@@ -35,14 +35,14 @@ export const ROUTES = {
 
 export const MENU_ROUTE_MAP = {
   Home: ROUTES.home,
-  'Org Chart': ROUTES.orgChart,
   KPI: ROUTES.kpi,
-  Tasks: ROUTES.tasks,
-  Reviews: ROUTES.reviews,
-  Surveys: ROUTES.surveys,
-  Feedback: ROUTES.feedback,
-  Recognitions: ROUTES.recognitions,
   'L&D': ROUTES.learningDevelopment,
+  Tasks: ROUTES.tasks,
+  'Performance Reviews': ROUTES.reviews,
+  Feedbacks: ROUTES.feedback,
+  'AI Surveys': ROUTES.surveys,
+  Recognitions: ROUTES.recognitions,
+  'Org Chart': ROUTES.orgChart,
 } as const;
 
 export const LMS_MENU_ROUTE_MAP = {

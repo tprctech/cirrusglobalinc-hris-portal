@@ -176,14 +176,14 @@ function App() {
 
   const sidebarItems = [
     { label: 'Home', icon: <Home size={20} /> },
-    { label: 'L&D', icon: <GraduationCap size={20} /> },
-    { label: 'Org Chart', icon: <Network size={20} /> },
     { label: 'KPI', icon: <Target size={20} /> },
+    { label: 'L&D', icon: <GraduationCap size={20} /> },
     { label: 'Tasks', icon: <ListTodo size={20} /> },
-    { label: 'Reviews', icon: <ClipboardList size={20} /> },
-    { label: 'Surveys', icon: <BarChart2 size={20} /> },
-    { label: 'Feedback', icon: <MessageSquare size={20} /> },
+    { label: 'Performance Reviews', icon: <ClipboardList size={20} /> },
+    { label: 'Feedbacks', icon: <MessageSquare size={20} /> },
+    { label: 'AI Surveys', icon: <BarChart2 size={20} /> },
     { label: 'Recognitions', icon: <Award size={20} /> },
+    { label: 'Org Chart', icon: <Network size={20} /> },
   ];
   const activeMenuLabel = getMenuLabelForPath(currentPath);
   const activeLmsMenuLabel = getLmsMenuLabelForPath(currentPath);
