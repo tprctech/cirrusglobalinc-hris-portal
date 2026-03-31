@@ -1,0 +1,17 @@
+{
+  "name": "cph-monorepo",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "infra/*"
+  ],
+  "scripts": {
+    "dev:web": "npm --workspace @cph/web run dev",
+    "build:web": "npm --workspace @cph/web run build",
+    "lint:web": "npm --workspace @cph/web run lint",
+    "typecheck:web": "npm --workspace @cph/web run typecheck",
+    "test:web": "npm --workspace @cph/web run test",
+    "infra:synth": "npm --workspace @cph/infra run synth"
+  }
+}
