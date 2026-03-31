@@ -1,0 +1,429 @@
+.recognitions-page {
+  display: grid;
+  gap: 18px;
+}
+
+.recognitions-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.recognitions-header-row h1 {
+  font-size: 28px;
+  line-height: 1;
+  color: var(--charcoal);
+}
+
+.recognitions-header-row p {
+  color: var(--gray-600);
+  font-size: 16px;
+  margin-top: 8px;
+}
+
+.new-recognition-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--primary);
+  color: var(--white);
+  border: 1px solid var(--primary);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.points-summary-card {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: 16px;
+  padding: 18px;
+  display: grid;
+  gap: 6px;
+}
+
+.points-summary-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--charcoal);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.points-summary-title svg {
+  color: #ca8a04;
+}
+
+.points-summary-value {
+  font-size: 34px;
+  line-height: 1;
+  font-weight: 700;
+  color: var(--charcoal);
+}
+
+.points-summary-card p {
+  color: var(--gray-600);
+  font-size: 14px;
+}
+
+.recognitions-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.recognitions-tab {
+  border: 1px solid var(--gray-300);
+  background: var(--white);
+  color: var(--charcoal);
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.recognitions-tab.active {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+
+.recognitions-list {
+  display: grid;
+  gap: 16px;
+}
+
+.recognition-card {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: 16px;
+  padding: 20px 22px;
+}
+
+.recognition-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.recognition-title-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.recognition-title-row svg {
+  color: var(--primary);
+}
+
+.recognition-title-row h3 {
+  font-size: 20px;
+  color: var(--charcoal);
+}
+
+.recognition-date-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--gray-300);
+  border-radius: 999px;
+  padding: 4px 10px;
+  color: var(--gray-700);
+  font-size: 13px;
+}
+
+.recognition-card p {
+  margin-top: 8px;
+  color: var(--gray-700);
+  font-size: 14px;
+}
+
+.recognition-card strong {
+  color: var(--charcoal);
+}
+
+.redeem-section {
+  display: grid;
+  gap: 14px;
+}
+
+.rewards-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.reward-card {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: 14px;
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+}
+
+.reward-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.reward-title-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reward-title-row h3 {
+  font-size: 17px;
+  color: var(--charcoal);
+}
+
+.reward-title-row svg {
+  color: #ca8a04;
+}
+
+.reward-card p {
+  color: var(--gray-700);
+  font-size: 14px;
+}
+
+.reward-points-pill {
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #fef9c3;
+  color: #854d0e;
+  border: 1px solid #fde68a;
+}
+
+.redeem-btn {
+  border: 1px solid var(--primary);
+  border-radius: 8px;
+  min-height: 34px;
+  background: var(--primary);
+  color: var(--white);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.redeem-btn:disabled {
+  border-color: var(--gray-300);
+  background: var(--gray-100);
+  color: var(--gray-500);
+  cursor: not-allowed;
+}
+
+.redeemed-history-card {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.redeemed-history-card h3 {
+  font-size: 18px;
+  color: var(--charcoal);
+}
+
+.redeemed-list {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.redeemed-list-item {
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: var(--gray-700);
+  background: var(--gray-50);
+}
+
+.recognitions-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 500;
+}
+
+.recognitions-modal {
+  width: min(760px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: 16px;
+  padding: 18px;
+  display: grid;
+  gap: 14px;
+}
+
+.recognitions-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.recognitions-modal-header h2 {
+  font-size: 24px;
+  color: var(--charcoal);
+}
+
+.recognitions-modal-header p {
+  margin-top: 4px;
+  color: var(--gray-600);
+  font-size: 14px;
+}
+
+.recognitions-modal-close-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid var(--gray-300);
+  background: var(--white);
+  color: var(--gray-700);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.recognitions-form-field {
+  display: grid;
+  gap: 6px;
+}
+
+.recognitions-form-field label {
+  font-size: 13px;
+  color: var(--gray-600);
+}
+
+.recognitions-form-field input,
+.recognitions-form-field textarea {
+  border: 1px solid var(--gray-300);
+  border-radius: 8px;
+  min-height: 36px;
+  padding: 8px 10px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.recognitions-form-field textarea {
+  resize: vertical;
+}
+
+.badge-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.badge-card {
+  border: 1px solid var(--gray-200);
+  border-radius: 10px;
+  background: var(--gray-50);
+  padding: 12px 10px;
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  text-align: center;
+  cursor: pointer;
+}
+
+.badge-card.selected {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+
+.badge-card:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.badge-icon {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.badge-label {
+  font-size: 14px;
+  color: var(--charcoal);
+}
+
+.badge-points {
+  font-size: 12px;
+  color: #854d0e;
+  border: 1px solid #fde68a;
+  background: #fef9c3;
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.badge-special-note {
+  font-size: 11px;
+  color: #991b1b;
+}
+
+.recognitions-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.recognitions-secondary-btn,
+.recognitions-primary-btn {
+  border-radius: 8px;
+  min-height: 36px;
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.recognitions-secondary-btn {
+  border: 1px solid var(--gray-300);
+  background: var(--white);
+  color: var(--charcoal);
+}
+
+.recognitions-primary-btn {
+  border: 1px solid var(--primary);
+  background: var(--primary);
+  color: var(--white);
+}
+
+@media (max-width: 1000px) {
+  .rewards-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .badge-grid {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .rewards-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .badge-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}

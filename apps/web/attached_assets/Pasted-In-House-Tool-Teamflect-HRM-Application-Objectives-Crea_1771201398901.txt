@@ -1,0 +1,68 @@
+In-House Tool: Teamflect (HRM Application)
+Objectives:
+	Create an HRIS application that seamlessly integrates with existing organization and employee’s data. Instead of using Teamflect a Microsoft 3rd party application, we will be building the functionalities in-house to fully customize the functionalities based on our HR use case.
+	Its main functionality is to consolidate the reviews, feedback, performance evaluations, surveys, and trainings.
+User Roles:
+1.	Administrator aka ‘HR’
+a.	Separate Admin Center
+b.	Impersonate/Proxy User
+2.	Manager 
+a.	Conduct Performance Review to their Direct Reports
+3.	Employee
+Features:
+•	Login Feature/s
+o	Ability for Super Admin and HR to Register Users
+o	Send an email verification for registration
+•	Profile Dashboard
+o	View Basic Information such as the ff:
+ 
+	Profile pic
+	Employee Name
+	Position
+	Reports to
+	Direct Reports
+	Email
+	Department
+	Office Location
+	Birthday
+	Phone
+	Country
+	Employee Hire Date
+	Mobile Phone
+	Role Information:
+•	Role/Position
+•	Role Description
+•	Required Competencies
+	Feedback
+•	Home Page
+o	Intranet
+	Company Policies (in pdf)
+	Employee Handbook (in pdf)
+	Voice of Employee – anonymous company feedback
+	Birthday and Anniversary
+	New Members
+o	Direct Report Competencies Dashboard
+•	KPI
+o	
+•	Reviews
+o	Performance Review Form
+	Admin -> can create the performance review
+	Manager -> able to see and answer performance review of his/her direct reports
+	Employee -> able to see and answer their own performance review as well as their manager’s review to them.
+
+
+•	Surveys
+o	Admin and Managers -> able to create surveys and select if for their team or entire organization.
+o	Employees -> able to answer surveys.
+•	Feedback
+o	Company
+	Note: Admin proxy feature should not be able to see proxied company reviews
+o	Employee
+o	Received
+o	Given
+•	Recognitions
+o	Admin- give special Recognitions with Points
+o	Employee – give normal Recognitions to Other Employees
+o	My Rewards
+	Claim rewards with gained points.
+	Redeemed Rewards	

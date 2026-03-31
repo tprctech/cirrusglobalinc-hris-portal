@@ -1,0 +1,187 @@
+import {
+  Award,
+  BarChart2,
+  BookOpenText,
+  ChevronDown,
+  ChevronRight,
+  ClipboardList,
+  FolderOpen,
+  MessageSquare,
+  Network,
+  Settings,
+  Target,
+  ListTodo,
+  Users,
+} from 'lucide-react';
+import { useState, type MouseEvent as ReactMouseEvent } from 'react';
+import { ROUTES } from '../app/routes';
+
+type AdminMenu = (
+  | 'users'
+  | 'lms'
+  | 'libraryRole'
+  | 'libraryCompetency'
+  | 'configOrgChart'
+  | 'configKpi'
+  | 'configTasks'
+  | 'configReviews'
+  | 'configSurveys'
+  | 'configFeedback'
+  | 'configRecognitions'
+);
+
+type AdminCenterSidebarProps = {
+  activeMenu: AdminMenu;
+  onNavigate: (path: string) => void;
+};
+
+function AdminCenterSidebar({ activeMenu, onNavigate }: AdminCenterSidebarProps) {
+  const [libraryExpanded, setLibraryExpanded] = useState(
+    activeMenu === 'libraryRole' || activeMenu === 'libraryCompetency',
+  );
+  const [configExpanded, setConfigExpanded] = useState(
+    activeMenu === 'configOrgChart'
+    || activeMenu === 'configKpi'
+    || activeMenu === 'configTasks'
+    || activeMenu === 'configReviews'
+    || activeMenu === 'configSurveys'
+    || activeMenu === 'configFeedback'
+    || activeMenu === 'configRecognitions',
+  );
+
+  const isLibraryMenuActive = activeMenu === 'libraryRole' || activeMenu === 'libraryCompetency';
+  const isConfigMenuActive = (
+    activeMenu === 'configOrgChart'
+    || activeMenu === 'configKpi'
+    || activeMenu === 'configTasks'
+    || activeMenu === 'configReviews'
+    || activeMenu === 'configSurveys'
+    || activeMenu === 'configFeedback'
+    || activeMenu === 'configRecognitions'
+  );
+
+  function handleNavigate(path: string, event: ReactMouseEvent<HTMLButtonElement>) {
+    if (event.ctrlKey || event.metaKey || event.button === 1) {
+      event.preventDefault();
+      window.open(path, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    onNavigate(path);
+  }
+
+  return (
+    <nav className="admin-center-sidebar">
+      <h2>Admin Center</h2>
+      <button
+        className={`admin-center-side-link ${activeMenu === 'users' ? 'active' : ''}`}
+        onClick={(event) => handleNavigate(ROUTES.adminUsers, event)}
+      >
+        <Users size={16} />
+        <span>Users</span>
+      </button>
+      <button
+        className={`admin-center-side-link ${activeMenu === 'lms' ? 'active' : ''}`}
+        onClick={(event) => handleNavigate(ROUTES.adminLms, event)}
+      >
+        <BookOpenText size={16} />
+        <span>LMS</span>
+      </button>
+      <button
+        className={`admin-center-side-link ${isLibraryMenuActive ? 'active' : ''}`}
+        onClick={() => setLibraryExpanded((previous) => !previous)}
+      >
+        <FolderOpen size={16} />
+        <span>Library</span>
+        <span className="admin-center-accordion-chevron">
+          {libraryExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        </span>
+      </button>
+
+      {libraryExpanded && (
+        <div className="admin-center-submenu">
+          <button
+            className={`admin-center-sub-link ${activeMenu === 'libraryRole' ? 'active' : ''}`}
+            onClick={(event) => handleNavigate(ROUTES.adminLibraryRole, event)}
+          >
+            <Users size={14} />
+            <span>Role</span>
+          </button>
+          <button
+            className={`admin-center-sub-link ${activeMenu === 'libraryCompetency' ? 'active' : ''}`}
+            onClick={(event) => handleNavigate(ROUTES.adminCompetencyLib, event)}
+          >
+            <BookOpenText size={14} />
+            <span>Competency</span>
+          </button>
+        </div>
+      )}
+
+      <button
+        className={`admin-center-side-link ${isConfigMenuActive ? 'active' : ''}`}
+        onClick={() => setConfigExpanded((previous) => !previous)}
+      >
+        <Settings size={16} />
+        <span>Config</span>
+        <span className="admin-center-accordion-chevron">
+          {configExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        </span>
+      </button>
+
+      {configExpanded && (
+        <div className="admin-center-submenu">
+          <button
+            className={`admin-center-sub-link ${activeMenu === 'configOrgChart' ? 'active' : ''}`}
+            onClick={(event) => handleNavigate(ROUTES.adminConfigOrgChart, event)}
+          >
+            <Network size={14} />
+            <span>Org Chart</span>
+          </button>
+          <button
+            className={`admin-center-sub-link ${activeMenu === 'configKpi' ? 'active' : ''}`}
+            onClick={(event) => handleNavigate(ROUTES.adminConfigKpi, event)}
+          >
+            <Target size={14} />
+            <span>KPI</span>
+          </button>
+          <button
+            className={`admin-center-sub-link ${activeMenu === 'configTasks' ? 'active' : ''}`}
+            onClick={(event) => handleNavigate(ROUTES.adminConfigTasks, event)}
+          >
+            <ListTodo size={14} />
+            <span>Tasks</span>
+          </button>
+          <button
+            className={`admin-center-sub-link ${activeMenu === 'configReviews' ? 'active' : ''}`}
+            onClick={(event) => handleNavigate(ROUTES.adminConfigReviews, event)}
+          >
+            <ClipboardList size={14} />
+            <span>Reviews</span>
+          </button>
+          <button
+            className={`admin-center-sub-link ${activeMenu === 'configSurveys' ? 'active' : ''}`}
+            onClick={(event) => handleNavigate(ROUTES.adminConfigSurveys, event)}
+          >
+            <BarChart2 size={14} />
+            <span>Surveys</span>
+          </button>
+          <button
+            className={`admin-center-sub-link ${activeMenu === 'configFeedback' ? 'active' : ''}`}
+            onClick={(event) => handleNavigate(ROUTES.adminConfigFeedback, event)}
+          >
+            <MessageSquare size={14} />
+            <span>Feedback</span>
+          </button>
+          <button
+            className={`admin-center-sub-link ${activeMenu === 'configRecognitions' ? 'active' : ''}`}
+            onClick={(event) => handleNavigate(ROUTES.adminConfigRecognitions, event)}
+          >
+            <Award size={14} />
+            <span>Recognitions</span>
+          </button>
+        </div>
+      )}
+    </nav>
+  );
+}
+
+export default AdminCenterSidebar;

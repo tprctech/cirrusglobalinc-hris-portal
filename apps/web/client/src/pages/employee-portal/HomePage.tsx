@@ -1,0 +1,192 @@
+import { useState } from 'react';
+import {
+  Award,
+  Cake,
+  ClipboardList,
+  FileText,
+  Gift,
+  HeartHandshake,
+  Megaphone,
+  MessageSquare,
+  Newspaper,
+  TrendingUp,
+  Users,
+} from 'lucide-react';
+import {
+  anniversaries,
+  birthdays,
+  dashboardStats,
+  newsletters,
+  nextSteps,
+  policies,
+  valuesCards,
+} from '../../data/mock/homeMockData';
+
+const statIcons: Record<string, React.ReactNode> = {
+  'clipboard-list': <ClipboardList size={22} />,
+  'trending-up': <TrendingUp size={22} />,
+  award: <Award size={22} />,
+  users: <Users size={22} />,
+};
+
+function HomePage() {
+  const [activeTab, setActiveTab] = useState('policies');
+  const currentMonth = new Date().toLocaleString('en-US', { month: 'long' });
+
+  return (
+    <>
+      <div className="card purpose-card">
+        <div className="card-header">
+          <HeartHandshake />
+          <h2>Our Purpose</h2>
+        </div>
+        <p className="purpose-quote">
+          "We transform lives and business by connecting global talent with great job opportunities."
+        </p>
+      </div>
+
+      <div className="values-grid">
+        {valuesCards.map((value) => (
+          <div key={value.title} className="card value-card">
+            <h2>{value.title}</h2>
+            <p>{value.description}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="stats-grid">
+        {dashboardStats.map((stat) => (
+          <div key={stat.label} className="stat-card">
+            <div>
+              <div className="stat-label">{stat.label}</div>
+              <div className="stat-value">{stat.value}</div>
+            </div>
+            <div className="stat-icon">{statIcons[stat.icon]}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="card resources-card">
+        <div className="card-header">
+          <FileText />
+          <h2>Company Resources</h2>
+        </div>
+        <div className="tabs">
+          <button
+            className={`tab ${activeTab === 'policies' ? 'active' : ''}`}
+            onClick={() => setActiveTab('policies')}
+          >
+            Policies
+          </button>
+          <button
+            className={`tab ${activeTab === 'handbook' ? 'active' : ''}`}
+            onClick={() => setActiveTab('handbook')}
+          >
+            Employee Handbook
+          </button>
+        </div>
+        <div>
+          {policies.map((policy) => (
+            <div key={policy.name} className="policy-item">
+              <div className="policy-info">
+                <div className="policy-icon">
+                  <FileText />
+                </div>
+                <div>
+                  <div className="policy-name">{policy.name}</div>
+                  <div className="policy-date">Updated: {policy.updated}</div>
+                </div>
+              </div>
+              <button className="download-btn">
+                Download
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="home-split-grid">
+        <div className="card voe-card">
+          <div className="card-header">
+            <MessageSquare />
+            <h2>Voice of Employee</h2>
+          </div>
+          <p className="voe-description">
+            Share your anonymous feedback to help us improve our workplace
+            environment and culture.
+          </p>
+          <textarea
+            className="voe-textarea"
+            placeholder="Type your anonymous feedback here..."
+          />
+          <button className="submit-btn">Submit Feedback</button>
+        </div>
+
+        <div className="card announcement-card">
+          <div className="card-header">
+            <Megaphone />
+            <h2>Announcements</h2>
+          </div>
+
+          <div className="announcement-sections">
+            <div className="announcement-section">
+              <div className="announcement-section-header">
+                <Cake />
+                <h3>{currentMonth} Birthday Celebrants</h3>
+              </div>
+              {birthdays.map((b) => (
+                <div key={b.name} className="event-item">
+                  <div className="event-name">{b.name}</div>
+                  <div className="event-message">{b.message}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="announcement-section">
+              <div className="announcement-section-header">
+                <Gift />
+                <h3>Work Anniversaries</h3>
+              </div>
+              {anniversaries.map((a) => (
+                <div key={a.name} className="event-item">
+                  <div className="event-name">{a.name}</div>
+                  <div className="event-message">{a.message}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="announcement-section">
+              <div className="announcement-section-header">
+                <Newspaper />
+                <h3>Newsletter</h3>
+              </div>
+              {newsletters.map((item) => (
+                <div key={item.title} className="event-item">
+                  <div className="event-name">{item.title}</div>
+                  <div className="event-message">{item.description}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="card whats-next-card">
+        <div className="card-header">
+          <ClipboardList />
+          <h2>What's Next</h2>
+        </div>
+        <div className="next-steps-grid">
+          {nextSteps.map((item) => (
+            <div key={item.title} className="next-step-item">
+              <div className="next-step-title">{item.title}</div>
+              <div className="next-step-detail">{item.detail}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+
+export default HomePage;

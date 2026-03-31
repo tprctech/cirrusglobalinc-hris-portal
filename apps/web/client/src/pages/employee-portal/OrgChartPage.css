@@ -1,0 +1,198 @@
+.org-chart-page {
+  display: grid;
+  gap: 16px;
+}
+
+.org-chart-header h1 {
+  font-size: 28px;
+  color: var(--charcoal);
+}
+
+.org-chart-header p {
+  margin-top: 6px;
+  color: var(--gray-600);
+  font-size: 15px;
+}
+
+.org-chart-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.org-chart-controls span {
+  min-width: 56px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--gray-700);
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--white);
+}
+
+.org-chart-control-btn,
+.org-chart-reset-btn {
+  border: 1px solid var(--gray-300);
+  background: var(--white);
+  color: var(--gray-700);
+  border-radius: 8px;
+  min-height: 32px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.org-chart-reset-btn {
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.org-chart-control-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.org-chart-viewport {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: 16px;
+  height: min(74vh, 720px);
+  min-height: 520px;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+  overscroll-behavior: contain;
+  position: relative;
+}
+
+.org-chart-flow {
+  width: 100%;
+  height: 100%;
+}
+
+.org-chart-flow .react-flow__node {
+  width: max-content;
+}
+
+.org-chart-flow .react-flow__node-default {
+  width: max-content;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.org-flow-node {
+  width: 238px;
+  min-height: 156px;
+  border: 1px solid var(--gray-200);
+  border-radius: 12px;
+  padding: 14px 16px;
+  text-align: center;
+  background: var(--gray-50);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  box-sizing: border-box;
+  position: relative;
+  pointer-events: all;
+}
+
+.org-flow-node-collapse-btn {
+  margin-top: 6px;
+  width: 24px;
+  height: 24px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--gray-700);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.org-flow-node-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: #dbeafe;
+  color: #1e3a8a;
+  font-size: 13px;
+  font-weight: 700;
+  border: 1px solid #bfdbfe;
+}
+
+.org-flow-node-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.org-flow-node h3 {
+  font-size: 16px;
+  color: var(--charcoal);
+  margin: 0;
+  width: 100%;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.org-flow-node p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--gray-600);
+  width: 100%;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.org-flow-node-ceo {
+  background: #ebf9ff;
+  border-color: #bfefff;
+}
+
+.org-flow-node-current {
+  border: 2px dashed #60a5fa;
+  box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.14);
+}
+
+.org-flow-node-ceo .org-flow-node-avatar {
+  background: #dff5ff;
+  border-color: #bfefff;
+  color: #0f4c81;
+}
+
+@media (max-width: 768px) {
+  .org-chart-controls {
+    flex-wrap: wrap;
+  }
+
+  .org-chart-reset-btn {
+    margin-left: 0;
+  }
+
+  .org-chart-viewport {
+    min-height: 420px;
+  }
+
+  .org-level {
+    min-width: 560px;
+  }
+}
