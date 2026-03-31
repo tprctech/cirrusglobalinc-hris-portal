@@ -49,7 +49,7 @@ export type AdminRole = {
 };
 
 export const adminMockData = {
-  pageTitle: 'Admin Center',
+  pageTitle: 'HR Center',
   subtitle: 'Manage users who can access the Teamflect portal',
   users: [
     {

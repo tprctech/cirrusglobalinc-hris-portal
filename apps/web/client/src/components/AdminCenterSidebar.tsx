@@ -71,7 +71,7 @@ function AdminCenterSidebar({ activeMenu, onNavigate }: AdminCenterSidebarProps)
 
   return (
     <nav className="admin-center-sidebar">
-      <h2>Admin Center</h2>
+      <h2>HR Center</h2>
       <button
         className={`admin-center-side-link ${activeMenu === 'users' ? 'active' : ''}`}
         onClick={(event) => handleNavigate(ROUTES.adminUsers, event)}

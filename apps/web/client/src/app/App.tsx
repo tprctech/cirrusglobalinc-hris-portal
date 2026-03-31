@@ -204,7 +204,7 @@ function App() {
               onClick={(event) => navigateTo(ROUTES.adminUsers, event)}
             >
               <Settings size={14} />
-              Admin Center
+              HR Center
             </button>
           )}
           <div className="profile-wrapper" ref={profileRef}>
@@ -259,12 +259,6 @@ function App() {
                   <User size={14} />
                   View Full Profile
                 </button>
-                {!isLmsCenter && (
-                  <button className="profile-popup-link" onClick={() => navigateTo(ROUTES.lmsHome)}>
-                    <BookOpen size={14} />
-                    My LMS
-                  </button>
-                )}
                 {(isAdminCenter || isLmsCenter) && (
                   <button className="profile-popup-link" onClick={goToEmployeePortal}>
                     <Home size={14} />
