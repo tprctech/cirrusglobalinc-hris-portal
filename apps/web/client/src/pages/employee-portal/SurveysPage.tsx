@@ -422,7 +422,6 @@ function SurveysPage() {
                   <th>Created On</th>
                   <th>Due Date</th>
                   <th>No. of Questions</th>
-                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -438,24 +437,6 @@ function SurveysPage() {
                     </td>
                     <td>{survey.dueDate}</td>
                     <td>{survey.questionCount}</td>
-                    <td>
-                      <div className="table-actions">
-                        <button
-                          className="table-action-btn"
-                          onClick={() => openEditSurveyModal(survey)}
-                        >
-                          <Pencil size={14} />
-                          Edit
-                        </button>
-                        <button
-                          className="table-action-btn danger"
-                          onClick={() => setPendingDeleteSurvey(survey)}
-                        >
-                          <Trash2 size={14} />
-                          Delete
-                        </button>
-                      </div>
-                    </td>
                   </tr>
                 ))}
               </tbody>
