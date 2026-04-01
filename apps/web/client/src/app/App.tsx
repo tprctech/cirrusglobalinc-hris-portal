@@ -44,15 +44,8 @@ import AdminCompetencyLibraryPage from '../pages/admin-center/library/AdminCompe
 import AdminRoleLibraryPage from '../pages/admin-center/library/AdminRoleLibraryPage';
 import AdminPortalConfigPage from '../pages/admin-center/AdminPortalConfigPage';
 import AdminReviewsConfigPage from '../pages/admin-center/config/reviews/AdminReviewsConfigPage';
-import AdminReviewTemplatesPage from '../pages/admin-center/config/reviews/AdminReviewTemplatesPage';
-import AdminReviewQuestionSetsPage from '../pages/admin-center/config/reviews/AdminReviewQuestionSetsPage';
 import AdminSurveysConfigPage from '../pages/admin-center/config/surveys/AdminSurveysConfigPage';
-import AdminSurveyTemplatesPage from '../pages/admin-center/config/surveys/AdminSurveyTemplatesPage';
-import AdminSurveyQuestionSetsPage from '../pages/admin-center/config/surveys/AdminSurveyQuestionSetsPage';
 import AdminRecognitionsConfigPage from '../pages/admin-center/config/recognitions/AdminRecognitionsConfigPage';
-import AdminRecognitionBadgesPage from '../pages/admin-center/config/recognitions/AdminRecognitionBadgesPage';
-import AdminManageRewardsPage from '../pages/admin-center/config/recognitions/AdminManageRewardsPage';
-import AdminManageRewardRedeemsPage from '../pages/admin-center/config/recognitions/AdminManageRewardRedeemsPage';
 import {
   LMS_MENU_ROUTE_MAP,
   MENU_ROUTE_MAP,
@@ -442,23 +435,15 @@ function App() {
               onNavigate={navigateTo}
             />
           )}
-          {currentPath === ROUTES.adminConfigReviews && (
+          {(currentPath === ROUTES.adminConfigReviews
+            || currentPath === ROUTES.adminConfigReviewTemplates
+            || currentPath === ROUTES.adminConfigReviewQuestionSets) && (
             <AdminReviewsConfigPage onNavigate={navigateTo} />
           )}
-          {currentPath === ROUTES.adminConfigReviewTemplates && (
-            <AdminReviewTemplatesPage onNavigate={navigateTo} />
-          )}
-          {currentPath === ROUTES.adminConfigReviewQuestionSets && (
-            <AdminReviewQuestionSetsPage onNavigate={navigateTo} />
-          )}
-          {currentPath === ROUTES.adminConfigSurveys && (
+          {(currentPath === ROUTES.adminConfigSurveys
+            || currentPath === ROUTES.adminConfigSurveyTemplates
+            || currentPath === ROUTES.adminConfigSurveyQuestionSets) && (
             <AdminSurveysConfigPage onNavigate={navigateTo} />
-          )}
-          {currentPath === ROUTES.adminConfigSurveyTemplates && (
-            <AdminSurveyTemplatesPage onNavigate={navigateTo} />
-          )}
-          {currentPath === ROUTES.adminConfigSurveyQuestionSets && (
-            <AdminSurveyQuestionSetsPage onNavigate={navigateTo} />
           )}
           {currentPath === ROUTES.adminConfigFeedback && (
             <AdminPortalConfigPage
@@ -468,17 +453,11 @@ function App() {
               onNavigate={navigateTo}
             />
           )}
-          {currentPath === ROUTES.adminConfigRecognitions && (
+          {(currentPath === ROUTES.adminConfigRecognitions
+            || currentPath === ROUTES.adminConfigRecognitionBadges
+            || currentPath === ROUTES.adminConfigManageRewards
+            || currentPath === ROUTES.adminConfigManageRewardRedeems) && (
             <AdminRecognitionsConfigPage onNavigate={navigateTo} />
-          )}
-          {currentPath === ROUTES.adminConfigRecognitionBadges && (
-            <AdminRecognitionBadgesPage onNavigate={navigateTo} />
-          )}
-          {currentPath === ROUTES.adminConfigManageRewards && (
-            <AdminManageRewardsPage onNavigate={navigateTo} />
-          )}
-          {currentPath === ROUTES.adminConfigManageRewardRedeems && (
-            <AdminManageRewardRedeemsPage onNavigate={navigateTo} />
           )}
           {currentPath === ROUTES.profile && <ProfilePage />}
         </main>

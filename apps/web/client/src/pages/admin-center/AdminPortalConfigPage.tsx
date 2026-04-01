@@ -40,7 +40,7 @@ function AdminPortalConfigPage({
           <section className="admin-users-section">
             <div className="admin-users-toolbar">
               <div>
-                <h1>Config &gt; {title}</h1>
+                <h1>Configuration &gt; {title}</h1>
                 <p>{description}</p>
               </div>
             </div>
