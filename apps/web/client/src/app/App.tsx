@@ -111,11 +111,24 @@ function getLmsMenuLabelForPath(pathname: string): LmsMenuLabel | null {
   return match ? match[0] : null;
 }
 
+const mockNotifications = [
+  { id: '1', type: 'review', title: 'Performance Review Due', message: 'Your Q2 self-assessment is due in 3 days.', time: '2 hours ago', read: false },
+  { id: '2', type: 'feedback', title: 'New Feedback Received', message: 'Sarah Johnson sent you feedback on your recent presentation.', time: '5 hours ago', read: false },
+  { id: '3', type: 'recognition', title: 'You Were Recognized!', message: 'David Lee recognized you for "Outstanding Teamwork".', time: '1 day ago', read: false },
+  { id: '4', type: 'survey', title: 'New Survey Available', message: 'Employee Engagement Survey Q2 is now open.', time: '1 day ago', read: true },
+  { id: '5', type: 'kpi', title: 'KPI Update', message: 'Your monthly KPI targets have been updated by your manager.', time: '2 days ago', read: true },
+  { id: '6', type: 'task', title: 'Task Assigned', message: 'Complete onboarding checklist for new team member.', time: '3 days ago', read: true },
+];
+
 function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState(mockNotifications);
   const [currentPath, setCurrentPath] = useState(normalizePath(window.location.pathname));
   const profileRef = useRef<HTMLDivElement>(null);
+  const notificationRef = useRef<HTMLDivElement>(null);
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   useEffect(() => {
     const normalized = normalizePath(window.location.pathname);
@@ -129,6 +142,9 @@ function App() {
     function handleClickOutside(event: MouseEvent) {
       if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
         setProfileOpen(false);
+      }
+      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+        setNotificationsOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -163,6 +179,10 @@ function App() {
       window.history.pushState({}, '', normalized);
     }
     setCurrentPath(normalized);
+  }
+
+  function markAllNotificationsRead() {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   }
 
   function openProfilePage() {
@@ -208,9 +228,44 @@ function App() {
               HR Center
             </button>
           )}
-          <button className="notification-bell" title="Notifications">
-            <Bell size={20} />
-          </button>
+          <div className="notification-wrapper" ref={notificationRef}>
+            <button
+              className="notification-bell"
+              title="Notifications"
+              onClick={() => {
+                setNotificationsOpen(!notificationsOpen);
+                setProfileOpen(false);
+              }}
+            >
+              <Bell size={20} />
+              {unreadCount > 0 && <span className="notification-badge">{unreadCount}</span>}
+            </button>
+
+            {notificationsOpen && (
+              <div className="notification-popup">
+                <div className="notification-popup-header">
+                  <h3>Notifications</h3>
+                  {unreadCount > 0 && (
+                    <button className="notification-mark-read" onClick={markAllNotificationsRead}>
+                      Mark all as read
+                    </button>
+                  )}
+                </div>
+                <div className="notification-popup-list">
+                  {notifications.map((n) => (
+                    <div key={n.id} className={`notification-item ${n.read ? '' : 'unread'}`}>
+                      <div className="notification-item-dot">{!n.read && <span />}</div>
+                      <div className="notification-item-content">
+                        <div className="notification-item-title">{n.title}</div>
+                        <div className="notification-item-message">{n.message}</div>
+                        <div className="notification-item-time">{n.time}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
           <div className="profile-wrapper" ref={profileRef}>
             <div
               className="user-info"
