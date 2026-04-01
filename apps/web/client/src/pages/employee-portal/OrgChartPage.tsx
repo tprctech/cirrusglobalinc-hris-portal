@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { ChevronDown, ChevronUp, Download, Minus, Plus, RotateCcw } from 'lucide-react';
-import html2canvas from 'html2canvas-pro';
+import { toPng } from 'html-to-image';
 import { jsPDF } from 'jspdf';
 import {
   Background,
@@ -409,7 +409,7 @@ function OrgChartCanvas() {
         source: connection.source,
         target: connection.target,
         style: { stroke: '#cbd5e1', strokeWidth: 2.2 },
-        type: 'bezier',
+        type: 'smoothstep',
       })),
     [hiddenNodeIds],
   );
@@ -452,22 +452,32 @@ function OrgChartCanvas() {
     setExporting(true);
     try {
       const el = viewportRef.current;
-      const canvas = await html2canvas(el, {
-        scale: 2,
-        useCORS: true,
+      const dataUrl = await toPng(el, {
+        pixelRatio: 2,
         backgroundColor: '#ffffff',
+        filter: (node: HTMLElement) => {
+          if (node.classList?.contains('react-flow__minimap') || node.classList?.contains('react-flow__controls')) {
+            return false;
+          }
+          return true;
+        },
       });
-      const imgData = canvas.toDataURL('image/png');
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
+      const img = new Image();
+      img.src = dataUrl;
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = reject;
+      });
+      const imgWidth = img.width;
+      const imgHeight = img.height;
       const orientation = imgWidth > imgHeight ? 'landscape' : 'portrait';
       const pdf = new jsPDF({
         orientation,
         unit: 'px',
         format: [imgWidth, imgHeight],
       });
-      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-      pdf.save('org-chart.pdf');
+      pdf.addImage(dataUrl, 'PNG', 0, 0, imgWidth, imgHeight);
+      pdf.save('organization-chart.pdf');
     } finally {
       setExporting(false);
     }
@@ -503,7 +513,7 @@ function OrgChartCanvas() {
           disabled={exporting}
         >
           <Download size={14} />
-          {exporting ? 'Exporting…' : 'Export Org View'}
+          {exporting ? 'Exporting…' : 'Export Organization View'}
         </button>
       </div>
 
@@ -549,7 +559,7 @@ function OrgChartPage() {
   return (
     <section className="org-chart-page">
       <header className="org-chart-header">
-        <h1>Org Chart</h1>
+        <h1>Organization Chart</h1>
         <p>View team reporting lines and organizational structure.</p>
       </header>
       <ReactFlowProvider>

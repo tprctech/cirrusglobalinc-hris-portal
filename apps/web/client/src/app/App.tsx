@@ -197,7 +197,7 @@ function App() {
     { label: 'Feedbacks', icon: <MessageSquare size={20} /> },
     { label: 'AI Surveys', icon: <BarChart2 size={20} /> },
     { label: 'Recognitions', icon: <Award size={20} /> },
-    { label: 'Org Chart', icon: <Network size={20} /> },
+    { label: 'Organization Chart', icon: <Network size={20} /> },
   ];
   const activeMenuLabel = getMenuLabelForPath(currentPath);
   const activeLmsMenuLabel = getLmsMenuLabelForPath(currentPath);
@@ -414,8 +414,8 @@ function App() {
           {currentPath === ROUTES.adminConfigOrgChart && (
             <AdminPortalConfigPage
               activeMenu="configOrgChart"
-              title="Org Chart"
-              description="Manage admin-side settings for the employee portal Org Chart."
+              title="Organization Chart"
+              description="Manage admin-side settings for the employee portal Organization Chart."
               onNavigate={navigateTo}
             />
           )}

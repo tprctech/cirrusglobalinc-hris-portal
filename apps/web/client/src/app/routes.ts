@@ -42,7 +42,7 @@ export const MENU_ROUTE_MAP = {
   Feedbacks: ROUTES.feedback,
   'AI Surveys': ROUTES.surveys,
   Recognitions: ROUTES.recognitions,
-  'Org Chart': ROUTES.orgChart,
+  'Organization Chart': ROUTES.orgChart,
 } as const;
 
 export const LMS_MENU_ROUTE_MAP = {

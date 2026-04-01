@@ -134,7 +134,7 @@ function AdminCenterSidebar({ activeMenu, onNavigate }: AdminCenterSidebarProps)
             onClick={(event) => handleNavigate(ROUTES.adminConfigOrgChart, event)}
           >
             <Network size={14} />
-            <span>Org Chart</span>
+            <span>Organization Chart</span>
           </button>
           <button
             className={`admin-center-sub-link ${activeMenu === 'configKpi' ? 'active' : ''}`}

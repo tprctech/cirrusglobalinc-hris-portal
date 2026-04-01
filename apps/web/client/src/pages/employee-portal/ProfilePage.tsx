@@ -213,8 +213,8 @@ function ProfilePage() {
             <button
               className="profile-org-chart-btn"
               onClick={openOrgChartPage}
-              title="Open Org Chart"
-              aria-label="Open Org Chart"
+              title="Open Organization Chart"
+              aria-label="Open Organization Chart"
             >
               <Network size={16} />
             </button>
