@@ -56,6 +56,34 @@
   font-weight: 600;
 }
 
+.org-chart-export-btn {
+  margin-left: auto;
+  border: 1px solid var(--primary);
+  background: var(--primary);
+  color: var(--white);
+  border-radius: 8px;
+  min-height: 32px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  transition: opacity 0.2s;
+}
+
+.org-chart-export-btn:hover {
+  opacity: 0.88;
+}
+
+.org-chart-export-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .org-chart-control-btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;

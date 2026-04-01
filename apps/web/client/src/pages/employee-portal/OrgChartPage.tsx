@@ -1,5 +1,7 @@
-import { useCallback, useMemo, useState } from 'react';
-import { ChevronDown, ChevronUp, Minus, Plus, RotateCcw } from 'lucide-react';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { ChevronDown, ChevronUp, Download, Minus, Plus, RotateCcw } from 'lucide-react';
+import html2canvas from 'html2canvas-pro';
+import { jsPDF } from 'jspdf';
 import {
   Background,
   Position,
@@ -319,6 +321,8 @@ function OrgChartCanvas() {
     () => new Set(initialCollapsedNodeIds),
   );
   const [zoom, setZoom] = useState(1);
+  const [exporting, setExporting] = useState(false);
+  const viewportRef = useRef<HTMLDivElement>(null);
   const { zoomTo, fitView } = useReactFlow();
 
   const nodePositionsById = useMemo(
@@ -443,6 +447,32 @@ function OrgChartCanvas() {
     fitView({ duration: 220, padding: 0.25 });
   }, [fitView]);
 
+  const handleExportPdf = useCallback(async () => {
+    if (!viewportRef.current || exporting) return;
+    setExporting(true);
+    try {
+      const el = viewportRef.current;
+      const canvas = await html2canvas(el, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+      });
+      const imgData = canvas.toDataURL('image/png');
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const orientation = imgWidth > imgHeight ? 'landscape' : 'portrait';
+      const pdf = new jsPDF({
+        orientation,
+        unit: 'px',
+        format: [imgWidth, imgHeight],
+      });
+      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+      pdf.save('org-chart.pdf');
+    } finally {
+      setExporting(false);
+    }
+  }, [exporting]);
+
   return (
     <>
       <div className="org-chart-controls">
@@ -467,10 +497,19 @@ function OrgChartCanvas() {
           <RotateCcw size={14} />
           Reset View
         </button>
+        <button
+          className="org-chart-export-btn"
+          onClick={handleExportPdf}
+          disabled={exporting}
+        >
+          <Download size={14} />
+          {exporting ? 'Exporting…' : 'Export Org View'}
+        </button>
       </div>
 
       <div
         className="org-chart-viewport"
+        ref={viewportRef}
         onWheel={(event) => {
           if (event.ctrlKey) {
             event.preventDefault();
