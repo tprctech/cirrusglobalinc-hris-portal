@@ -84,7 +84,7 @@ function AdminCenterSidebar({ activeMenu, onNavigate }: AdminCenterSidebarProps)
         onClick={(event) => handleNavigate(ROUTES.adminLms, event)}
       >
         <BookOpenText size={16} />
-        <span>LMS</span>
+        <span>L&amp;D</span>
       </button>
       <button
         className={`admin-center-side-link ${isLibraryMenuActive ? 'active' : ''}`}
@@ -121,7 +121,7 @@ function AdminCenterSidebar({ activeMenu, onNavigate }: AdminCenterSidebarProps)
         onClick={() => setConfigExpanded((previous) => !previous)}
       >
         <Settings size={16} />
-        <span>Config</span>
+        <span>Configuration</span>
         <span className="admin-center-accordion-chevron">
           {configExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         </span>
