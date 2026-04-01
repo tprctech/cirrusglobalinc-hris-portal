@@ -422,6 +422,7 @@ function SurveysPage() {
                   <th>Created On</th>
                   <th>Due Date</th>
                   <th>No. of Questions</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -437,6 +438,11 @@ function SurveysPage() {
                     </td>
                     <td>{survey.dueDate}</td>
                     <td>{survey.questionCount}</td>
+                    <td>
+                      <button className="survey-action-btn small" onClick={() => handleViewResponses(survey)}>
+                        View Response
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
