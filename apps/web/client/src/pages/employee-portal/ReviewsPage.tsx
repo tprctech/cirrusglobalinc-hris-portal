@@ -16,7 +16,9 @@ type Review = {
   id: string;
   title: string;
   employee: string;
+  department: string;
   manager: string;
+  teammates: string[];
   dueDate: string;
   status: ReviewStatus;
 };
@@ -279,7 +281,9 @@ function ReviewsPage() {
             </div>
 
             <p>Employee: <strong>{review.employee}</strong></p>
+            <p>Department: <strong>{review.department}</strong></p>
             <p>Manager: <strong>{review.manager}</strong></p>
+            <p>Teammates: <strong>{review.teammates.join(', ')}</strong></p>
             <p>Due Date: <strong>{review.dueDate}</strong></p>
 
             <button className="review-employee-btn">
