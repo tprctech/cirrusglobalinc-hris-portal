@@ -1,13 +1,16 @@
-import { useMemo, useState } from 'react';
-import { CheckCircle2, Clock3, Medal, TrendingUp } from 'lucide-react';
+import { useCallback, useMemo, useState } from 'react';
+import { CheckCircle2, ChevronLeft, ChevronRight, Clock3, MapPin, Medal, TrendingUp, User, X } from 'lucide-react';
 import { currentUser } from '../../data/mock/homeMockData';
 import {
   coreCompetencies,
   initialTrainingProgressRecords,
   learningMaterials,
+  trainingCalendarEvents,
   type LearningLevel,
   type LearningMaterial,
   type LearningMaterialType,
+  type TrainingCalendarCategory,
+  type TrainingCalendarEvent,
   type TrainingProgressRecord,
 } from '../../data/mock/learningDevelopmentMockData';
 import {
@@ -17,7 +20,7 @@ import {
 } from '../../data/certificationsStore';
 import './LearningDevelopmentPage.css';
 
-type LearningTab = 'materials' | 'competencies' | 'tracking';
+type LearningTab = 'materials' | 'competencies' | 'tracking' | 'calendar';
 
 const LEVELS: Array<'All' | LearningLevel> = ['All', 'Beginner', 'Intermediate', 'Advanced'];
 const TYPES: Array<'All' | LearningMaterialType> = ['All', 'Course', 'Workshop', 'Module'];
@@ -167,6 +170,9 @@ function LearningDevelopmentPage() {
           </button>
           <button className={activeTab === 'tracking' ? 'active' : ''} onClick={() => setActiveTab('tracking')}>
             Progress tracking
+          </button>
+          <button className={activeTab === 'calendar' ? 'active' : ''} onClick={() => setActiveTab('calendar')}>
+            Training Calendar
           </button>
         </div>
       </header>
@@ -329,7 +335,206 @@ function LearningDevelopmentPage() {
           )}
         </div>
       )}
+
+      {activeTab === 'calendar' && (
+        <TrainingCalendar events={trainingCalendarEvents} />
+      )}
     </section>
+  );
+}
+
+const CATEGORY_COLORS: Record<TrainingCalendarCategory, string> = {
+  Competency: '#3b82f6',
+  IDP: '#8b5cf6',
+  'Cross-Training': '#f59e0b',
+  'Leadership Essentials': '#10b981',
+};
+
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+function formatTime12h(time24: string) {
+  const [h, m] = time24.split(':').map(Number);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
+}
+
+function TrainingCalendar({ events }: { events: TrainingCalendarEvent[] }) {
+  const [currentDate, setCurrentDate] = useState(() => new Date(2026, 3, 1));
+  const [selectedEvent, setSelectedEvent] = useState<TrainingCalendarEvent | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<'All' | TrainingCalendarCategory>('All');
+
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+
+  const goToPrevMonth = useCallback(() => {
+    setCurrentDate(new Date(year, month - 1, 1));
+  }, [year, month]);
+
+  const goToNextMonth = useCallback(() => {
+    setCurrentDate(new Date(year, month + 1, 1));
+  }, [year, month]);
+
+  const goToToday = useCallback(() => {
+    setCurrentDate(new Date(2026, 3, 1));
+  }, []);
+
+  const filteredEvents = useMemo(() => (
+    categoryFilter === 'All'
+      ? events
+      : events.filter((e) => e.category === categoryFilter)
+  ), [events, categoryFilter]);
+
+  const eventsByDate = useMemo(() => {
+    const map: Record<string, TrainingCalendarEvent[]> = {};
+    for (const event of filteredEvents) {
+      if (!map[event.date]) map[event.date] = [];
+      map[event.date].push(event);
+    }
+    for (const key of Object.keys(map)) {
+      map[key].sort((a, b) => a.startTime.localeCompare(b.startTime));
+    }
+    return map;
+  }, [filteredEvents]);
+
+  const calendarDays = useMemo(() => {
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const prevMonthDays = new Date(year, month, 0).getDate();
+
+    const days: Array<{ day: number; inMonth: boolean; dateStr: string }> = [];
+
+    for (let i = firstDay - 1; i >= 0; i--) {
+      const d = prevMonthDays - i;
+      const m = month === 0 ? 12 : month;
+      const y = month === 0 ? year - 1 : year;
+      days.push({ day: d, inMonth: false, dateStr: `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}` });
+    }
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      days.push({
+        day: d,
+        inMonth: true,
+        dateStr: `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`,
+      });
+    }
+
+    const remaining = 7 - (days.length % 7);
+    if (remaining < 7) {
+      for (let d = 1; d <= remaining; d++) {
+        const m = month + 2 > 12 ? 1 : month + 2;
+        const y = month + 2 > 12 ? year + 1 : year;
+        days.push({ day: d, inMonth: false, dateStr: `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}` });
+      }
+    }
+
+    return days;
+  }, [year, month]);
+
+  return (
+    <div className="tc-container">
+      <div className="tc-toolbar">
+        <div className="tc-nav">
+          <button className="tc-nav-btn" onClick={goToPrevMonth} aria-label="Previous month"><ChevronLeft size={16} /></button>
+          <h2>{MONTH_NAMES[month]} {year}</h2>
+          <button className="tc-nav-btn" onClick={goToNextMonth} aria-label="Next month"><ChevronRight size={16} /></button>
+          <button className="tc-today-btn" onClick={goToToday}>Today</button>
+        </div>
+        <div className="tc-legend">
+          <button
+            className={`tc-legend-item ${categoryFilter === 'All' ? 'active' : ''}`}
+            onClick={() => setCategoryFilter('All')}
+          >
+            All
+          </button>
+          {(Object.keys(CATEGORY_COLORS) as TrainingCalendarCategory[]).map((cat) => (
+            <button
+              key={cat}
+              className={`tc-legend-item ${categoryFilter === cat ? 'active' : ''}`}
+              onClick={() => setCategoryFilter(cat === categoryFilter ? 'All' : cat)}
+            >
+              <span className="tc-legend-dot" style={{ background: CATEGORY_COLORS[cat] }} />
+              {cat}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="tc-grid">
+        {DAY_NAMES.map((day) => (
+          <div key={day} className="tc-day-header">{day}</div>
+        ))}
+        {calendarDays.map((cell, idx) => {
+          const dayEvents = eventsByDate[cell.dateStr] ?? [];
+          return (
+            <div
+              key={idx}
+              className={`tc-cell ${cell.inMonth ? '' : 'tc-cell-outside'} ${dayEvents.length > 0 ? 'tc-cell-has-events' : ''}`}
+            >
+              <span className="tc-cell-day">{cell.day}</span>
+              <div className="tc-cell-events">
+                {dayEvents.slice(0, 2).map((ev) => (
+                  <button
+                    key={ev.id}
+                    className="tc-event-pill"
+                    style={{ borderLeftColor: CATEGORY_COLORS[ev.category] }}
+                    onClick={() => setSelectedEvent(ev)}
+                    title={ev.title}
+                  >
+                    <span className="tc-event-time">{formatTime12h(ev.startTime)}</span>
+                    <span className="tc-event-title">{ev.title}</span>
+                  </button>
+                ))}
+                {dayEvents.length > 2 && (
+                  <span className="tc-more-events">+{dayEvents.length - 2} more</span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {selectedEvent && (
+        <div className="tc-detail-overlay" onClick={() => setSelectedEvent(null)}>
+          <div className="tc-detail-card" onClick={(e) => e.stopPropagation()}>
+            <div className="tc-detail-header">
+              <div
+                className="tc-detail-category"
+                style={{ background: CATEGORY_COLORS[selectedEvent.category] }}
+              >
+                {selectedEvent.category}
+              </div>
+              <button className="tc-detail-close" onClick={() => setSelectedEvent(null)} aria-label="Close event details">
+                <X size={18} />
+              </button>
+            </div>
+            <h3>{selectedEvent.title}</h3>
+            <p className="tc-detail-desc">{selectedEvent.description}</p>
+            <div className="tc-detail-meta">
+              <div className="tc-detail-meta-item">
+                <Clock3 size={14} />
+                <span>
+                  {formatTime12h(selectedEvent.startTime)} – {formatTime12h(selectedEvent.endTime)}
+                </span>
+              </div>
+              <div className="tc-detail-meta-item">
+                <MapPin size={14} />
+                <span>{selectedEvent.location}</span>
+              </div>
+              <div className="tc-detail-meta-item">
+                <User size={14} />
+                <span>{selectedEvent.instructor}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
