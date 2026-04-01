@@ -29,7 +29,9 @@ function getComparableValue(user: AdminUser, key: SortKey): string {
   if (key === 'actions') {
     return user.name;
   }
-  return user[key];
+  const val = user[key];
+  if (Array.isArray(val)) return val.join(', ');
+  return val;
 }
 
 function AdminCenterPage() {

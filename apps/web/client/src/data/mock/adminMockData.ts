@@ -1,13 +1,21 @@
 export type AdminUser = {
   id: string;
   name: string;
+  title: string;
   email: string;
+  phone: string;
   teamflectRole: string;
-  manager: string;
-  attachments: string;
   department: string;
-  jobTitle: string;
+  officeLocation: string;
+  birthday: string;
   country: string;
+  employeeHireDate: string;
+  manager: string;
+  reportsTo: string;
+  directReports: string[];
+  jobTitle: string;
+  rolePosition: string;
+  attachments: string;
 };
 
 export type AdminCompetency = {
@@ -55,46 +63,78 @@ export const adminMockData = {
     {
       id: 'admin-user-1',
       name: 'Michael Chen',
+      title: 'VP of Human Resources',
       email: 'michael.chen@cirrusglobal.com',
+      phone: '+1 (555) 111-2222',
       teamflectRole: 'Admin',
-      manager: 'Sarah Johnson',
-      attachments: 'Policy Ack',
       department: 'Human Resources',
-      jobTitle: 'HR Business Partner',
+      officeLocation: 'New York, NY',
+      birthday: 'November 20, 1985',
       country: 'United States',
+      employeeHireDate: 'January 15, 2015',
+      manager: 'Sarah Johnson',
+      reportsTo: 'Sarah Johnson',
+      directReports: ['Grace Walker', 'James Foster', 'Chloe Bennett'],
+      jobTitle: 'HR Business Partner',
+      rolePosition: 'HR Business Partner',
+      attachments: 'Policy Ack',
     },
     {
       id: 'admin-user-2',
       name: 'Emily Davis',
+      title: 'Marketing Lead',
       email: 'emily.davis@cirrusglobal.com',
+      phone: '+1 (555) 333-4444',
       teamflectRole: 'Manager',
-      manager: 'Sarah Johnson',
-      attachments: 'NDA',
       department: 'Marketing',
-      jobTitle: 'Marketing Lead',
+      officeLocation: 'Toronto, ON',
+      birthday: 'March 8, 1990',
       country: 'Canada',
+      employeeHireDate: 'June 1, 2019',
+      manager: 'Sarah Johnson',
+      reportsTo: 'Sarah Johnson',
+      directReports: ['Ava Turner', 'Mason Reed'],
+      jobTitle: 'Marketing Lead',
+      rolePosition: '',
+      attachments: 'NDA',
     },
     {
       id: 'admin-user-3',
       name: 'John Smith',
+      title: 'Software Engineer',
       email: 'john.smith@cirrusglobal.com',
+      phone: '+44 (20) 7946-0958',
       teamflectRole: 'Employee',
-      manager: 'Michael Chen',
-      attachments: 'Contract',
       department: 'Engineering',
-      jobTitle: 'Software Engineer',
+      officeLocation: 'London, UK',
+      birthday: 'July 14, 1992',
       country: 'United Kingdom',
+      employeeHireDate: 'September 10, 2021',
+      manager: 'Michael Chen',
+      reportsTo: 'Michael Chen',
+      directReports: [],
+      jobTitle: 'Software Engineer',
+      rolePosition: 'Software Engineer',
+      attachments: 'Contract',
     },
     {
       id: 'admin-user-4',
       name: 'Sarah Johnson',
+      title: 'Operations Director',
       email: 'sarah.johnson@cirrusglobal.com',
+      phone: '+1 (555) 555-6666',
       teamflectRole: 'Admin',
-      manager: 'Executive Team',
-      attachments: 'Security Training',
       department: 'Operations',
-      jobTitle: 'Operations Director',
+      officeLocation: 'New York, NY',
+      birthday: 'January 5, 1980',
       country: 'United States',
+      employeeHireDate: 'March 20, 2012',
+      manager: 'Executive Team',
+      reportsTo: 'Executive Team',
+      directReports: ['Michael Chen', 'Emily Davis'],
+      jobTitle: 'Operations Director',
+      rolePosition: '',
+      attachments: 'Security Training',
     },
   ] as AdminUser[],
   competencies: [
