@@ -3,6 +3,7 @@ import './App.css';
 import {
   Award,
   BarChart2,
+  Bell,
   BookOpen,
   Building,
   Calendar,
@@ -207,6 +208,9 @@ function App() {
               HR Center
             </button>
           )}
+          <button className="notification-bell" title="Notifications">
+            <Bell size={20} />
+          </button>
           <div className="profile-wrapper" ref={profileRef}>
             <div
               className="user-info"

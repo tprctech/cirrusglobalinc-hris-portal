@@ -59,6 +59,25 @@
   color: var(--white);
 }
 
+.notification-bell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: #555;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 50%;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.notification-bell:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--primary);
+}
+
 .profile-wrapper {
   position: relative;
 }
