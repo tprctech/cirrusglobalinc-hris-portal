@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BarChart3, CalendarDays, CircleDot, ListChecks, Pencil, Plus, Trash2 } from 'lucide-react';
+import { BarChart3, CalendarDays, CircleDot, Pencil, Plus, Trash2 } from 'lucide-react';
 import TemplateBuilderModal, {
   type BuilderExistingSectionOption,
   type BuilderQuestionType,
@@ -28,10 +28,12 @@ type ManagedSurvey = {
   id: string;
   title: string;
   audience: string;
+  department: string;
   createdDate: string;
   dueDate: string;
   status: SurveyStatus;
   responseCount: number;
+  questionCount: number;
 };
 
 type SurveyTemplatePayload = {
@@ -331,16 +333,19 @@ function SurveysPage() {
       )));
     } else {
       const surveyId = `my-${Date.now()}`;
+      const totalQuestions = sections.reduce((sum, s) => sum + s.questions.length, 0);
       setSurveyTemplatesById((previous) => ({ ...previous, [surveyId]: payload }));
       setManagedSurveys((previous) => [
         {
           id: surveyId,
           title: formTitle,
           audience,
+          department: scope === 'All Employees' ? 'All Departments' : 'My Department',
           createdDate: formatDateForDisplay(new Date()),
           dueDate: toUsDate(dueDate),
           status: 'Draft',
           responseCount: 0,
+          questionCount: totalQuestions,
         },
         ...previous,
       ]);
@@ -370,7 +375,7 @@ function SurveysPage() {
           className={`surveys-tab ${activeTab === 'my' ? 'active' : ''}`}
           onClick={() => setActiveTab('my')}
         >
-          My Surveys
+          Survey Dashboard
         </button>
       </div>
 
@@ -413,11 +418,10 @@ function SurveysPage() {
               <thead>
                 <tr>
                   <th>Survey</th>
-                  <th>Audience</th>
-                  <th>Created</th>
+                  <th>Department</th>
+                  <th>Created On</th>
                   <th>Due Date</th>
-                  <th>Status</th>
-                  <th>Responses</th>
+                  <th>No. of Questions</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -425,7 +429,7 @@ function SurveysPage() {
                 {managedSurveys.map((survey) => (
                   <tr key={survey.id}>
                     <td>{survey.title}</td>
-                    <td>{survey.audience}</td>
+                    <td>{survey.department}</td>
                     <td>
                       <span className="table-icon-text">
                         <CalendarDays size={14} />
@@ -433,23 +437,9 @@ function SurveysPage() {
                       </span>
                     </td>
                     <td>{survey.dueDate}</td>
-                    <td>
-                      <span className={statusClassMap[survey.status]}>{survey.status}</span>
-                    </td>
-                    <td>
-                      <span className="table-icon-text">
-                        <ListChecks size={14} />
-                        {survey.responseCount}
-                      </span>
-                    </td>
+                    <td>{survey.questionCount}</td>
                     <td>
                       <div className="table-actions">
-                        <button
-                          className="responses-btn"
-                          onClick={() => handleViewResponses(survey)}
-                        >
-                          View Responses
-                        </button>
                         <button
                           className="table-action-btn"
                           onClick={() => openEditSurveyModal(survey)}
