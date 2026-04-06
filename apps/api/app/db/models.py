@@ -1,0 +1,304 @@
+from datetime import date, datetime
+from sqlalchemy import (
+    Boolean, Column, Date, DateTime, ForeignKey, Integer, Numeric, String, Text,
+    Table,
+)
+from sqlalchemy.orm import DeclarativeBase, relationship
+
+
+class Base(DeclarativeBase):
+    pass
+
+
+role_competencies = Table(
+    "role_competencies",
+    Base.metadata,
+    Column("role_id", Integer, ForeignKey("roles.id", ondelete="CASCADE"), primary_key=True),
+    Column("competency_id", Integer, ForeignKey("competencies.id", ondelete="CASCADE"), primary_key=True),
+)
+
+
+class Employee(Base):
+    __tablename__ = "employees"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    employee_id = Column(String(50), unique=True, nullable=False)
+    first_name = Column(String(100), nullable=False)
+    middle_name = Column(String(100), nullable=True, default="")
+    last_name = Column(String(100), nullable=False)
+    birthdate = Column(Date, nullable=True)
+    gender = Column(String(20), nullable=True, default="")
+    marital_status = Column(String(30), nullable=True, default="")
+    home_address = Column(Text, nullable=True, default="")
+    permanent_address = Column(Text, nullable=True, default="")
+    team = Column(String(100), nullable=True, default="")
+    regularization_date = Column(Date, nullable=True)
+    department = Column(String(100), nullable=True, default="")
+    job_title = Column(String(150), nullable=True, default="")
+    job_description = Column(Text, nullable=True, default="")
+    teamflect_role = Column(String(50), nullable=True, default="Employee")
+    date_hired = Column(Date, nullable=True)
+    status = Column(String(30), nullable=True, default="Active")
+    supervisor = Column(String(200), nullable=True, default="")
+    reviewers = Column(Text, nullable=True, default="")
+    sss_number = Column(String(50), nullable=True, default="")
+    hdmf_number = Column(String(50), nullable=True, default="")
+    phil_health_number = Column(String(50), nullable=True, default="")
+    tin = Column(String(50), nullable=True, default="")
+    email = Column(String(200), nullable=True, default="")
+    phone = Column(String(50), nullable=True, default="")
+    country = Column(String(100), nullable=True, default="")
+    office_location = Column(String(200), nullable=True, default="")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class Department(Base):
+    __tablename__ = "departments"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(150), unique=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    roles = relationship("Role", back_populates="department_rel")
+
+
+class Role(Base):
+    __tablename__ = "roles"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    role_job_title = Column(String(200), nullable=False)
+    role_description = Column(Text, nullable=True, default="")
+    users_in_role = Column(Integer, nullable=True, default=0)
+    department_id = Column(Integer, ForeignKey("departments.id", ondelete="SET NULL"), nullable=True)
+    created_by = Column(String(200), nullable=True, default="")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    department_rel = relationship("Department", back_populates="roles")
+    competencies = relationship("Competency", secondary=role_competencies, back_populates="roles")
+
+
+class Competency(Base):
+    __tablename__ = "competencies"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    competency_code = Column(String(30), unique=True, nullable=False)
+    competency_name = Column(String(200), nullable=False)
+    competency_description = Column(Text, nullable=True, default="")
+    expectations = Column(Text, nullable=True, default="")
+    competency_level = Column(String(60), nullable=True, default="")
+    competency_experts = Column(String(300), nullable=True, default="")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    learning_materials = relationship("CompetencyLearningMaterial", back_populates="competency", cascade="all, delete-orphan")
+    roles = relationship("Role", secondary=role_competencies, back_populates="competencies")
+
+
+class CompetencyLearningMaterial(Base):
+    __tablename__ = "competency_learning_materials"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    competency_id = Column(Integer, ForeignKey("competencies.id", ondelete="CASCADE"), nullable=False)
+    material_type = Column(String(50), nullable=True, default="Link")
+    url = Column(Text, nullable=True, default="")
+    name = Column(String(300), nullable=True, default="")
+    description = Column(Text, nullable=True, default="")
+    category = Column(String(100), nullable=True, default="")
+    duration = Column(String(50), nullable=True, default="")
+
+    competency = relationship("Competency", back_populates="learning_materials")
+
+
+class ReviewTemplate(Base):
+    __tablename__ = "review_templates"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    title = Column(String(300), nullable=False)
+    description = Column(Text, nullable=True, default="")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    sections = relationship("ReviewTemplateSection", back_populates="template", cascade="all, delete-orphan", order_by="ReviewTemplateSection.sort_order")
+
+
+class ReviewTemplateSection(Base):
+    __tablename__ = "review_template_sections"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    template_id = Column(Integer, ForeignKey("review_templates.id", ondelete="CASCADE"), nullable=False)
+    label = Column(String(300), nullable=False)
+    sort_order = Column(Integer, nullable=False, default=0)
+
+    template = relationship("ReviewTemplate", back_populates="sections")
+    questions = relationship("ReviewTemplateQuestion", back_populates="section", cascade="all, delete-orphan", order_by="ReviewTemplateQuestion.sort_order")
+
+
+class ReviewTemplateQuestion(Base):
+    __tablename__ = "review_template_questions"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    section_id = Column(Integer, ForeignKey("review_template_sections.id", ondelete="CASCADE"), nullable=False)
+    prompt = Column(Text, nullable=False)
+    question_type = Column(String(50), nullable=False, default="Long Answer")
+    options = Column(Text, nullable=True, default="")
+    required = Column(Boolean, nullable=False, default=False)
+    sort_order = Column(Integer, nullable=False, default=0)
+
+    section = relationship("ReviewTemplateSection", back_populates="questions")
+
+
+class ReviewQuestionSet(Base):
+    __tablename__ = "review_question_sets"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    title = Column(String(300), nullable=False)
+    description = Column(Text, nullable=True, default="")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    sections = relationship("ReviewQuestionSetSection", back_populates="question_set", cascade="all, delete-orphan", order_by="ReviewQuestionSetSection.sort_order")
+
+
+class ReviewQuestionSetSection(Base):
+    __tablename__ = "review_question_set_sections"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    question_set_id = Column(Integer, ForeignKey("review_question_sets.id", ondelete="CASCADE"), nullable=False)
+    label = Column(String(300), nullable=False)
+    sort_order = Column(Integer, nullable=False, default=0)
+
+    question_set = relationship("ReviewQuestionSet", back_populates="sections")
+    questions = relationship("ReviewQuestionSetQuestion", back_populates="section", cascade="all, delete-orphan", order_by="ReviewQuestionSetQuestion.sort_order")
+
+
+class ReviewQuestionSetQuestion(Base):
+    __tablename__ = "review_question_set_questions"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    section_id = Column(Integer, ForeignKey("review_question_set_sections.id", ondelete="CASCADE"), nullable=False)
+    prompt = Column(Text, nullable=False)
+    question_type = Column(String(50), nullable=False, default="Long Answer")
+    options = Column(Text, nullable=True, default="")
+    required = Column(Boolean, nullable=False, default=False)
+    sort_order = Column(Integer, nullable=False, default=0)
+
+    section = relationship("ReviewQuestionSetSection", back_populates="questions")
+
+
+class SurveyTemplate(Base):
+    __tablename__ = "survey_templates"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    title = Column(String(300), nullable=False)
+    description = Column(Text, nullable=True, default="")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    sections = relationship("SurveyTemplateSection", back_populates="template", cascade="all, delete-orphan", order_by="SurveyTemplateSection.sort_order")
+
+
+class SurveyTemplateSection(Base):
+    __tablename__ = "survey_template_sections"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    template_id = Column(Integer, ForeignKey("survey_templates.id", ondelete="CASCADE"), nullable=False)
+    label = Column(String(300), nullable=False)
+    sort_order = Column(Integer, nullable=False, default=0)
+
+    template = relationship("SurveyTemplate", back_populates="sections")
+    questions = relationship("SurveyTemplateQuestion", back_populates="section", cascade="all, delete-orphan", order_by="SurveyTemplateQuestion.sort_order")
+
+
+class SurveyTemplateQuestion(Base):
+    __tablename__ = "survey_template_questions"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    section_id = Column(Integer, ForeignKey("survey_template_sections.id", ondelete="CASCADE"), nullable=False)
+    prompt = Column(Text, nullable=False)
+    question_type = Column(String(50), nullable=False, default="Long Answer")
+    options = Column(Text, nullable=True, default="")
+    required = Column(Boolean, nullable=False, default=False)
+    sort_order = Column(Integer, nullable=False, default=0)
+
+    section = relationship("SurveyTemplateSection", back_populates="questions")
+
+
+class SurveyQuestionSet(Base):
+    __tablename__ = "survey_question_sets"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    title = Column(String(300), nullable=False)
+    description = Column(Text, nullable=True, default="")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    sections = relationship("SurveyQuestionSetSection", back_populates="question_set", cascade="all, delete-orphan", order_by="SurveyQuestionSetSection.sort_order")
+
+
+class SurveyQuestionSetSection(Base):
+    __tablename__ = "survey_question_set_sections"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    question_set_id = Column(Integer, ForeignKey("survey_question_sets.id", ondelete="CASCADE"), nullable=False)
+    label = Column(String(300), nullable=False)
+    sort_order = Column(Integer, nullable=False, default=0)
+
+    question_set = relationship("SurveyQuestionSet", back_populates="sections")
+    questions = relationship("SurveyQuestionSetQuestion", back_populates="section", cascade="all, delete-orphan", order_by="SurveyQuestionSetQuestion.sort_order")
+
+
+class SurveyQuestionSetQuestion(Base):
+    __tablename__ = "survey_question_set_questions"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    section_id = Column(Integer, ForeignKey("survey_question_set_sections.id", ondelete="CASCADE"), nullable=False)
+    prompt = Column(Text, nullable=False)
+    question_type = Column(String(50), nullable=False, default="Long Answer")
+    options = Column(Text, nullable=True, default="")
+    required = Column(Boolean, nullable=False, default=False)
+    sort_order = Column(Integer, nullable=False, default=0)
+
+    section = relationship("SurveyQuestionSetSection", back_populates="questions")
+
+
+class RecognitionBadge(Base):
+    __tablename__ = "recognition_badges"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    image = Column(String(100), nullable=True, default="Trophy")
+    title = Column(String(200), nullable=False)
+    description = Column(Text, nullable=True, default="")
+    is_official = Column(Boolean, nullable=False, default=False)
+    point = Column(Integer, nullable=False, default=0)
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class Reward(Base):
+    __tablename__ = "rewards"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    reward_name = Column(String(200), nullable=False)
+    reward_description = Column(Text, nullable=True, default="")
+    reward_category = Column(String(100), nullable=True, default="")
+    required_point = Column(Integer, nullable=False, default=0)
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class RewardRedeem(Base):
+    __tablename__ = "reward_redeems"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    requested_by = Column(String(200), nullable=False)
+    user_mail = Column(String(200), nullable=True, default="")
+    reward_name = Column(String(200), nullable=False)
+    reward_points = Column(Integer, nullable=False, default=0)
+    redeem_date = Column(Date, nullable=True)
+    status = Column(String(30), nullable=False, default="Pending")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
