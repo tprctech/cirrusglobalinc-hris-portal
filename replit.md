@@ -19,18 +19,39 @@ Two workflows are configured:
 ## Tech Stack
 
 - **Frontend**: React 19, TypeScript, Vite 7, @xyflow/react, lucide-react, html-to-image
-- **Backend**: FastAPI, Pydantic, SQLAlchemy, psycopg2-binary, python-jose (JWT), uvicorn, mangum (Lambda adapter), Pillow (image resizing), python-multipart (file uploads)
+- **Backend**: FastAPI, Pydantic, SQLAlchemy, psycopg2-binary, bcrypt, PyJWT, uvicorn, mangum (Lambda adapter), Pillow (image resizing), python-multipart (file uploads)
 - **Database**: PostgreSQL (Replit-managed, via DATABASE_URL)
 - **Infrastructure**: AWS CDK (optional)
+
+## Authentication & Authorization
+
+- **Login**: Username/password auth via JWT tokens stored in localStorage
+- **Session duration**: 24 hours (configurable via `SESSION_DURATION_HOURS` env var)
+- **JWT secret**: Configurable via `JWT_SECRET` env var (defaults to dev secret)
+- **Portal roles**: Employee, Manager, HR, Admin (case-insensitive, normalized on save)
+- **Role-based access**: HR Center only visible/accessible to HR and Admin roles
+- **Auth context**: `useAuth()` hook provides `user`, `login()`, `logout()`, `hasRole()`
+- **Profile data**: Header and profile page reflect logged-in employee's real DB data
+- **User accounts table**: `user_accounts` (username, password_hash, employee_id FK, portal_role)
+- **Future**: Microsoft SSO login will replace username/password
+
+### Test Accounts (dev)
+- `admin` / `admin123` — Admin role (linked to John Brent David)
+- `charlene` / `password123` — HR role (linked to Charlene Quirante)
+- `bary` / `password123` — Employee role (linked to Bary Amalla)
 
 ## Key Files
 
 - `apps/web/client/vite.config.ts` - Vite config (host: 0.0.0.0, port 5000, allowedHosts: true)
+- `apps/web/client/src/app/AuthContext.tsx` - Auth context provider (JWT, role checks)
+- `apps/web/client/src/api/auth.ts` - Auth API client (login, fetchMe, token storage)
+- `apps/web/client/src/pages/LoginPage.tsx` - Login page component
 - `apps/api/app/main.py` - FastAPI entry point (creates DB tables on startup)
 - `apps/api/app/api/v1/router.py` - API route registration
+- `apps/api/app/api/v1/auth.py` - Auth endpoints (login, register, me)
 - `apps/api/app/core/middleware.py` - Audit logging middleware
 - `apps/api/app/db/session.py` - SQLAlchemy engine/session factory
-- `apps/api/app/db/models.py` - All SQLAlchemy ORM models (21 tables)
+- `apps/api/app/db/models.py` - All SQLAlchemy ORM models (22 tables)
 - `apps/api/app/db/init_db.py` - Table creation script
 - `apps/api/app/api/v1/hr_center/` - HR Center CRUD route modules
 - `apps/api/requirements.txt` - Python dependencies
@@ -39,7 +60,9 @@ Two workflows are configured:
 
 - `GET /health` - Health check
 - `GET /docs` - OpenAPI docs
-- `/api/v1/auth/*` - Authentication
+- `POST /api/v1/auth/login` - Login (returns JWT token + user data)
+- `GET /api/v1/auth/me` - Get current user from JWT (Authorization: Bearer header)
+- `POST /api/v1/auth/register` - Register new user account
 - `/api/v1/profile/*` - User profiles
 - `/api/v1/reviews/*` - Performance reviews
 - `/api/v1/kpis/*` - KPI tracking
@@ -64,9 +87,9 @@ Two workflows are configured:
 - `/api/v1/hr/recognitions/rewards` - Reward catalog management
 - `/api/v1/hr/recognitions/redeems` - Reward redeem tracking
 
-## Database Tables (21 total)
+## Database Tables (22 total)
 
-employees, departments, roles, role_competencies, competencies, competency_learning_materials,
+user_accounts, employees, departments, roles, role_competencies, competencies, competency_learning_materials,
 review_templates, review_template_sections, review_template_questions,
 review_question_sets, review_question_set_sections, review_question_set_questions,
 survey_templates, survey_template_sections, survey_template_questions,
@@ -86,3 +109,4 @@ recognition_badges, rewards, reward_redeems
 - Supervisor field: searchable dropdown via `/api/v1/hr/employees/search/lookup`
 - Reviewers field: multi-select with tag chips, same search endpoint
 - `xlsx` npm package used for Excel template download + bulk upload parsing
+- Bulk upload checks for duplicate employees by employee_id, email, or full name before creating

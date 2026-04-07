@@ -18,6 +18,21 @@ role_competencies = Table(
 )
 
 
+class UserAccount(Base):
+    __tablename__ = "user_accounts"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    username = Column(String(150), unique=True, nullable=False)
+    password_hash = Column(String(255), nullable=False)
+    employee_id = Column(Integer, ForeignKey("employees.id", ondelete="CASCADE"), nullable=True)
+    portal_role = Column(String(50), nullable=False, default="Employee")
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    employee = relationship("Employee", backref="user_account")
+
+
 class Employee(Base):
     __tablename__ = "employees"
 

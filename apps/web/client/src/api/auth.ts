@@ -1,0 +1,76 @@
+const API_BASE = '/api/v1/auth';
+
+export interface EmployeeProfile {
+  id: number;
+  employeeId: string;
+  firstName: string;
+  middleName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  department: string;
+  jobTitle: string;
+  jobDescription: string;
+  team: string;
+  supervisor: string;
+  reviewers: string;
+  status: string;
+  portalRole: string;
+  country: string;
+  officeLocation: string;
+  birthdate: string;
+  dateHired: string;
+  profilePhoto: string;
+  gender: string;
+  maritalStatus: string;
+  homeAddress: string;
+}
+
+export interface AuthUser {
+  id: number;
+  username: string;
+  portalRole: string;
+  employee: EmployeeProfile | null;
+}
+
+export interface LoginResponse {
+  token: string;
+  user: AuthUser;
+}
+
+const TOKEN_KEY = 'cirrus_auth_token';
+
+export function getStoredToken(): string | null {
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+export function setStoredToken(token: string): void {
+  localStorage.setItem(TOKEN_KEY, token);
+}
+
+export function clearStoredToken(): void {
+  localStorage.removeItem(TOKEN_KEY);
+}
+
+export async function loginApi(username: string, password: string): Promise<LoginResponse> {
+  const res = await fetch(`${API_BASE}/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({ detail: 'Login failed' }));
+    throw new Error(data.detail || 'Login failed');
+  }
+  return res.json();
+}
+
+export async function fetchMe(token: string): Promise<AuthUser> {
+  const res = await fetch(`${API_BASE}/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    throw new Error('Session expired');
+  }
+  return res.json();
+}

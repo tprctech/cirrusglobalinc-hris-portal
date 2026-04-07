@@ -24,7 +24,8 @@ import {
   User,
   GraduationCap,
 } from 'lucide-react';
-import { currentUser } from '../data/mock/homeMockData';
+import { useAuth } from './AuthContext';
+import LoginPage from '../pages/LoginPage';
 import HomePage from '../pages/employee-portal/HomePage';
 import ProfilePage from '../pages/employee-portal/ProfilePage';
 import KpiPage from '../pages/employee-portal/KpiPage';
@@ -114,6 +115,7 @@ const mockNotifications = [
 ];
 
 function App() {
+  const { user, loading, logout, hasRole } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -122,6 +124,17 @@ function App() {
   const profileRef = useRef<HTMLDivElement>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
   const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const canAccessAdmin = hasRole('HR', 'Admin');
+  const emp = user?.employee;
+  const displayName = emp ? `${emp.firstName} ${emp.lastName}` : user?.username ?? '';
+  const displayRole = emp?.jobTitle || user?.portalRole || '';
+  const displayEmail = emp?.email || '';
+  const displayDepartment = emp?.department || '';
+  const displayLocation = emp?.officeLocation || '';
+  const displayPhone = emp?.phone || '';
+  const displayHireDate = emp?.dateHired || '';
+  const displayPhoto = emp?.profilePhoto || '';
 
   useEffect(() => {
     const normalized = normalizePath(window.location.pathname);
@@ -204,6 +217,23 @@ function App() {
   const isAdminCenter = currentPath.startsWith('/admin');
   const isLmsCenter = currentPath.startsWith('/lms');
 
+  if (loading) {
+    return (
+      <div className="app" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <LoginPage />;
+  }
+
+  if (isAdminCenter && !canAccessAdmin) {
+    navigateTo(ROUTES.home);
+    return null;
+  }
+
   return (
     <div className="app">
       <nav className="navbar">
@@ -212,7 +242,7 @@ function App() {
         </div>
 
         <div className="navbar-right">
-          {!isAdminCenter && !isLmsCenter && (
+          {!isAdminCenter && !isLmsCenter && canAccessAdmin && (
             <button
               className={`admin-btn ${isAdminCenter ? 'active' : ''}`}
               onClick={(event) => navigateTo(ROUTES.adminUsers, event)}
@@ -264,10 +294,14 @@ function App() {
               className="user-info"
               onClick={() => setProfileOpen(!profileOpen)}
             >
-              <div className="user-avatar">{getInitials(currentUser.name)}</div>
+              {displayPhoto ? (
+                <img src={displayPhoto} alt={displayName} className="user-avatar-img" />
+              ) : (
+                <div className="user-avatar">{getInitials(displayName)}</div>
+              )}
               <div className="user-details">
-                <span className="user-name">{currentUser.name}</span>
-                <span className="user-role">{currentUser.role}</span>
+                <span className="user-name">{displayName}</span>
+                <span className="user-role">{displayRole}</span>
               </div>
               <ChevronDown size={14} className={`profile-chevron ${profileOpen ? 'open' : ''}`} />
             </div>
@@ -275,36 +309,50 @@ function App() {
             {profileOpen && (
               <div className="profile-popup">
                 <div className="profile-popup-header">
-                  <div className="profile-popup-avatar">
-                    {getInitials(currentUser.name)}
-                  </div>
+                  {displayPhoto ? (
+                    <img src={displayPhoto} alt={displayName} className="profile-popup-avatar-img" />
+                  ) : (
+                    <div className="profile-popup-avatar">
+                      {getInitials(displayName)}
+                    </div>
+                  )}
                   <div>
-                    <div className="profile-popup-name">{currentUser.name}</div>
-                    <div className="profile-popup-role">{currentUser.role}</div>
+                    <div className="profile-popup-name">{displayName}</div>
+                    <div className="profile-popup-role">{displayRole}</div>
                   </div>
                 </div>
                 <div className="profile-popup-divider" />
                 <div className="profile-popup-details">
-                  <div className="profile-detail-item">
-                    <Mail size={14} />
-                    <span>{currentUser.email}</span>
-                  </div>
-                  <div className="profile-detail-item">
-                    <Building size={14} />
-                    <span>{currentUser.department}</span>
-                  </div>
-                  <div className="profile-detail-item">
-                    <MapPin size={14} />
-                    <span>{currentUser.location}</span>
-                  </div>
-                  <div className="profile-detail-item">
-                    <Phone size={14} />
-                    <span>{currentUser.phone}</span>
-                  </div>
-                  <div className="profile-detail-item">
-                    <Calendar size={14} />
-                    <span>Joined {currentUser.hireDate}</span>
-                  </div>
+                  {displayEmail && (
+                    <div className="profile-detail-item">
+                      <Mail size={14} />
+                      <span>{displayEmail}</span>
+                    </div>
+                  )}
+                  {displayDepartment && (
+                    <div className="profile-detail-item">
+                      <Building size={14} />
+                      <span>{displayDepartment}</span>
+                    </div>
+                  )}
+                  {displayLocation && (
+                    <div className="profile-detail-item">
+                      <MapPin size={14} />
+                      <span>{displayLocation}</span>
+                    </div>
+                  )}
+                  {displayPhone && (
+                    <div className="profile-detail-item">
+                      <Phone size={14} />
+                      <span>{displayPhone}</span>
+                    </div>
+                  )}
+                  {displayHireDate && (
+                    <div className="profile-detail-item">
+                      <Calendar size={14} />
+                      <span>Joined {displayHireDate}</span>
+                    </div>
+                  )}
                 </div>
                 <div className="profile-popup-divider" />
                 <button className="profile-popup-link" onClick={openProfilePage}>
@@ -317,7 +365,7 @@ function App() {
                     Employee Portal
                   </button>
                 )}
-                <button className="profile-popup-logout">
+                <button className="profile-popup-logout" onClick={() => { setProfileOpen(false); logout(); }}>
                   <LogOut size={14} />
                   Logout
                 </button>

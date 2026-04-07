@@ -16,6 +16,7 @@ import {
 import { adminMockData, type AdminCompetency } from '../../data/mock/adminMockData';
 import { ROUTES } from '../../app/routes';
 import { profilePageMockData } from '../../data/mock/profileMockData';
+import { useAuth } from '../../app/AuthContext';
 import ConfirmationDialog from '../../components/ConfirmationDialog';
 import {
   getStoredCertifications,
@@ -49,6 +50,32 @@ type UploadedAttachment = {
 };
 
 function ProfilePage() {
+  const { user } = useAuth();
+  const emp = user?.employee;
+  const profileData = {
+    name: emp ? `${emp.firstName} ${emp.lastName}` : profilePageMockData.name,
+    title: emp?.jobTitle || profilePageMockData.title,
+    departmentTag: emp?.department || profilePageMockData.departmentTag,
+    adminTag: user?.portalRole || profilePageMockData.adminTag,
+    recognitionPoints: profilePageMockData.recognitionPoints,
+    basicInformation: {
+      department: emp?.department || profilePageMockData.basicInformation.department,
+      officeLocation: emp?.officeLocation || profilePageMockData.basicInformation.officeLocation,
+      birthday: emp?.birthdate || profilePageMockData.basicInformation.birthday,
+      country: emp?.country || profilePageMockData.basicInformation.country,
+      employeeHireDate: emp?.dateHired || profilePageMockData.basicInformation.employeeHireDate,
+    },
+    contactInformation: {
+      email: emp?.email || profilePageMockData.contactInformation.email,
+      phone: emp?.phone || profilePageMockData.contactInformation.phone,
+    },
+    reportingStructure: {
+      reportsTo: emp?.supervisor || profilePageMockData.reportingStructure.reportsTo,
+      directReports: profilePageMockData.reportingStructure.directReports,
+    },
+    roleInformation: profilePageMockData.roleInformation,
+    profilePhoto: emp?.profilePhoto || '',
+  };
   const [attachments, setAttachments] = useState<UploadedAttachment[]>([]);
   const [selectedCompetency, setSelectedCompetency] = useState<AdminCompetency | null>(null);
   const [pendingDeleteAttachment, setPendingDeleteAttachment] = useState<UploadedAttachment | null>(null);
@@ -130,29 +157,33 @@ function ProfilePage() {
 
       <article className="profile-hero-card">
         <div className="profile-hero-main">
-          <div className="profile-hero-avatar">{getInitials(profilePageMockData.name)}</div>
+          {profileData.profilePhoto ? (
+            <img src={profileData.profilePhoto} alt={profileData.name} className="profile-hero-avatar-img" />
+          ) : (
+            <div className="profile-hero-avatar">{getInitials(profileData.name)}</div>
+          )}
           <div className="profile-hero-meta">
-            <h2>{profilePageMockData.name}</h2>
-            <p>{profilePageMockData.title}</p>
+            <h2>{profileData.name}</h2>
+            <p>{profileData.title}</p>
             <div className="profile-hero-tags">
-              <span className="hero-tag hero-tag-primary">{profilePageMockData.adminTag}</span>
-              <span className="hero-tag">{profilePageMockData.departmentTag}</span>
+              <span className="hero-tag hero-tag-primary">{profileData.adminTag}</span>
+              <span className="hero-tag">{profileData.departmentTag}</span>
             </div>
             <div className="profile-hero-inline">
               <span>
                 <Mail size={16} />
-                {profilePageMockData.contactInformation.email}
+                {profileData.contactInformation.email}
               </span>
               <span>
                 <MapPin size={16} />
-                {profilePageMockData.basicInformation.officeLocation}
+                {profileData.basicInformation.officeLocation}
               </span>
             </div>
           </div>
         </div>
         <aside className="profile-hero-points">
           <Award size={24} />
-          <strong>{profilePageMockData.recognitionPoints}</strong>
+          <strong>{profileData.recognitionPoints}</strong>
           <p>Recognition Points</p>
         </aside>
       </article>
@@ -166,23 +197,23 @@ function ProfilePage() {
           <div className="profile-field-list">
             <div className="profile-field">
               <span>Department</span>
-              <strong>{profilePageMockData.basicInformation.department}</strong>
+              <strong>{profileData.basicInformation.department}</strong>
             </div>
             <div className="profile-field">
               <span>Office Location</span>
-              <strong>{profilePageMockData.basicInformation.officeLocation}</strong>
+              <strong>{profileData.basicInformation.officeLocation}</strong>
             </div>
             <div className="profile-field">
               <span>Birthday</span>
-              <strong>{profilePageMockData.basicInformation.birthday}</strong>
+              <strong>{profileData.basicInformation.birthday}</strong>
             </div>
             <div className="profile-field">
               <span>Country</span>
-              <strong>{profilePageMockData.basicInformation.country}</strong>
+              <strong>{profileData.basicInformation.country}</strong>
             </div>
             <div className="profile-field">
               <span>Employee Hire Date</span>
-              <strong>{profilePageMockData.basicInformation.employeeHireDate}</strong>
+              <strong>{profileData.basicInformation.employeeHireDate}</strong>
             </div>
           </div>
         </article>
@@ -195,11 +226,11 @@ function ProfilePage() {
           <div className="profile-field-list">
             <div className="profile-field">
               <span>Email</span>
-              <strong>{profilePageMockData.contactInformation.email}</strong>
+              <strong>{profileData.contactInformation.email}</strong>
             </div>
             <div className="profile-field">
               <span>Phone</span>
-              <strong>{profilePageMockData.contactInformation.phone}</strong>
+              <strong>{profileData.contactInformation.phone}</strong>
             </div>
           </div>
         </article>
@@ -225,16 +256,16 @@ function ProfilePage() {
               <div className="profile-person-list">
                 <div className="profile-person-pill">
                   <UserRound size={16} />
-                  {profilePageMockData.reportingStructure.reportsTo}
+                  {profileData.reportingStructure.reportsTo}
                 </div>
               </div>
             </div>
             <div className="profile-field">
               <span>
-                Direct Reports ({profilePageMockData.reportingStructure.directReports.length})
+                Direct Reports ({profileData.reportingStructure.directReports.length})
               </span>
               <div className="profile-person-list">
-                {profilePageMockData.reportingStructure.directReports.map((person) => (
+                {profileData.reportingStructure.directReports.map((person) => (
                   <div key={person} className="profile-person-pill">
                     <UserRound size={16} />
                     {person}
@@ -253,16 +284,16 @@ function ProfilePage() {
           <div className="profile-field-list">
             <div className="profile-field">
               <span>Role/Position</span>
-              <strong>{profilePageMockData.roleInformation.rolePosition}</strong>
+              <strong>{profileData.roleInformation.rolePosition}</strong>
             </div>
             <div className="profile-field">
               <span>Role Description</span>
-              <strong>{profilePageMockData.roleInformation.roleDescription}</strong>
+              <strong>{profileData.roleInformation.roleDescription}</strong>
             </div>
             <div className="profile-field">
               <span>Required Competencies</span>
               <div className="profile-chip-list">
-                {profilePageMockData.roleInformation.requiredCompetencies.map((competency) => (
+                {profileData.roleInformation.requiredCompetencies.map((competency) => (
                   <button
                     key={competency}
                     className="profile-chip profile-chip-button"
@@ -285,12 +316,12 @@ function ProfilePage() {
         </div>
 
         <div className="profile-certification-list">
-          {certifications.filter((item) => item.employeeName === profilePageMockData.name).length === 0 && (
+          {certifications.filter((item) => item.employeeName === profileData.name).length === 0 && (
             <p>No certifications acquired yet. Complete training in L&amp;D to generate certificates.</p>
           )}
 
           {certifications
-            .filter((item) => item.employeeName === profilePageMockData.name)
+            .filter((item) => item.employeeName === profileData.name)
             .map((item) => (
               <div key={item.id} className="profile-certification-item">
                 <div>
