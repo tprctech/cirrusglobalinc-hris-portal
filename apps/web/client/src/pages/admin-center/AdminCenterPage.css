@@ -556,7 +556,7 @@
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
-  width: 240px;
+  width: 200px;
   max-height: 360px;
   overflow-y: auto;
   background: var(--white);
@@ -564,7 +564,7 @@
   border-radius: 10px;
   box-shadow: 0 4px 16px rgba(0,0,0,0.12);
   z-index: 20;
-  padding: 8px 0;
+  padding: 6px 0;
 }
 
 .admin-column-picker-title {
@@ -583,7 +583,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 14px;
+  padding: 5px 12px;
   font-size: 13px;
   cursor: pointer;
   color: var(--charcoal);
@@ -591,6 +591,14 @@
 
 .admin-column-picker-option:hover {
   background: var(--gray-50);
+}
+
+.admin-column-picker-option input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  margin: 0;
+  cursor: pointer;
 }
 
 .admin-column-picker-option input:disabled {
