@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import AdminCenterSidebar from '../../../components/AdminCenterSidebar';
 import AdminTablePagination from '../../../components/AdminTablePagination';
 import ConfirmationDialog from '../../../components/ConfirmationDialog';
+import { useAuth } from '../../../app/AuthContext';
 import '../AdminCenterPage.css';
 
 type AdminRoleLibraryPageProps = {
@@ -49,6 +50,7 @@ function emptyDraft(): RoleDraft {
 }
 
 function AdminRoleLibraryPage({ onNavigate }: AdminRoleLibraryPageProps) {
+  const { user } = useAuth();
   const [roles, setRoles] = useState<RoleRecord[]>([]);
   const [departments, setDepartments] = useState<DeptRecord[]>([]);
   const [competencies, setCompetencies] = useState<CompRecord[]>([]);
@@ -138,7 +140,7 @@ function AdminRoleLibraryPage({ onNavigate }: AdminRoleLibraryPageProps) {
           role_job_title: `${role.role_job_title} (Copy)`,
           role_description: role.role_description,
           department_id: role.department_id,
-          created_by: role.created_by || 'Admin',
+          created_by: user?.employee?.displayName || user?.email || 'Admin',
           status: role.status || 'Active',
           competency_ids: compIds.length > 0 ? compIds : (detail?.competency_ids ?? []),
         }),
@@ -201,7 +203,7 @@ function AdminRoleLibraryPage({ onNavigate }: AdminRoleLibraryPageProps) {
           role_job_title: newRole.roleJobTitle.trim(),
           role_description: newRole.roleDescription.trim(),
           department_id: newRole.departmentId,
-          created_by: 'Admin',
+          created_by: user?.employee?.displayName || user?.email || 'Admin',
           status: newRole.status,
           competency_ids: newRole.competencyIds,
         }),

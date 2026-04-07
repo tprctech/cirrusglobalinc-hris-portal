@@ -3,6 +3,7 @@ import { Plus, X } from 'lucide-react';
 import AdminCenterSidebar from '../../../components/AdminCenterSidebar';
 import AdminTablePagination from '../../../components/AdminTablePagination';
 import ConfirmationDialog from '../../../components/ConfirmationDialog';
+import { useAuth } from '../../../app/AuthContext';
 import type { AdminLearningMaterial, CompetencyLevel } from '../../../data/mock/adminMockData';
 import '../AdminCenterPage.css';
 
@@ -125,6 +126,7 @@ function materialsToApi(mats: AdminLearningMaterial[]) {
 }
 
 function AdminCompetencyLibraryPage({ onNavigate }: AdminCompetencyLibraryPageProps) {
+  const { user } = useAuth();
   const [competencies, setCompetencies] = useState<ApiCompetency[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingCompetency, setEditingCompetency] = useState<EditCompetency | null>(null);
@@ -339,7 +341,7 @@ function AdminCompetencyLibraryPage({ onNavigate }: AdminCompetencyLibraryPagePr
           expectations: newCompetency.expectations.trim(),
           competency_level: newCompetency.competencyLevel,
           competency_experts: newCompetency.competencyExperts.trim(),
-          created_by: 'Admin',
+          created_by: user?.employee?.displayName || user?.email || 'Admin',
           status: newCompetency.status,
           learning_materials: materialsToApi(newCompetency.learningMaterials),
         }),

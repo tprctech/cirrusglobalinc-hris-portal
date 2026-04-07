@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import AdminCenterSidebar from '../../../components/AdminCenterSidebar';
 import AdminTablePagination from '../../../components/AdminTablePagination';
 import ConfirmationDialog from '../../../components/ConfirmationDialog';
+import { useAuth } from '../../../app/AuthContext';
 import '../AdminCenterPage.css';
 
 type AdminDepartmentLibraryPageProps = {
@@ -34,6 +35,7 @@ function emptyDraft(): DepartmentDraft {
 const API_BASE = '/api/v1/hr/departments';
 
 function AdminDepartmentLibraryPage({ onNavigate }: AdminDepartmentLibraryPageProps) {
+  const { user } = useAuth();
   const [departments, setDepartments] = useState<DepartmentRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -84,7 +86,7 @@ function AdminDepartmentLibraryPage({ onNavigate }: AdminDepartmentLibraryPagePr
         body: JSON.stringify({
           name: draft.name.trim(),
           description: draft.description.trim(),
-          created_by: 'Admin',
+          created_by: user?.employee?.displayName || user?.email || 'Admin',
           status: draft.status,
         }),
       });
