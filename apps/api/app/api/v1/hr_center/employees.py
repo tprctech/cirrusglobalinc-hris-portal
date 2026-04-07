@@ -145,6 +145,7 @@ def search_employees(q: str = "", db: Session = Depends(get_db)):
         rows = db.query(Employee).filter(
             (Employee.first_name.ilike(term)) |
             (Employee.last_name.ilike(term)) |
+            (Employee.display_name.ilike(term)) |
             (Employee.email.ilike(term))
         ).limit(20).all()
     return [
@@ -154,6 +155,7 @@ def search_employees(q: str = "", db: Session = Depends(get_db)):
             "first_name": r.first_name,
             "middle_name": r.middle_name or "",
             "last_name": r.last_name,
+            "display_name": r.display_name or "",
             "email": r.email or "",
         }
         for r in rows

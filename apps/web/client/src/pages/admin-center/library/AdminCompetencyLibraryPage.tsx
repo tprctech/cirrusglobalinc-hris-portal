@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Plus, X } from 'lucide-react';
 import AdminCenterSidebar from '../../../components/AdminCenterSidebar';
 import AdminTablePagination from '../../../components/AdminTablePagination';
 import ConfirmationDialog from '../../../components/ConfirmationDialog';
 import { useAuth } from '../../../app/AuthContext';
+import { searchEmployees } from '../../../api/employees';
 import type { AdminLearningMaterial, CompetencyLevel } from '../../../data/mock/adminMockData';
 import '../AdminCenterPage.css';
 
@@ -123,6 +124,106 @@ function materialsToApi(mats: AdminLearningMaterial[]) {
     category: m.category || '',
     duration: m.duration || '',
   }));
+}
+
+type ExpertsPickerProps = {
+  value: string;
+  onChange: (value: string) => void;
+  id?: string;
+};
+
+function ExpertsPicker({ value, onChange, id }: ExpertsPickerProps) {
+  const selected = useMemo(() => value ? value.split(',').map((s) => s.trim()).filter(Boolean) : [], [value]);
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<{ id: number; first_name: string; middle_name: string; last_name: string; display_name?: string; email: string }[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  function handleSearch(q: string) {
+    setQuery(q);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (q.trim().length < 2) {
+      setResults([]);
+      setShowDropdown(false);
+      return;
+    }
+    debounceRef.current = setTimeout(async () => {
+      const data = await searchEmployees(q.trim());
+      setResults(data);
+      setShowDropdown(true);
+    }, 300);
+  }
+
+  function displayName(emp: { first_name: string; middle_name: string; last_name: string; display_name?: string }) {
+    if (emp.display_name) return emp.display_name;
+    return [emp.first_name, emp.middle_name, emp.last_name].filter(Boolean).join(' ');
+  }
+
+  function addExpert(emp: { first_name: string; middle_name: string; last_name: string; display_name?: string }) {
+    const name = displayName(emp);
+    if (selected.includes(name)) return;
+    const updated = [...selected, name].join(', ');
+    onChange(updated);
+    setQuery('');
+    setResults([]);
+    setShowDropdown(false);
+  }
+
+  function removeExpert(name: string) {
+    const updated = selected.filter((s) => s !== name).join(', ');
+    onChange(updated);
+  }
+
+  return (
+    <div ref={containerRef} style={{ position: 'relative' }}>
+      <div className="experts-picker-tags">
+        {selected.map((name) => (
+          <span key={name} className="experts-picker-tag">
+            {name}
+            <button type="button" onClick={() => removeExpert(name)} className="experts-picker-tag-remove">
+              <X size={12} />
+            </button>
+          </span>
+        ))}
+      </div>
+      <input
+        id={id}
+        value={query}
+        onChange={(e) => handleSearch(e.target.value)}
+        onFocus={() => { if (results.length > 0) setShowDropdown(true); }}
+        placeholder={selected.length > 0 ? 'Search more users...' : 'Search users...'}
+        autoComplete="off"
+      />
+      {showDropdown && results.length > 0 && (
+        <div className="experts-picker-dropdown">
+          {results.filter((emp) => !selected.includes(displayName(emp))).map((emp) => (
+            <div
+              key={emp.id}
+              className="experts-picker-option"
+              onClick={() => addExpert(emp)}
+            >
+              <span className="experts-picker-option-name">{displayName(emp)}</span>
+              <span className="experts-picker-option-email">{emp.email}</span>
+            </div>
+          ))}
+          {results.filter((emp) => !selected.includes(displayName(emp))).length === 0 && (
+            <div className="experts-picker-option" style={{ color: 'var(--gray-400)', cursor: 'default' }}>All results already selected</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function AdminCompetencyLibraryPage({ onNavigate }: AdminCompetencyLibraryPageProps) {
@@ -582,11 +683,10 @@ function AdminCompetencyLibraryPage({ onNavigate }: AdminCompetencyLibraryPagePr
               </div>
               <div className="admin-form-field">
                 <label htmlFor="add-competency-experts">Competency Expert(s) (optional)</label>
-                <input
+                <ExpertsPicker
                   id="add-competency-experts"
                   value={newCompetency.competencyExperts}
-                  onChange={(e) => setNewCompetency((prev) => ({ ...prev, competencyExperts: e.target.value }))}
-                  placeholder="Enter expert names"
+                  onChange={(val) => setNewCompetency((prev) => ({ ...prev, competencyExperts: val }))}
                 />
               </div>
               <div className="admin-form-field">
@@ -693,11 +793,10 @@ function AdminCompetencyLibraryPage({ onNavigate }: AdminCompetencyLibraryPagePr
               </div>
               <div className="admin-form-field">
                 <label htmlFor="edit-competency-experts">Competency Expert(s) (optional)</label>
-                <input
+                <ExpertsPicker
                   id="edit-competency-experts"
                   value={editingCompetency.competencyExperts}
-                  onChange={(e) => setEditingCompetency((prev) => prev ? { ...prev, competencyExperts: e.target.value } : prev)}
-                  placeholder="Enter expert names"
+                  onChange={(val) => setEditingCompetency((prev) => prev ? { ...prev, competencyExperts: val } : prev)}
                 />
               </div>
               <div className="admin-form-field">
