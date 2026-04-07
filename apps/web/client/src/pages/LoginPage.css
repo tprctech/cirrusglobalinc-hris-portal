@@ -106,6 +106,86 @@
   text-align: left;
 }
 
+.login-forgot-row {
+  text-align: right;
+  margin-top: -8px;
+}
+
+.login-forgot-link {
+  background: none;
+  border: none;
+  color: #0ea5e9;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+}
+
+.login-forgot-link:hover {
+  color: #0284c7;
+  text-decoration: underline;
+}
+
+.login-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.login-modal {
+  background: #fff;
+  border-radius: 16px;
+  padding: 40px 36px;
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+
+.login-modal-icon {
+  margin-bottom: 20px;
+}
+
+.login-modal-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin: 0 0 12px;
+}
+
+.login-modal-message {
+  font-size: 14px;
+  color: #374151;
+  margin: 0 0 12px;
+  line-height: 1.5;
+}
+
+.login-modal-note {
+  font-size: 13px;
+  color: #6b7280;
+  margin: 0 0 24px;
+  line-height: 1.5;
+}
+
+.login-modal-btn {
+  padding: 10px 32px;
+  background: #0ea5e9;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.login-modal-btn:hover {
+  background: #0284c7;
+}
+
 .login-footer {
   margin-top: 32px;
   font-size: 12px;
