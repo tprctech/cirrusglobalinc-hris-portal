@@ -33,6 +33,22 @@ type ApiEmployee = {
   office_location: string;
 };
 
+function isoToDisplay(iso: string | null): string {
+  if (!iso) return '';
+  const parts = iso.split('-');
+  if (parts.length !== 3) return iso;
+  const [y, m, d] = parts;
+  return `${parseInt(m)}/${parseInt(d)}/${y}`;
+}
+
+function displayToIso(display: string): string | null {
+  if (!display) return null;
+  const parts = display.split('/');
+  if (parts.length !== 3) return display || null;
+  const [m, d, y] = parts;
+  return `${y.padStart(4, '0')}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+}
+
 function apiToFrontend(e: ApiEmployee): AdminUser {
   return {
     id: e.id,
@@ -40,18 +56,18 @@ function apiToFrontend(e: ApiEmployee): AdminUser {
     firstName: e.first_name,
     middleName: e.middle_name || '',
     lastName: e.last_name,
-    birthdate: e.birthdate || '',
+    birthdate: isoToDisplay(e.birthdate),
     gender: e.gender || '',
     maritalStatus: e.marital_status || '',
     homeAddress: e.home_address || '',
     permanentAddress: e.permanent_address || '',
     team: e.team || '',
-    regularizationDate: e.regularization_date || '',
+    regularizationDate: isoToDisplay(e.regularization_date),
     department: e.department || '',
     jobTitle: e.job_title || '',
     jobDescription: e.job_description || '',
     teamflectRole: e.teamflect_role || 'Employee',
-    dateHired: e.date_hired || '',
+    dateHired: isoToDisplay(e.date_hired),
     status: e.status || 'Active',
     supervisor: e.supervisor || '',
     reviewers: e.reviewers || '',
@@ -72,18 +88,18 @@ function frontendToApi(u: AdminUser): Record<string, unknown> {
     first_name: u.firstName,
     middle_name: u.middleName,
     last_name: u.lastName,
-    birthdate: u.birthdate || null,
+    birthdate: displayToIso(u.birthdate),
     gender: u.gender,
     marital_status: u.maritalStatus,
     home_address: u.homeAddress,
     permanent_address: u.permanentAddress,
     team: u.team,
-    regularization_date: u.regularizationDate || null,
+    regularization_date: displayToIso(u.regularizationDate),
     department: u.department,
     job_title: u.jobTitle,
     job_description: u.jobDescription,
     teamflect_role: u.teamflectRole,
-    date_hired: u.dateHired || null,
+    date_hired: displayToIso(u.dateHired),
     status: u.status,
     supervisor: u.supervisor,
     reviewers: u.reviewers,

@@ -132,39 +132,55 @@ function downloadTemplate() {
   XLSX.writeFile(wb, 'Employee_Upload_Template.xlsx');
 }
 
+function normalizeExcelDate(val: unknown): string {
+  if (val === null || val === undefined || val === '') return '';
+  if (typeof val === 'number') {
+    const utcDays = Math.floor(val - 25569);
+    const ms = utcDays * 86400 * 1000;
+    const d = new Date(ms);
+    return `${d.getUTCMonth() + 1}/${d.getUTCDate()}/${d.getUTCFullYear()}`;
+  }
+  const s = String(val).trim();
+  const isoMatch = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (isoMatch) {
+    return `${parseInt(isoMatch[2])}/${parseInt(isoMatch[3])}/${isoMatch[1]}`;
+  }
+  return s;
+}
+
 function parseExcelToUsers(data: ArrayBuffer): AdminUser[] {
   const wb = XLSX.read(data, { type: 'array' });
   const ws = wb.Sheets[wb.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json<Record<string, string>>(ws, { defval: '' });
+  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: '' });
   return rows.map((row) => ({
     id: 0,
-    employeeId: row['Employee ID *'] || row['Employee ID'] || '',
-    firstName: row['First Name *'] || row['First Name'] || '',
-    middleName: row['Middle Name'] || '',
-    lastName: row['Last Name *'] || row['Last Name'] || '',
-    email: row['Email'] || '',
-    phone: row['Phone'] || '',
-    birthdate: row['Birthdate'] || '',
-    gender: row['Gender'] || '',
-    maritalStatus: row['Marital Status'] || '',
-    homeAddress: row['Home Address'] || '',
-    permanentAddress: row['Permanent Address'] || '',
-    team: row['Team'] || '',
-    regularizationDate: row['Regularization Date'] || '',
-    department: row['Department'] || '',
-    jobTitle: row['Job Title'] || '',
-    jobDescription: row['Job Description'] || '',
-    teamflectRole: row['Teamflect Role'] || 'Employee',
-    dateHired: row['Date Hired'] || '',
-    status: row['Status'] || 'Active',
-    supervisor: row['Supervisor'] || '',
-    reviewers: row['Reviewers'] || '',
-    sssNumber: row['SSS Number'] || '',
-    hdmfNumber: row['HDMF Number'] || '',
-    philHealthNumber: row['PhilHealth Number'] || '',
-    tin: row['TIN'] || '',
-    country: row['Country'] || '',
-    officeLocation: row['Office Location'] || '',
+    employeeId: String(row['Employee ID *'] || row['Employee ID'] || ''),
+    firstName: String(row['First Name *'] || row['First Name'] || ''),
+    middleName: String(row['Middle Name'] || ''),
+    lastName: String(row['Last Name *'] || row['Last Name'] || ''),
+    email: String(row['Email'] || ''),
+    phone: String(row['Phone'] || ''),
+    birthdate: normalizeExcelDate(row['Birthdate']),
+    gender: String(row['Gender'] || ''),
+    maritalStatus: String(row['Marital Status'] || ''),
+    homeAddress: String(row['Home Address'] || ''),
+    permanentAddress: String(row['Permanent Address'] || ''),
+    team: String(row['Team'] || ''),
+    regularizationDate: normalizeExcelDate(row['Regularization Date']),
+    department: String(row['Department'] || ''),
+    jobTitle: String(row['Job Title'] || ''),
+    jobDescription: String(row['Job Description'] || ''),
+    teamflectRole: String(row['Teamflect Role'] || 'Employee'),
+    dateHired: normalizeExcelDate(row['Date Hired']),
+    status: String(row['Status'] || 'Active'),
+    supervisor: String(row['Supervisor'] || ''),
+    reviewers: String(row['Reviewers'] || ''),
+    sssNumber: String(row['SSS Number'] || ''),
+    hdmfNumber: String(row['HDMF Number'] || ''),
+    philHealthNumber: String(row['PhilHealth Number'] || ''),
+    tin: String(row['TIN'] || ''),
+    country: String(row['Country'] || ''),
+    officeLocation: String(row['Office Location'] || ''),
   }));
 }
 
@@ -216,7 +232,7 @@ function UserFormFields({
         <div className="admin-edit-grid">
           <div className="admin-form-field">
             <label htmlFor={`${prefix}-birthdate`}>Birthdate</label>
-            <input id={`${prefix}-birthdate`} type="date" value={user.birthdate} onChange={(e) => onChange('birthdate', e.target.value)} />
+            <input id={`${prefix}-birthdate`} type="text" placeholder="mm/dd/yyyy" value={user.birthdate} onChange={(e) => onChange('birthdate', e.target.value)} />
           </div>
           <div className="admin-form-field">
             <label htmlFor={`${prefix}-gender`}>Gender</label>
@@ -288,11 +304,11 @@ function UserFormFields({
           </div>
           <div className="admin-form-field">
             <label htmlFor={`${prefix}-dateHired`}>Date Hired</label>
-            <input id={`${prefix}-dateHired`} type="date" value={user.dateHired} onChange={(e) => onChange('dateHired', e.target.value)} />
+            <input id={`${prefix}-dateHired`} type="text" placeholder="mm/dd/yyyy" value={user.dateHired} onChange={(e) => onChange('dateHired', e.target.value)} />
           </div>
           <div className="admin-form-field">
             <label htmlFor={`${prefix}-regularizationDate`}>Regularization Date</label>
-            <input id={`${prefix}-regularizationDate`} type="date" value={user.regularizationDate} onChange={(e) => onChange('regularizationDate', e.target.value)} />
+            <input id={`${prefix}-regularizationDate`} type="text" placeholder="mm/dd/yyyy" value={user.regularizationDate} onChange={(e) => onChange('regularizationDate', e.target.value)} />
           </div>
           <div className="admin-form-field">
             <label htmlFor={`${prefix}-status`}>Status</label>
