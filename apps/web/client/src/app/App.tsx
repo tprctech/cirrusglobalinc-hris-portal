@@ -428,7 +428,7 @@ function App() {
       </nav>
 
       {changePasswordOpen && (
-        <div className="admin-modal-backdrop" onClick={() => setChangePasswordOpen(false)}>
+        <div className="app-modal-backdrop" onClick={() => setChangePasswordOpen(false)}>
           <div className="change-password-modal" onClick={(e) => e.stopPropagation()}>
             <h2>Change Password</h2>
             {cpError && <div className="change-password-error">{cpError}</div>}
