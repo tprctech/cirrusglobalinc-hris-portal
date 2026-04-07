@@ -19,7 +19,7 @@ Two workflows are configured:
 ## Tech Stack
 
 - **Frontend**: React 19, TypeScript, Vite 7, @xyflow/react, lucide-react, html-to-image
-- **Backend**: FastAPI, Pydantic, SQLAlchemy, psycopg2-binary, python-jose (JWT), uvicorn, mangum (Lambda adapter)
+- **Backend**: FastAPI, Pydantic, SQLAlchemy, psycopg2-binary, python-jose (JWT), uvicorn, mangum (Lambda adapter), Pillow (image resizing), python-multipart (file uploads)
 - **Database**: PostgreSQL (Replit-managed, via DATABASE_URL)
 - **Infrastructure**: AWS CDK (optional)
 
@@ -52,7 +52,7 @@ Two workflows are configured:
 
 ### HR Center API (PostgreSQL-backed CRUD)
 
-- `/api/v1/hr/employees/*` - Employee management (full employee profile with PH gov IDs)
+- `/api/v1/hr/employees/*` - Employee management (full profile with PH gov IDs, profile photo upload, employee search/lookup)
 - `/api/v1/hr/departments/*` - Department CRUD
 - `/api/v1/hr/roles/*` - Role management (linked to competencies & departments)
 - `/api/v1/hr/competencies/*` - Competencies with learning materials
@@ -75,8 +75,14 @@ recognition_badges, rewards, reward_redeems
 
 ## Development Notes
 
-- Frontend proxy is configured (`allowedHosts: true`) for Replit's preview iframe
+- Frontend proxy is configured (`allowedHosts: true`) for Replit's preview iframe; Vite proxies `/api` → `localhost:8000`
 - Backend uses localhost as host in dev; frontend uses 0.0.0.0
 - PostgreSQL via Replit's DATABASE_URL; tables auto-created on FastAPI startup
 - Training calendar default month hardcoded to April 2026
 - Organization Chart export uses html-to-image; edge type is smoothstep
+- AdminUser type uses `teamflectRole` internally but displays as "Portal Role" (values: Employee, Manager, HR, Admin)
+- Date fields displayed as mm/dd/yyyy; stored as ISO yyyy-mm-dd; converted in employees.ts
+- Profile photos stored as base64 data URIs in DB; resized to max 400x400 JPEG on upload
+- Supervisor field: searchable dropdown via `/api/v1/hr/employees/search/lookup`
+- Reviewers field: multi-select with tag chips, same search endpoint
+- `xlsx` npm package used for Excel template download + bulk upload parsing

@@ -27,6 +27,7 @@ export type AdminUser = {
   phone: string;
   country: string;
   officeLocation: string;
+  profilePhoto: string;
 };
 
 export type AdminCompetency = {

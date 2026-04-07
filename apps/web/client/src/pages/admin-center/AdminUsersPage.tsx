@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowUpDown, Download, Plus, Settings2, Upload, X } from 'lucide-react';
+import { ArrowUpDown, Camera, Download, Plus, Settings2, Upload, X } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import AdminCenterSidebar from '../../components/AdminCenterSidebar';
 import AdminTablePagination from '../../components/AdminTablePagination';
 import ConfirmationDialog from '../../components/ConfirmationDialog';
 import type { AdminUser } from '../../data/mock/adminMockData';
-import { fetchEmployees, createEmployee, updateEmployee, deleteEmployee, bulkCreateEmployees } from '../../api/employees';
+import { fetchEmployees, createEmployee, updateEmployee, deleteEmployee, bulkCreateEmployees, uploadPhoto, searchEmployees } from '../../api/employees';
 import './AdminCenterPage.css';
 
 type SortDirection = 'asc' | 'desc';
@@ -81,6 +81,7 @@ function emptyUser(): AdminUser {
     phone: '',
     country: '',
     officeLocation: '',
+    profilePhoto: '',
   };
 }
 
@@ -181,7 +182,212 @@ function parseExcelToUsers(data: ArrayBuffer): AdminUser[] {
     tin: String(row['TIN'] || ''),
     country: String(row['Country'] || ''),
     officeLocation: String(row['Office Location'] || ''),
+    profilePhoto: '',
   }));
+}
+
+function displayToIsoForPicker(display: string): string {
+  if (!display) return '';
+  const parts = display.split('/');
+  if (parts.length !== 3) return '';
+  const [m, d, y] = parts;
+  return `${y.padStart(4, '0')}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+}
+
+function isoToDisplayForPicker(iso: string): string {
+  if (!iso) return '';
+  const parts = iso.split('-');
+  if (parts.length !== 3) return iso;
+  const [y, m, d] = parts;
+  return `${parseInt(m)}/${parseInt(d)}/${y}`;
+}
+
+function DatePickerField({ id, label, value, onChange }: { id: string; label: string; value: string; onChange: (val: string) => void }) {
+  const isoVal = displayToIsoForPicker(value);
+  return (
+    <div className="admin-form-field">
+      <label htmlFor={id}>{label}</label>
+      <input
+        id={id}
+        type="date"
+        value={isoVal}
+        onChange={(e) => onChange(isoToDisplayForPicker(e.target.value))}
+      />
+    </div>
+  );
+}
+
+type LookupResult = { id: number; employee_id: string; first_name: string; middle_name: string; last_name: string; email: string };
+
+function EmployeeSearchField({ id, label, value, onChange }: { id: string; label: string; value: string; onChange: (val: string) => void }) {
+  const [query, setQuery] = useState(value);
+  const [results, setResults] = useState<LookupResult[]>([]);
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => { setQuery(value); }, [value]);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  function handleInput(val: string) {
+    setQuery(val);
+    onChange(val);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      if (val.length >= 1) {
+        const res = await searchEmployees(val);
+        setResults(res);
+        setOpen(true);
+      } else {
+        setResults([]);
+        setOpen(false);
+      }
+    }, 250);
+  }
+
+  function select(r: LookupResult) {
+    const name = [r.first_name, r.middle_name, r.last_name].filter(Boolean).join(' ');
+    const display = r.email ? `${name} (${r.email})` : name;
+    setQuery(display);
+    onChange(display);
+    setOpen(false);
+  }
+
+  return (
+    <div className="admin-form-field" ref={ref} style={{ position: 'relative' }}>
+      <label htmlFor={id}>{label}</label>
+      <input id={id} value={query} onChange={(e) => handleInput(e.target.value)} onFocus={() => { if (results.length > 0) setOpen(true); }} autoComplete="off" />
+      {open && results.length > 0 && (
+        <ul className="admin-search-dropdown">
+          {results.map((r) => (
+            <li key={r.id} onClick={() => select(r)}>
+              <span className="admin-search-name">{r.first_name} {r.middle_name ? r.middle_name + ' ' : ''}{r.last_name}</span>
+              {r.email && <span className="admin-search-email">{r.email}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function ReviewerMultiSelect({ id, label, value, onChange }: { id: string; label: string; value: string; onChange: (val: string) => void }) {
+  const reviewers = value ? value.split(',').map((s) => s.trim()).filter(Boolean) : [];
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<LookupResult[]>([]);
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  function handleInput(val: string) {
+    setQuery(val);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      if (val.length >= 1) {
+        const res = await searchEmployees(val);
+        setResults(res);
+        setOpen(true);
+      } else {
+        setResults([]);
+        setOpen(false);
+      }
+    }, 250);
+  }
+
+  function addReviewer(r: LookupResult) {
+    const name = [r.first_name, r.middle_name, r.last_name].filter(Boolean).join(' ');
+    const display = r.email ? `${name} (${r.email})` : name;
+    if (!reviewers.includes(display)) {
+      const updated = [...reviewers, display].join(', ');
+      onChange(updated);
+    }
+    setQuery('');
+    setOpen(false);
+  }
+
+  function removeReviewer(idx: number) {
+    const updated = reviewers.filter((_, i) => i !== idx).join(', ');
+    onChange(updated);
+  }
+
+  return (
+    <div className="admin-form-field full-width" ref={ref} style={{ position: 'relative' }}>
+      <label htmlFor={id}>{label}</label>
+      {reviewers.length > 0 && (
+        <div className="admin-reviewer-tags">
+          {reviewers.map((r, i) => (
+            <span key={i} className="admin-reviewer-tag">
+              {r}
+              <button type="button" onClick={() => removeReviewer(i)} className="admin-reviewer-tag-remove"><X size={12} /></button>
+            </span>
+          ))}
+        </div>
+      )}
+      <input id={id} value={query} onChange={(e) => handleInput(e.target.value)} onFocus={() => { if (results.length > 0) setOpen(true); }} placeholder="Search to add reviewer..." autoComplete="off" />
+      {open && results.length > 0 && (
+        <ul className="admin-search-dropdown">
+          {results.map((r) => (
+            <li key={r.id} onClick={() => addReviewer(r)}>
+              <span className="admin-search-name">{r.first_name} {r.middle_name ? r.middle_name + ' ' : ''}{r.last_name}</span>
+              {r.email && <span className="admin-search-email">{r.email}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function ProfilePhotoUpload({ user, onPhotoUploaded }: { user: AdminUser; onPhotoUploaded: (updated: AdminUser) => void }) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !user.id) return;
+    setUploading(true);
+    try {
+      const updated = await uploadPhoto(user.id, file);
+      onPhotoUploaded(updated);
+    } catch {
+      alert('Failed to upload photo');
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  }
+
+  return (
+    <div className="admin-photo-upload">
+      <div className="admin-photo-preview" onClick={() => fileRef.current?.click()}>
+        {user.profilePhoto ? (
+          <img src={user.profilePhoto} alt="Profile" />
+        ) : (
+          <div className="admin-photo-placeholder">
+            <Camera size={28} />
+            <span>Upload Photo</span>
+          </div>
+        )}
+        {uploading && <div className="admin-photo-uploading">Uploading...</div>}
+      </div>
+      <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFile} style={{ display: 'none' }} />
+    </div>
+  );
 }
 
 function UserFormFields({
@@ -189,14 +395,22 @@ function UserFormFields({
   onChange,
   prefix,
   isEditing = false,
+  onPhotoUploaded,
 }: {
   user: AdminUser;
   onChange: (field: keyof AdminUser, value: string) => void;
   prefix: string;
   isEditing?: boolean;
+  onPhotoUploaded?: (updated: AdminUser) => void;
 }) {
   return (
     <div className="admin-user-form-sections">
+      {isEditing && onPhotoUploaded && (
+        <div className="admin-form-photo-row">
+          <ProfilePhotoUpload user={user} onPhotoUploaded={onPhotoUploaded} />
+        </div>
+      )}
+
       <fieldset className="admin-form-section">
         <legend>Employee Identity</legend>
         <div className="admin-edit-grid">
@@ -230,10 +444,7 @@ function UserFormFields({
       <fieldset className="admin-form-section">
         <legend>Personal Information</legend>
         <div className="admin-edit-grid">
-          <div className="admin-form-field">
-            <label htmlFor={`${prefix}-birthdate`}>Birthdate</label>
-            <input id={`${prefix}-birthdate`} type="text" placeholder="mm/dd/yyyy" value={user.birthdate} onChange={(e) => onChange('birthdate', e.target.value)} />
-          </div>
+          <DatePickerField id={`${prefix}-birthdate`} label="Birthdate" value={user.birthdate} onChange={(v) => onChange('birthdate', v)} />
           <div className="admin-form-field">
             <label htmlFor={`${prefix}-gender`}>Gender</label>
             <select id={`${prefix}-gender`} value={user.gender} onChange={(e) => onChange('gender', e.target.value)}>
@@ -303,14 +514,8 @@ function UserFormFields({
             <label htmlFor={`${prefix}-team`}>Team</label>
             <input id={`${prefix}-team`} value={user.team} onChange={(e) => onChange('team', e.target.value)} />
           </div>
-          <div className="admin-form-field">
-            <label htmlFor={`${prefix}-dateHired`}>Date Hired</label>
-            <input id={`${prefix}-dateHired`} type="text" placeholder="mm/dd/yyyy" value={user.dateHired} onChange={(e) => onChange('dateHired', e.target.value)} />
-          </div>
-          <div className="admin-form-field">
-            <label htmlFor={`${prefix}-regularizationDate`}>Regularization Date</label>
-            <input id={`${prefix}-regularizationDate`} type="text" placeholder="mm/dd/yyyy" value={user.regularizationDate} onChange={(e) => onChange('regularizationDate', e.target.value)} />
-          </div>
+          <DatePickerField id={`${prefix}-dateHired`} label="Date Hired" value={user.dateHired} onChange={(v) => onChange('dateHired', v)} />
+          <DatePickerField id={`${prefix}-regularizationDate`} label="Regularization Date" value={user.regularizationDate} onChange={(v) => onChange('regularizationDate', v)} />
           <div className="admin-form-field">
             <label htmlFor={`${prefix}-status`}>Status</label>
             <select id={`${prefix}-status`} value={user.status} onChange={(e) => onChange('status', e.target.value)}>
@@ -331,14 +536,8 @@ function UserFormFields({
       <fieldset className="admin-form-section">
         <legend>Reporting & Reviews</legend>
         <div className="admin-edit-grid">
-          <div className="admin-form-field">
-            <label htmlFor={`${prefix}-supervisor`}>Supervisor</label>
-            <input id={`${prefix}-supervisor`} value={user.supervisor} onChange={(e) => onChange('supervisor', e.target.value)} />
-          </div>
-          <div className="admin-form-field">
-            <label htmlFor={`${prefix}-reviewers`}>Reviewers</label>
-            <input id={`${prefix}-reviewers`} value={user.reviewers} onChange={(e) => onChange('reviewers', e.target.value)} placeholder="Comma-separated names" />
-          </div>
+          <EmployeeSearchField id={`${prefix}-supervisor`} label="Supervisor" value={user.supervisor} onChange={(v) => onChange('supervisor', v)} />
+          <ReviewerMultiSelect id={`${prefix}-reviewers`} label="Reviewers" value={user.reviewers} onChange={(v) => onChange('reviewers', v)} />
         </div>
       </fieldset>
 
@@ -760,6 +959,10 @@ function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
               onChange={updateEditingUserField}
               prefix="edit"
               isEditing
+              onPhotoUploaded={(updated) => {
+                setEditingUser(updated);
+                setUsers((prev) => prev.map((u) => u.id === updated.id ? updated : u));
+              }}
             />
 
             <div className="admin-modal-actions">

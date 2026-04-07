@@ -1,8 +1,10 @@
+import io
 from datetime import date, datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from pydantic import BaseModel
+from PIL import Image
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -10,6 +12,8 @@ from app.db.models import Employee
 from app.db.session import get_db
 
 router = APIRouter()
+
+PHOTO_MAX_SIZE = (400, 400)
 
 
 class EmployeeCreate(BaseModel):
@@ -40,6 +44,7 @@ class EmployeeCreate(BaseModel):
     phone: Optional[str] = ""
     country: Optional[str] = ""
     office_location: Optional[str] = ""
+    profile_photo: Optional[str] = ""
 
 
 class EmployeeUpdate(BaseModel):
@@ -69,6 +74,7 @@ class EmployeeUpdate(BaseModel):
     phone: Optional[str] = None
     country: Optional[str] = None
     office_location: Optional[str] = None
+    profile_photo: Optional[str] = None
 
 
 class EmployeeOut(BaseModel):
@@ -100,6 +106,7 @@ class EmployeeOut(BaseModel):
     phone: str
     country: str
     office_location: str
+    profile_photo: str
     created_at: Optional[datetime]
     updated_at: Optional[datetime]
 
@@ -115,6 +122,30 @@ def _row_to_dict(row: Employee) -> dict:
 def list_employees(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     rows = db.query(Employee).offset(skip).limit(limit).all()
     return rows
+
+
+@router.get("/search/lookup")
+def search_employees(q: str = "", db: Session = Depends(get_db)):
+    if not q or len(q) < 1:
+        rows = db.query(Employee).limit(20).all()
+    else:
+        term = f"%{q}%"
+        rows = db.query(Employee).filter(
+            (Employee.first_name.ilike(term)) |
+            (Employee.last_name.ilike(term)) |
+            (Employee.email.ilike(term))
+        ).limit(20).all()
+    return [
+        {
+            "id": r.id,
+            "employee_id": r.employee_id,
+            "first_name": r.first_name,
+            "middle_name": r.middle_name or "",
+            "last_name": r.last_name,
+            "email": r.email or "",
+        }
+        for r in rows
+    ]
 
 
 @router.get("/{employee_id}", response_model=EmployeeOut)
@@ -158,3 +189,24 @@ def delete_employee(employee_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Employee not found")
     db.delete(row)
     db.commit()
+
+
+@router.post("/{employee_id}/photo", response_model=EmployeeOut)
+def upload_photo(employee_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
+    row = db.query(Employee).filter(Employee.id == employee_id).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    if file.content_type not in ("image/jpeg", "image/png", "image/webp"):
+        raise HTTPException(status_code=400, detail="Only JPEG, PNG, or WebP images are accepted")
+    import base64
+    contents = file.file.read()
+    img = Image.open(io.BytesIO(contents))
+    img = img.convert("RGB")
+    img.thumbnail(PHOTO_MAX_SIZE, Image.LANCZOS)
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=85)
+    b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
+    row.profile_photo = f"data:image/jpeg;base64,{b64}"
+    db.commit()
+    db.refresh(row)
+    return row

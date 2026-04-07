@@ -49,6 +49,7 @@ class Employee(Base):
     phone = Column(String(50), nullable=True, default="")
     country = Column(String(100), nullable=True, default="")
     office_location = Column(String(200), nullable=True, default="")
+    profile_photo = Column(Text, nullable=True, default="")
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

@@ -31,6 +31,7 @@ type ApiEmployee = {
   phone: string;
   country: string;
   office_location: string;
+  profile_photo: string;
 };
 
 function isoToDisplay(iso: string | null): string {
@@ -79,6 +80,7 @@ function apiToFrontend(e: ApiEmployee): AdminUser {
     phone: e.phone || '',
     country: e.country || '',
     officeLocation: e.office_location || '',
+    profilePhoto: e.profile_photo || '',
   };
 }
 
@@ -111,7 +113,28 @@ function frontendToApi(u: AdminUser): Record<string, unknown> {
     phone: u.phone,
     country: u.country,
     office_location: u.officeLocation,
+    profile_photo: u.profilePhoto,
   };
+}
+
+export async function uploadPhoto(employeeId: number, file: File): Promise<AdminUser> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch(`${API_BASE}/${employeeId}/photo`, {
+    method: 'POST',
+    body: formData,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(formatApiError(err));
+  }
+  return apiToFrontend(await res.json());
+}
+
+export async function searchEmployees(q: string): Promise<{ id: number; employee_id: string; first_name: string; middle_name: string; last_name: string; email: string }[]> {
+  const res = await fetch(`${API_BASE}/search/lookup?q=${encodeURIComponent(q)}`);
+  if (!res.ok) return [];
+  return res.json();
 }
 
 export async function fetchEmployees(): Promise<AdminUser[]> {
