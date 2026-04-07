@@ -18,6 +18,7 @@ class RoleCreate(BaseModel):
     users_in_role: Optional[int] = 0
     department_id: Optional[int] = None
     created_by: Optional[str] = ""
+    status: Optional[str] = "Active"
     competency_ids: Optional[list[int]] = []
 
 
@@ -27,6 +28,7 @@ class RoleUpdate(BaseModel):
     users_in_role: Optional[int] = None
     department_id: Optional[int] = None
     created_by: Optional[str] = None
+    status: Optional[str] = None
     competency_ids: Optional[list[int]] = None
 
 
@@ -39,11 +41,15 @@ class RoleOut(BaseModel):
     department_name: Optional[str] = None
     required_competencies: Optional[str] = None
     created_by: str
+    status: str
     created_at: Optional[datetime]
     updated_at: Optional[datetime]
 
     class Config:
         from_attributes = True
+
+
+VALID_STATUSES = {"active": "Active", "inactive": "Inactive"}
 
 
 def _to_out(row: Role) -> dict:
@@ -58,6 +64,7 @@ def _to_out(row: Role) -> dict:
         "department_name": dept_name,
         "required_competencies": comp_names,
         "created_by": row.created_by or "",
+        "status": row.status or "Active",
         "created_at": row.created_at,
         "updated_at": row.updated_at,
     }
@@ -84,6 +91,7 @@ def create_role(payload: RoleCreate, db: Session = Depends(get_db)):
         if not dept:
             raise HTTPException(status_code=400, detail="Department not found")
     data = payload.model_dump(exclude={"competency_ids"})
+    data["status"] = VALID_STATUSES.get((data.get("status") or "Active").strip().lower(), "Active")
     row = Role(**data)
     if payload.competency_ids:
         comps = db.query(Competency).filter(Competency.id.in_(payload.competency_ids)).all()
@@ -104,6 +112,11 @@ def update_role(role_id: int, payload: RoleUpdate, db: Session = Depends(get_db)
     if not row:
         raise HTTPException(status_code=404, detail="Role not found")
     updates = payload.model_dump(exclude_unset=True, exclude={"competency_ids"})
+    if "status" in updates:
+        if updates["status"] is None:
+            del updates["status"]
+        else:
+            updates["status"] = VALID_STATUSES.get(updates["status"].strip().lower(), "Active")
     for k, v in updates.items():
         setattr(row, k, v)
     if payload.competency_ids is not None:

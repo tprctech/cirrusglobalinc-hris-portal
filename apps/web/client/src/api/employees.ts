@@ -8,6 +8,7 @@ type ApiEmployee = {
   first_name: string;
   middle_name: string;
   last_name: string;
+  display_name: string;
   birthdate: string | null;
   gender: string;
   marital_status: string;
@@ -57,6 +58,7 @@ function apiToFrontend(e: ApiEmployee): AdminUser {
     firstName: e.first_name,
     middleName: e.middle_name || '',
     lastName: e.last_name,
+    displayName: e.display_name || '',
     birthdate: isoToDisplay(e.birthdate),
     gender: e.gender || '',
     maritalStatus: e.marital_status || '',
@@ -90,6 +92,7 @@ function frontendToApi(u: AdminUser): Record<string, unknown> {
     first_name: u.firstName,
     middle_name: u.middleName,
     last_name: u.lastName,
+    display_name: u.displayName,
     birthdate: displayToIso(u.birthdate),
     gender: u.gender,
     marital_status: u.maritalStatus,

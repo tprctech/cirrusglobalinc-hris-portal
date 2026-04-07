@@ -90,6 +90,7 @@ def serialize_employee(emp: Employee) -> dict:
         "firstName": emp.first_name,
         "middleName": emp.middle_name or "",
         "lastName": emp.last_name,
+        "displayName": emp.display_name or "",
         "email": emp.email or "",
         "phone": emp.phone or "",
         "department": emp.department or "",

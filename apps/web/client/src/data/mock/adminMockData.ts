@@ -4,6 +4,7 @@ export type AdminUser = {
   firstName: string;
   middleName: string;
   lastName: string;
+  displayName: string;
   birthdate: string;
   gender: string;
   maritalStatus: string;
@@ -50,7 +51,7 @@ export type CompetencyLevel =
 
 export type AdminLearningMaterial = {
   id: string;
-  type: 'Link';
+  type: string;
   url: string;
   name: string;
   description?: string;

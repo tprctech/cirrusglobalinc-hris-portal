@@ -30,6 +30,7 @@ class EmployeeCreate(BaseModel):
     first_name: str
     middle_name: Optional[str] = ""
     last_name: str
+    display_name: Optional[str] = ""
     birthdate: Optional[date] = None
     gender: Optional[str] = ""
     marital_status: Optional[str] = ""
@@ -60,6 +61,7 @@ class EmployeeUpdate(BaseModel):
     first_name: Optional[str] = None
     middle_name: Optional[str] = None
     last_name: Optional[str] = None
+    display_name: Optional[str] = None
     birthdate: Optional[date] = None
     gender: Optional[str] = None
     marital_status: Optional[str] = None
@@ -92,6 +94,7 @@ class EmployeeOut(BaseModel):
     first_name: str
     middle_name: str
     last_name: str
+    display_name: str
     birthdate: Optional[date]
     gender: str
     marital_status: str

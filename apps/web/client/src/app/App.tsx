@@ -137,7 +137,7 @@ function App() {
 
   const canAccessAdmin = hasRole('HR', 'Admin');
   const emp = user?.employee;
-  const displayName = emp ? `${emp.firstName} ${emp.lastName}` : user?.email ?? '';
+  const displayName = emp?.displayName || (emp ? `${emp.firstName} ${emp.lastName}` : user?.email ?? '');
   const displayRole = emp?.jobTitle || user?.portalRole || '';
   const displayEmail = emp?.email || '';
   const displayDepartment = emp?.department || '';

@@ -41,6 +41,8 @@ class CompetencyCreate(BaseModel):
     expectations: Optional[str] = ""
     competency_level: Optional[str] = ""
     competency_experts: Optional[str] = ""
+    created_by: Optional[str] = ""
+    status: Optional[str] = "Active"
     learning_materials: Optional[list[LearningMaterialIn]] = []
 
 
@@ -51,6 +53,8 @@ class CompetencyUpdate(BaseModel):
     expectations: Optional[str] = None
     competency_level: Optional[str] = None
     competency_experts: Optional[str] = None
+    created_by: Optional[str] = None
+    status: Optional[str] = None
     learning_materials: Optional[list[LearningMaterialIn]] = None
 
 
@@ -62,12 +66,17 @@ class CompetencyOut(BaseModel):
     expectations: str
     competency_level: str
     competency_experts: str
+    created_by: str
+    status: str
     learning_materials: list[LearningMaterialOut]
     created_at: Optional[datetime]
     updated_at: Optional[datetime]
 
     class Config:
         from_attributes = True
+
+
+VALID_STATUSES = {"active": "Active", "inactive": "Inactive"}
 
 
 @router.get("/", response_model=list[CompetencyOut])
@@ -86,6 +95,7 @@ def get_competency(competency_id: int, db: Session = Depends(get_db)):
 @router.post("/", response_model=CompetencyOut, status_code=201)
 def create_competency(payload: CompetencyCreate, db: Session = Depends(get_db)):
     data = payload.model_dump(exclude={"learning_materials"})
+    data["status"] = VALID_STATUSES.get((data.get("status") or "Active").strip().lower(), "Active")
     row = Competency(**data)
     for mat in (payload.learning_materials or []):
         row.learning_materials.append(CompetencyLearningMaterial(**mat.model_dump()))
@@ -105,6 +115,11 @@ def update_competency(competency_id: int, payload: CompetencyUpdate, db: Session
     if not row:
         raise HTTPException(status_code=404, detail="Competency not found")
     updates = payload.model_dump(exclude_unset=True, exclude={"learning_materials"})
+    if "status" in updates:
+        if updates["status"] is None:
+            del updates["status"]
+        else:
+            updates["status"] = VALID_STATUSES.get(updates["status"].strip().lower(), "Active")
     for k, v in updates.items():
         setattr(row, k, v)
     if payload.learning_materials is not None:

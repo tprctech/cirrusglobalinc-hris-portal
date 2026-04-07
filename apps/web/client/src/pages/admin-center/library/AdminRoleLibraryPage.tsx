@@ -23,6 +23,7 @@ interface RoleRecord {
   department_name: string;
   required_competencies: string;
   created_by: string;
+  status: string;
 }
 
 interface DeptRecord {
@@ -40,10 +41,11 @@ type RoleDraft = {
   roleDescription: string;
   departmentId: number | null;
   competencyIds: number[];
+  status: string;
 };
 
 function emptyDraft(): RoleDraft {
-  return { roleJobTitle: '', roleDescription: '', departmentId: null, competencyIds: [] };
+  return { roleJobTitle: '', roleDescription: '', departmentId: null, competencyIds: [], status: 'Active' };
 }
 
 function AdminRoleLibraryPage({ onNavigate }: AdminRoleLibraryPageProps) {
@@ -137,6 +139,7 @@ function AdminRoleLibraryPage({ onNavigate }: AdminRoleLibraryPageProps) {
           role_description: role.role_description,
           department_id: role.department_id,
           created_by: role.created_by || 'Admin',
+          status: role.status || 'Active',
           competency_ids: compIds.length > 0 ? compIds : (detail?.competency_ids ?? []),
         }),
       });
@@ -199,6 +202,7 @@ function AdminRoleLibraryPage({ onNavigate }: AdminRoleLibraryPageProps) {
           role_description: newRole.roleDescription.trim(),
           department_id: newRole.departmentId,
           created_by: 'Admin',
+          status: newRole.status,
           competency_ids: newRole.competencyIds,
         }),
       });
@@ -254,13 +258,14 @@ function AdminRoleLibraryPage({ onNavigate }: AdminRoleLibraryPageProps) {
                         <th>Department</th>
                         <th>Required Competencies</th>
                         <th>Created by</th>
+                        <th>Status</th>
                         <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {totalRoles === 0 && (
                         <tr>
-                          <td colSpan={7} className="admin-empty-state">No roles available.</td>
+                          <td colSpan={8} className="admin-empty-state">No roles available.</td>
                         </tr>
                       )}
                       {pagedRoles.map((role) => (
@@ -271,6 +276,11 @@ function AdminRoleLibraryPage({ onNavigate }: AdminRoleLibraryPageProps) {
                           <td>{role.department_name}</td>
                           <td>{role.required_competencies}</td>
                           <td>{role.created_by}</td>
+                          <td>
+                            <span className={`admin-status-badge ${role.status === 'Active' ? 'active' : 'inactive'}`}>
+                              {role.status}
+                            </span>
+                          </td>
                           <td>
                             <div className="admin-actions-cell">
                               <button className="admin-icon-action-btn" title="Copy role" onClick={() => handleCopyRole(role)}>
@@ -355,6 +365,18 @@ function AdminRoleLibraryPage({ onNavigate }: AdminRoleLibraryPageProps) {
                   ))}
                 </select>
                 {departmentError && <small className="admin-field-error">{departmentError}</small>}
+              </div>
+
+              <div className="admin-form-field">
+                <label htmlFor="add-role-status">Status</label>
+                <select
+                  id="add-role-status"
+                  value={newRole.status}
+                  onChange={(e) => setNewRole({ ...newRole, status: e.target.value })}
+                >
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
               </div>
 
               <div className="admin-form-field">

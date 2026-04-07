@@ -6,6 +6,7 @@ export interface EmployeeProfile {
   firstName: string;
   middleName: string;
   lastName: string;
+  displayName: string;
   email: string;
   phone: string;
   department: string;

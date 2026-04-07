@@ -1,21 +1,41 @@
-﻿import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus, X } from 'lucide-react';
 import AdminCenterSidebar from '../../../components/AdminCenterSidebar';
 import AdminTablePagination from '../../../components/AdminTablePagination';
 import ConfirmationDialog from '../../../components/ConfirmationDialog';
-import {
-  adminMockData,
-  type AdminCompetency,
-  type AdminLearningMaterial,
-  type CompetencyLevel,
-} from '../../../data/mock/adminMockData';
+import type { AdminLearningMaterial, CompetencyLevel } from '../../../data/mock/adminMockData';
 import '../AdminCenterPage.css';
+
+const COMPETENCIES_API = '/api/v1/hr/competencies';
 
 type AdminCompetencyLibraryPageProps = {
   onNavigate?: (path: string) => void;
 };
 
 const PAGE_SIZE = 8;
+
+interface ApiCompetency {
+  id: number;
+  competency_code: string;
+  competency_name: string;
+  competency_description: string;
+  expectations: string;
+  competency_level: string;
+  competency_experts: string;
+  created_by: string;
+  status: string;
+  learning_materials: ApiLearningMaterial[];
+}
+
+interface ApiLearningMaterial {
+  id: number;
+  material_type: string;
+  url: string;
+  name: string;
+  description: string;
+  category: string;
+  duration: string;
+}
 
 type MaterialTarget = 'new' | 'edit' | null;
 type PendingDeleteLearningMaterial = {
@@ -30,6 +50,20 @@ type CompetencyDraft = {
   expectations: string;
   competencyLevel: CompetencyLevel;
   competencyExperts: string;
+  status: string;
+  learningMaterials: AdminLearningMaterial[];
+};
+
+type EditCompetency = {
+  id: number;
+  competencyCode: string;
+  competencyName: string;
+  competencyDescription: string;
+  expectations: string;
+  competencyLevel: string;
+  competencyExperts: string;
+  createdBy: string;
+  status: string;
   learningMaterials: AdminLearningMaterial[];
 };
 
@@ -44,25 +78,63 @@ const competencyLevelOptions: CompetencyLevel[] = [
 const categoryOptions = ['Leadership', 'Communication', 'Technical', 'Compliance'];
 const durationOptions = ['15 mins', '30 mins', '45 mins', '60 mins'];
 
-function getInitialCompetencyDraft(): CompetencyDraft {
+function apiToLocal(c: ApiCompetency): EditCompetency {
+  return {
+    id: c.id,
+    competencyCode: c.competency_code,
+    competencyName: c.competency_name,
+    competencyDescription: c.competency_description,
+    expectations: c.expectations,
+    competencyLevel: c.competency_level,
+    competencyExperts: c.competency_experts,
+    createdBy: c.created_by,
+    status: c.status || 'Active',
+    learningMaterials: (c.learning_materials || []).map((m) => ({
+      id: String(m.id),
+      type: m.material_type || 'Link',
+      url: m.url,
+      name: m.name,
+      description: m.description,
+      category: m.category,
+      duration: m.duration,
+    })),
+  };
+}
+
+function emptyDraft(): CompetencyDraft {
   return {
     competencyName: '',
     competencyDescription: '',
     expectations: '',
     competencyLevel: 'Entry Level',
     competencyExperts: '',
+    status: 'Active',
     learningMaterials: [],
   };
 }
 
+function materialsToApi(mats: AdminLearningMaterial[]) {
+  return mats.map((m) => ({
+    material_type: m.type || 'Link',
+    url: m.url,
+    name: m.name,
+    description: m.description || '',
+    category: m.category || '',
+    duration: m.duration || '',
+  }));
+}
+
 function AdminCompetencyLibraryPage({ onNavigate }: AdminCompetencyLibraryPageProps) {
-  const [competencies, setCompetencies] = useState<AdminCompetency[]>(
-    adminMockData.competencies as AdminCompetency[],
-  );
-  const [editingCompetency, setEditingCompetency] = useState<AdminCompetency | null>(null);
+  const [competencies, setCompetencies] = useState<ApiCompetency[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editingCompetency, setEditingCompetency] = useState<EditCompetency | null>(null);
   const [showAddCompetencyModal, setShowAddCompetencyModal] = useState(false);
-  const [newCompetency, setNewCompetency] = useState<CompetencyDraft>(getInitialCompetencyDraft());
+  const [newCompetency, setNewCompetency] = useState<CompetencyDraft>(emptyDraft());
   const [currentPage, setCurrentPage] = useState(1);
+  const [submitError, setSubmitError] = useState('');
+  const [nameError, setNameError] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
 
   const [materialTarget, setMaterialTarget] = useState<MaterialTarget>(null);
   const [showNewMaterialModal, setShowNewMaterialModal] = useState(false);
@@ -100,7 +172,7 @@ function AdminCompetencyLibraryPage({ onNavigate }: AdminCompetencyLibraryPagePr
   });
   const [materialUrlError, setMaterialUrlError] = useState('');
   const [materialNameError, setMaterialNameError] = useState('');
-  const [pendingDeleteCompetency, setPendingDeleteCompetency] = useState<AdminCompetency | null>(null);
+  const [pendingDeleteCompetency, setPendingDeleteCompetency] = useState<ApiCompetency | null>(null);
   const [pendingDeleteLearningMaterial, setPendingDeleteLearningMaterial] = useState<PendingDeleteLearningMaterial | null>(null);
 
   const navigate = onNavigate ?? ((path: string) => {
@@ -110,80 +182,79 @@ function AdminCompetencyLibraryPage({ onNavigate }: AdminCompetencyLibraryPagePr
     }
   });
 
+  const loadCompetencies = useCallback(async () => {
+    try {
+      const res = await fetch(COMPETENCIES_API + '/');
+      if (res.ok) {
+        setCompetencies(await res.json());
+      }
+    } catch {
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadCompetencies();
+  }, [loadCompetencies]);
+
+  const filteredCompetencies = useMemo(() => {
+    let list = competencies;
+    if (filterStatus !== 'all') {
+      list = list.filter((c) => c.status === filterStatus);
+    }
+    if (searchTerm.trim()) {
+      const q = searchTerm.trim().toLowerCase();
+      list = list.filter((c) =>
+        c.competency_name.toLowerCase().includes(q) ||
+        c.competency_code.toLowerCase().includes(q) ||
+        c.competency_description.toLowerCase().includes(q) ||
+        (c.created_by || '').toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [competencies, filterStatus, searchTerm]);
+
   const filteredLibraryMaterials = useMemo(() => {
     const query = materialSearchTerm.trim().toLowerCase();
-    if (!query) {
-      return materialLibrary;
-    }
-
-    return materialLibrary.filter((material) => [material.name, material.url, material.description ?? '', material.category ?? '']
-      .join(' ')
-      .toLowerCase()
-      .includes(query));
+    if (!query) return materialLibrary;
+    return materialLibrary.filter((material) =>
+      [material.name, material.url, material.description ?? '', material.category ?? '']
+        .join(' ')
+        .toLowerCase()
+        .includes(query)
+    );
   }, [materialLibrary, materialSearchTerm]);
-
-  function updateEditingCompetencyField(field: keyof AdminCompetency, value: string) {
-    setEditingCompetency((previous) => {
-      if (!previous) {
-        return previous;
-      }
-      return { ...previous, [field]: value };
-    });
-  }
-
-  function updateNewCompetencyField(field: keyof CompetencyDraft, value: string) {
-    setNewCompetency((previous) => ({ ...previous, [field]: value }));
-  }
-
-  function getNextCompetencyCode(): string {
-    const maxSequence = competencies.reduce((max, competency) => {
-      const parsed = Number(competency.competencyCode.replace('CMP-', ''));
-      if (Number.isNaN(parsed)) {
-        return max;
-      }
-      return Math.max(max, parsed);
-    }, 0);
-    return `CMP-${String(maxSequence + 1).padStart(3, '0')}`;
-  }
 
   function attachMaterialsToTarget(materials: AdminLearningMaterial[]) {
     if (materialTarget === 'new') {
-      setNewCompetency((previous) => {
-        const existingIds = new Set(previous.learningMaterials.map((item) => item.id));
+      setNewCompetency((prev) => {
+        const existingIds = new Set(prev.learningMaterials.map((item) => item.id));
         const toAdd = materials.filter((item) => !existingIds.has(item.id));
-        return { ...previous, learningMaterials: [...previous.learningMaterials, ...toAdd] };
+        return { ...prev, learningMaterials: [...prev.learningMaterials, ...toAdd] };
       });
     }
-
     if (materialTarget === 'edit') {
-      setEditingCompetency((previous) => {
-        if (!previous) {
-          return previous;
-        }
-        const existingIds = new Set(previous.learningMaterials.map((item) => item.id));
+      setEditingCompetency((prev) => {
+        if (!prev) return prev;
+        const existingIds = new Set(prev.learningMaterials.map((item) => item.id));
         const toAdd = materials.filter((item) => !existingIds.has(item.id));
-        return { ...previous, learningMaterials: [...previous.learningMaterials, ...toAdd] };
+        return { ...prev, learningMaterials: [...prev.learningMaterials, ...toAdd] };
       });
     }
   }
 
   function removeLearningMaterialFromTarget(target: Exclude<MaterialTarget, null>, materialId: string) {
     if (target === 'new') {
-      setNewCompetency((previous) => ({
-        ...previous,
-        learningMaterials: previous.learningMaterials.filter((material) => material.id !== materialId),
+      setNewCompetency((prev) => ({
+        ...prev,
+        learningMaterials: prev.learningMaterials.filter((m) => m.id !== materialId),
       }));
       return;
     }
-
-    setEditingCompetency((previous) => {
-      if (!previous) {
-        return previous;
-      }
-      return {
-        ...previous,
-        learningMaterials: previous.learningMaterials.filter((material) => material.id !== materialId),
-      };
+    setEditingCompetency((prev) => {
+      if (!prev) return prev;
+      return { ...prev, learningMaterials: prev.learningMaterials.filter((m) => m.id !== materialId) };
     });
   }
 
@@ -191,15 +262,7 @@ function AdminCompetencyLibraryPage({ onNavigate }: AdminCompetencyLibraryPagePr
     setMaterialTarget(target);
     setMaterialUrlError('');
     setMaterialNameError('');
-    setNewLearningMaterial({
-      id: '',
-      type: 'Link',
-      url: '',
-      name: '',
-      description: '',
-      category: '',
-      duration: '',
-    });
+    setNewLearningMaterial({ id: '', type: 'Link', url: '', name: '', description: '', category: '', duration: '' });
     setShowNewMaterialModal(true);
   }
 
@@ -214,12 +277,8 @@ function AdminCompetencyLibraryPage({ onNavigate }: AdminCompetencyLibraryPagePr
     const trimmedUrl = newLearningMaterial.url.trim();
     const trimmedName = newLearningMaterial.name.trim();
     if (!trimmedUrl || !trimmedName) {
-      if (!trimmedUrl) {
-        setMaterialUrlError('URL is required.');
-      }
-      if (!trimmedName) {
-        setMaterialNameError('Learning material name is required.');
-      }
+      if (!trimmedUrl) setMaterialUrlError('URL is required.');
+      if (!trimmedName) setMaterialNameError('Learning material name is required.');
       return;
     }
     if (!trimmedUrl.startsWith('https://')) {
@@ -239,78 +298,115 @@ function AdminCompetencyLibraryPage({ onNavigate }: AdminCompetencyLibraryPagePr
       duration: newLearningMaterial.duration?.trim(),
     };
 
-    setMaterialLibrary((previous) => [material, ...previous]);
+    setMaterialLibrary((prev) => [material, ...prev]);
     attachMaterialsToTarget([material]);
     setShowNewMaterialModal(false);
     setMaterialTarget(null);
   }
 
   function handleAttachSelectedLibraryMaterials() {
-    if (!selectedLibraryMaterialIds.length) {
-      return;
-    }
-
-    const selectedMaterials = materialLibrary.filter((material) => selectedLibraryMaterialIds.includes(material.id));
+    if (!selectedLibraryMaterialIds.length) return;
+    const selectedMaterials = materialLibrary.filter((m) => selectedLibraryMaterialIds.includes(m.id));
     attachMaterialsToTarget(selectedMaterials);
     setShowLibraryMaterialsModal(false);
     setMaterialTarget(null);
   }
 
-  function handleAddCompetency() {
+  function getNextCompetencyCode(): string {
+    const maxSeq = competencies.reduce((max, c) => {
+      const parsed = Number(c.competency_code.replace('CMP-', ''));
+      if (Number.isNaN(parsed)) return max;
+      return Math.max(max, parsed);
+    }, 0);
+    return `CMP-${String(maxSeq + 1).padStart(3, '0')}`;
+  }
+
+  async function handleAddCompetency() {
+    setNameError('');
+    setSubmitError('');
     if (!newCompetency.competencyName.trim()) {
+      setNameError('Competency Name is required.');
       return;
     }
-
-    const competency: AdminCompetency = {
-      id: `competency-${Date.now()}`,
-      competencyCode: getNextCompetencyCode(),
-      competencyName: newCompetency.competencyName.trim(),
-      competencyDescription: newCompetency.competencyDescription.trim(),
-      expectations: newCompetency.expectations.trim(),
-      competencyLevel: newCompetency.competencyLevel,
-      competencyExperts: newCompetency.competencyExperts.trim(),
-      learningMaterials: newCompetency.learningMaterials,
-    };
-
-    console.log('add_competency_payload', competency);
-    setCompetencies((previous) => [competency, ...previous]);
-    setNewCompetency(getInitialCompetencyDraft());
-    setShowAddCompetencyModal(false);
-  }
-
-  function handleSaveEditedCompetency() {
-    if (!editingCompetency) {
-      return;
+    try {
+      const res = await fetch(COMPETENCIES_API + '/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          competency_code: getNextCompetencyCode(),
+          competency_name: newCompetency.competencyName.trim(),
+          competency_description: newCompetency.competencyDescription.trim(),
+          expectations: newCompetency.expectations.trim(),
+          competency_level: newCompetency.competencyLevel,
+          competency_experts: newCompetency.competencyExperts.trim(),
+          created_by: 'Admin',
+          status: newCompetency.status,
+          learning_materials: materialsToApi(newCompetency.learningMaterials),
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ detail: 'Failed to create' }));
+        setSubmitError(data.detail || 'Failed to create competency');
+        return;
+      }
+      setShowAddCompetencyModal(false);
+      setNewCompetency(emptyDraft());
+      setCurrentPage(1);
+      await loadCompetencies();
+    } catch {
+      setSubmitError('Network error');
     }
-
-    console.log('edit_competency_payload', {
-      competencyId: editingCompetency.id,
-      competency: editingCompetency,
-    });
-    setCompetencies((previous) => previous.map((competency) => (
-      competency.id === editingCompetency.id ? editingCompetency : competency
-    )));
-    setEditingCompetency(null);
   }
 
-  function handleDeleteCompetency(competencyId: string) {
-    console.log('delete_competency_payload', { competencyId });
-    setCompetencies((previous) => previous.filter((competency) => competency.id !== competencyId));
+  async function handleSaveEditedCompetency() {
+    if (!editingCompetency) return;
+    setSubmitError('');
+    try {
+      const res = await fetch(`${COMPETENCIES_API}/${editingCompetency.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          competency_code: editingCompetency.competencyCode,
+          competency_name: editingCompetency.competencyName.trim(),
+          competency_description: editingCompetency.competencyDescription.trim(),
+          expectations: editingCompetency.expectations.trim(),
+          competency_level: editingCompetency.competencyLevel,
+          competency_experts: editingCompetency.competencyExperts.trim(),
+          created_by: editingCompetency.createdBy,
+          status: editingCompetency.status,
+          learning_materials: materialsToApi(editingCompetency.learningMaterials),
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ detail: 'Failed to update' }));
+        setSubmitError(data.detail || 'Failed to update competency');
+        return;
+      }
+      setEditingCompetency(null);
+      await loadCompetencies();
+    } catch {
+      setSubmitError('Network error');
+    }
+  }
+
+  async function handleDeleteCompetency(id: number) {
+    try {
+      await fetch(`${COMPETENCIES_API}/${id}`, { method: 'DELETE' });
+      await loadCompetencies();
+    } catch {
+    }
   }
 
   function toggleLibraryMaterialSelection(materialId: string) {
-    setSelectedLibraryMaterialIds((previous) => {
-      if (previous.includes(materialId)) {
-        return previous.filter((id) => id !== materialId);
-      }
-      return [...previous, materialId];
-    });
+    setSelectedLibraryMaterialIds((prev) =>
+      prev.includes(materialId) ? prev.filter((id) => id !== materialId) : [...prev, materialId]
+    );
   }
 
-  const totalCompetencies = competencies.length;
+  const totalCompetencies = filteredCompetencies.length;
   const totalPages = Math.max(1, Math.ceil(totalCompetencies / PAGE_SIZE));
   const safeCurrentPage = Math.min(currentPage, totalPages);
-  const pagedCompetencies = competencies.slice(
+  const pagedCompetencies = filteredCompetencies.slice(
     (safeCurrentPage - 1) * PAGE_SIZE,
     safeCurrentPage * PAGE_SIZE,
   );
@@ -327,71 +423,100 @@ function AdminCompetencyLibraryPage({ onNavigate }: AdminCompetencyLibraryPagePr
                 <h1>Competency Library</h1>
                 <p>Manage available competencies and expectations.</p>
               </div>
-              <button className="admin-invite-btn" onClick={() => setShowAddCompetencyModal(true)}>
+              <button className="admin-invite-btn" onClick={() => { setNewCompetency(emptyDraft()); setNameError(''); setSubmitError(''); setShowAddCompetencyModal(true); }}>
                 <Plus size={16} />
                 Add Competency
               </button>
             </div>
 
-            <div className="admin-users-table-wrap">
-              <table className="admin-users-table competency-table">
-                <thead>
-                  <tr>
-                    <th>Competency Code</th>
-                    <th>Competency Name</th>
-                    <th>Competency Description</th>
-                    <th>Expectations</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {totalCompetencies === 0 && (
-                    <tr>
-                      <td colSpan={5} className="admin-empty-state">
-                        No competencies available.
-                      </td>
-                    </tr>
-                  )}
-                  {pagedCompetencies.map((competency) => (
-                    <tr key={competency.id}>
-                      <td>{competency.competencyCode}</td>
-                      <td>{competency.competencyName}</td>
-                      <td>{competency.competencyDescription}</td>
-                      <td>{competency.expectations}</td>
-                      <td>
-                        <div className="admin-actions-cell">
-                          <button
-                            className="admin-edit-btn"
-                            onClick={() => setEditingCompetency({ ...competency })}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            className="admin-delete-btn"
-                            onClick={() => setPendingDeleteCompetency(competency)}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="admin-filters-bar">
+              <input
+                className="admin-search-input"
+                type="text"
+                placeholder="Search competencies..."
+                value={searchTerm}
+                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+              />
+              <select value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setCurrentPage(1); }}>
+                <option value="all">All Status</option>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
             </div>
-            <AdminTablePagination
-              currentPage={safeCurrentPage}
-              totalItems={totalCompetencies}
-              pageSize={PAGE_SIZE}
-              onPageChange={setCurrentPage}
-            />
+
+            {loading ? (
+              <div className="admin-empty-state" style={{ padding: '2rem', textAlign: 'center' }}>Loading competencies...</div>
+            ) : (
+              <>
+                <div className="admin-users-table-wrap">
+                  <table className="admin-users-table competency-table">
+                    <thead>
+                      <tr>
+                        <th>Competency Code</th>
+                        <th>Competency Name</th>
+                        <th>Competency Description</th>
+                        <th>Expectations</th>
+                        <th>Created By</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {totalCompetencies === 0 && (
+                        <tr>
+                          <td colSpan={7} className="admin-empty-state">
+                            No competencies available.
+                          </td>
+                        </tr>
+                      )}
+                      {pagedCompetencies.map((competency) => (
+                        <tr key={competency.id}>
+                          <td>{competency.competency_code}</td>
+                          <td>{competency.competency_name}</td>
+                          <td>{competency.competency_description}</td>
+                          <td>{competency.expectations}</td>
+                          <td>{competency.created_by}</td>
+                          <td>
+                            <span className={`admin-status-badge ${competency.status === 'Active' ? 'active' : 'inactive'}`}>
+                              {competency.status}
+                            </span>
+                          </td>
+                          <td>
+                            <div className="admin-actions-cell">
+                              <button
+                                className="admin-edit-btn"
+                                onClick={() => { setEditingCompetency(apiToLocal(competency)); setSubmitError(''); }}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                className="admin-delete-btn"
+                                onClick={() => setPendingDeleteCompetency(competency)}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <AdminTablePagination
+                  currentPage={safeCurrentPage}
+                  totalItems={totalCompetencies}
+                  pageSize={PAGE_SIZE}
+                  onPageChange={setCurrentPage}
+                />
+              </>
+            )}
           </section>
         </div>
       </div>
 
       {showAddCompetencyModal && (
         <div className="admin-modal-backdrop">
-          <section className="admin-modal" onClick={(event) => event.stopPropagation()}>
+          <section className="admin-modal" onClick={(e) => e.stopPropagation()}>
             <div className="admin-modal-header">
               <div>
                 <h3>Add Competency</h3>
@@ -402,27 +527,40 @@ function AdminCompetencyLibraryPage({ onNavigate }: AdminCompetencyLibraryPagePr
               </button>
             </div>
 
+            {submitError && <div className="admin-form-error">{submitError}</div>}
+
             <div className="admin-edit-grid single-column">
               <div className="admin-form-field">
-                <label htmlFor="add-competency-name">Competency Name</label>
+                <label htmlFor="add-competency-name">Competency Name <span className="required">*</span></label>
                 <input
                   id="add-competency-name"
+                  className={nameError ? 'admin-input-invalid' : ''}
                   value={newCompetency.competencyName}
-                  onChange={(event) => updateNewCompetencyField('competencyName', event.target.value)}
+                  onChange={(e) => { setNewCompetency((prev) => ({ ...prev, competencyName: e.target.value })); setNameError(''); }}
                 />
+                {nameError && <small className="admin-field-error">{nameError}</small>}
               </div>
               <div className="admin-form-field">
                 <label htmlFor="add-competency-level">Competency Level</label>
                 <select
                   id="add-competency-level"
                   value={newCompetency.competencyLevel}
-                  onChange={(event) => updateNewCompetencyField('competencyLevel', event.target.value)}
+                  onChange={(e) => setNewCompetency((prev) => ({ ...prev, competencyLevel: e.target.value as CompetencyLevel }))}
                 >
                   {competencyLevelOptions.map((level) => (
-                    <option key={level} value={level}>
-                      {level}
-                    </option>
+                    <option key={level} value={level}>{level}</option>
                   ))}
+                </select>
+              </div>
+              <div className="admin-form-field">
+                <label htmlFor="add-competency-status">Status</label>
+                <select
+                  id="add-competency-status"
+                  value={newCompetency.status}
+                  onChange={(e) => setNewCompetency((prev) => ({ ...prev, status: e.target.value }))}
+                >
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
                 </select>
               </div>
               <div className="admin-form-field">
@@ -430,7 +568,7 @@ function AdminCompetencyLibraryPage({ onNavigate }: AdminCompetencyLibraryPagePr
                 <input
                   id="add-competency-experts"
                   value={newCompetency.competencyExperts}
-                  onChange={(event) => updateNewCompetencyField('competencyExperts', event.target.value)}
+                  onChange={(e) => setNewCompetency((prev) => ({ ...prev, competencyExperts: e.target.value }))}
                   placeholder="Enter expert names"
                 />
               </div>
@@ -440,7 +578,7 @@ function AdminCompetencyLibraryPage({ onNavigate }: AdminCompetencyLibraryPagePr
                   id="add-competency-description"
                   rows={4}
                   value={newCompetency.competencyDescription}
-                  onChange={(event) => updateNewCompetencyField('competencyDescription', event.target.value)}
+                  onChange={(e) => setNewCompetency((prev) => ({ ...prev, competencyDescription: e.target.value }))}
                 />
               </div>
               <div className="admin-form-field">
@@ -449,7 +587,7 @@ function AdminCompetencyLibraryPage({ onNavigate }: AdminCompetencyLibraryPagePr
                   id="add-competency-expectations"
                   rows={4}
                   value={newCompetency.expectations}
-                  onChange={(event) => updateNewCompetencyField('expectations', event.target.value)}
+                  onChange={(e) => setNewCompetency((prev) => ({ ...prev, expectations: e.target.value }))}
                 />
               </div>
 
@@ -467,16 +605,10 @@ function AdminCompetencyLibraryPage({ onNavigate }: AdminCompetencyLibraryPagePr
                   {newCompetency.learningMaterials.length === 0 && <p>No materials added yet.</p>}
                   {newCompetency.learningMaterials.map((material) => (
                     <div key={material.id} className="admin-learning-material-item">
-                      <a href={material.url} target="_blank" rel="noreferrer">
-                        {material.name}
-                      </a>
+                      <a href={material.url} target="_blank" rel="noreferrer">{material.name}</a>
                       <button
                         className="admin-learning-remove-btn"
-                        onClick={() => setPendingDeleteLearningMaterial({
-                          target: 'new',
-                          materialId: material.id,
-                          materialName: material.name,
-                        })}
+                        onClick={() => setPendingDeleteLearningMaterial({ target: 'new', materialId: material.id, materialName: material.name })}
                         title={`Remove ${material.name}`}
                       >
                         <X size={12} />
@@ -488,12 +620,8 @@ function AdminCompetencyLibraryPage({ onNavigate }: AdminCompetencyLibraryPagePr
             </div>
 
             <div className="admin-modal-actions">
-              <button className="admin-secondary-btn" onClick={() => setShowAddCompetencyModal(false)}>
-                Cancel
-              </button>
-              <button className="admin-primary-btn" onClick={handleAddCompetency}>
-                Add Competency
-              </button>
+              <button className="admin-secondary-btn" onClick={() => setShowAddCompetencyModal(false)}>Cancel</button>
+              <button className="admin-primary-btn" onClick={handleAddCompetency}>Add Competency</button>
             </div>
           </section>
         </div>
@@ -501,7 +629,7 @@ function AdminCompetencyLibraryPage({ onNavigate }: AdminCompetencyLibraryPagePr
 
       {editingCompetency && (
         <div className="admin-modal-backdrop">
-          <section className="admin-modal" onClick={(event) => event.stopPropagation()}>
+          <section className="admin-modal" onClick={(e) => e.stopPropagation()}>
             <div className="admin-modal-header">
               <div>
                 <h3>Edit Competency</h3>
@@ -512,13 +640,15 @@ function AdminCompetencyLibraryPage({ onNavigate }: AdminCompetencyLibraryPagePr
               </button>
             </div>
 
+            {submitError && <div className="admin-form-error">{submitError}</div>}
+
             <div className="admin-edit-grid single-column">
               <div className="admin-form-field">
                 <label htmlFor="edit-competency-name">Competency Name</label>
                 <input
                   id="edit-competency-name"
                   value={editingCompetency.competencyName}
-                  onChange={(event) => updateEditingCompetencyField('competencyName', event.target.value)}
+                  onChange={(e) => setEditingCompetency((prev) => prev ? { ...prev, competencyName: e.target.value } : prev)}
                 />
               </div>
               <div className="admin-form-field">
@@ -526,21 +656,30 @@ function AdminCompetencyLibraryPage({ onNavigate }: AdminCompetencyLibraryPagePr
                 <select
                   id="edit-competency-level"
                   value={editingCompetency.competencyLevel}
-                  onChange={(event) => updateEditingCompetencyField('competencyLevel', event.target.value)}
+                  onChange={(e) => setEditingCompetency((prev) => prev ? { ...prev, competencyLevel: e.target.value } : prev)}
                 >
                   {competencyLevelOptions.map((level) => (
-                    <option key={level} value={level}>
-                      {level}
-                    </option>
+                    <option key={level} value={level}>{level}</option>
                   ))}
+                </select>
+              </div>
+              <div className="admin-form-field">
+                <label htmlFor="edit-competency-status">Status</label>
+                <select
+                  id="edit-competency-status"
+                  value={editingCompetency.status}
+                  onChange={(e) => setEditingCompetency((prev) => prev ? { ...prev, status: e.target.value } : prev)}
+                >
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
                 </select>
               </div>
               <div className="admin-form-field">
                 <label htmlFor="edit-competency-experts">Competency Expert(s) (optional)</label>
                 <input
                   id="edit-competency-experts"
-                  value={editingCompetency.competencyExperts ?? ''}
-                  onChange={(event) => updateEditingCompetencyField('competencyExperts', event.target.value)}
+                  value={editingCompetency.competencyExperts}
+                  onChange={(e) => setEditingCompetency((prev) => prev ? { ...prev, competencyExperts: e.target.value } : prev)}
                   placeholder="Enter expert names"
                 />
               </div>
@@ -550,7 +689,7 @@ function AdminCompetencyLibraryPage({ onNavigate }: AdminCompetencyLibraryPagePr
                   id="edit-competency-description"
                   rows={4}
                   value={editingCompetency.competencyDescription}
-                  onChange={(event) => updateEditingCompetencyField('competencyDescription', event.target.value)}
+                  onChange={(e) => setEditingCompetency((prev) => prev ? { ...prev, competencyDescription: e.target.value } : prev)}
                 />
               </div>
               <div className="admin-form-field">
@@ -559,7 +698,7 @@ function AdminCompetencyLibraryPage({ onNavigate }: AdminCompetencyLibraryPagePr
                   id="edit-competency-expectations"
                   rows={4}
                   value={editingCompetency.expectations}
-                  onChange={(event) => updateEditingCompetencyField('expectations', event.target.value)}
+                  onChange={(e) => setEditingCompetency((prev) => prev ? { ...prev, expectations: e.target.value } : prev)}
                 />
               </div>
 
@@ -577,16 +716,10 @@ function AdminCompetencyLibraryPage({ onNavigate }: AdminCompetencyLibraryPagePr
                   {editingCompetency.learningMaterials.length === 0 && <p>No materials added yet.</p>}
                   {editingCompetency.learningMaterials.map((material) => (
                     <div key={material.id} className="admin-learning-material-item">
-                      <a href={material.url} target="_blank" rel="noreferrer">
-                        {material.name}
-                      </a>
+                      <a href={material.url} target="_blank" rel="noreferrer">{material.name}</a>
                       <button
                         className="admin-learning-remove-btn"
-                        onClick={() => setPendingDeleteLearningMaterial({
-                          target: 'edit',
-                          materialId: material.id,
-                          materialName: material.name,
-                        })}
+                        onClick={() => setPendingDeleteLearningMaterial({ target: 'edit', materialId: material.id, materialName: material.name })}
                         title={`Remove ${material.name}`}
                       >
                         <X size={12} />
@@ -598,12 +731,8 @@ function AdminCompetencyLibraryPage({ onNavigate }: AdminCompetencyLibraryPagePr
             </div>
 
             <div className="admin-modal-actions">
-              <button className="admin-secondary-btn" onClick={() => setEditingCompetency(null)}>
-                Cancel
-              </button>
-              <button className="admin-primary-btn" onClick={handleSaveEditedCompetency}>
-                Save Changes
-              </button>
+              <button className="admin-secondary-btn" onClick={() => setEditingCompetency(null)}>Cancel</button>
+              <button className="admin-primary-btn" onClick={handleSaveEditedCompetency}>Save Changes</button>
             </div>
           </section>
         </div>
@@ -611,11 +740,9 @@ function AdminCompetencyLibraryPage({ onNavigate }: AdminCompetencyLibraryPagePr
 
       {showNewMaterialModal && (
         <div className="admin-modal-backdrop">
-          <section className="admin-modal admin-learning-modal" onClick={(event) => event.stopPropagation()}>
+          <section className="admin-modal admin-learning-modal" onClick={(e) => e.stopPropagation()}>
             <div className="admin-modal-header">
-              <div>
-                <h3>New learning material</h3>
-              </div>
+              <div><h3>New learning material</h3></div>
               <button className="admin-modal-close-btn" onClick={() => setShowNewMaterialModal(false)}>
                 <X size={16} />
               </button>
@@ -628,12 +755,7 @@ function AdminCompetencyLibraryPage({ onNavigate }: AdminCompetencyLibraryPagePr
                 placeholder="Paste URL here"
                 className={materialUrlError ? 'admin-input-invalid' : ''}
                 value={newLearningMaterial.url}
-                onChange={(event) => {
-                  setNewLearningMaterial((previous) => ({ ...previous, url: event.target.value }));
-                  if (materialUrlError) {
-                    setMaterialUrlError('');
-                  }
-                }}
+                onChange={(e) => { setNewLearningMaterial((prev) => ({ ...prev, url: e.target.value })); if (materialUrlError) setMaterialUrlError(''); }}
               />
               <small className={materialUrlError ? 'admin-field-error' : ''}>
                 {materialUrlError || 'Only URLs with https are allowed'}
@@ -647,12 +769,7 @@ function AdminCompetencyLibraryPage({ onNavigate }: AdminCompetencyLibraryPagePr
                 placeholder="Example: Presentation tutorial"
                 className={materialNameError ? 'admin-input-invalid' : ''}
                 value={newLearningMaterial.name}
-                onChange={(event) => {
-                  setNewLearningMaterial((previous) => ({ ...previous, name: event.target.value }));
-                  if (materialNameError) {
-                    setMaterialNameError('');
-                  }
-                }}
+                onChange={(e) => { setNewLearningMaterial((prev) => ({ ...prev, name: e.target.value })); if (materialNameError) setMaterialNameError(''); }}
               />
               {materialNameError && <small className="admin-field-error">{materialNameError}</small>}
             </div>
@@ -663,10 +780,7 @@ function AdminCompetencyLibraryPage({ onNavigate }: AdminCompetencyLibraryPagePr
                 id="learning-description"
                 rows={5}
                 value={newLearningMaterial.description}
-                onChange={(event) => setNewLearningMaterial((previous) => ({
-                  ...previous,
-                  description: event.target.value,
-                }))}
+                onChange={(e) => setNewLearningMaterial((prev) => ({ ...prev, description: e.target.value }))}
               />
               <small>Note: You can paste images.</small>
             </div>
@@ -677,15 +791,10 @@ function AdminCompetencyLibraryPage({ onNavigate }: AdminCompetencyLibraryPagePr
                 <select
                   id="learning-category"
                   value={newLearningMaterial.category}
-                  onChange={(event) => setNewLearningMaterial((previous) => ({
-                    ...previous,
-                    category: event.target.value,
-                  }))}
+                  onChange={(e) => setNewLearningMaterial((prev) => ({ ...prev, category: e.target.value }))}
                 >
                   <option value="">Select</option>
-                  {categoryOptions.map((option) => (
-                    <option key={option} value={option}>{option}</option>
-                  ))}
+                  {categoryOptions.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
                 </select>
               </div>
               <div className="admin-form-field">
@@ -693,15 +802,10 @@ function AdminCompetencyLibraryPage({ onNavigate }: AdminCompetencyLibraryPagePr
                 <select
                   id="learning-duration"
                   value={newLearningMaterial.duration}
-                  onChange={(event) => setNewLearningMaterial((previous) => ({
-                    ...previous,
-                    duration: event.target.value,
-                  }))}
+                  onChange={(e) => setNewLearningMaterial((prev) => ({ ...prev, duration: e.target.value }))}
                 >
                   <option value="">Select</option>
-                  {durationOptions.map((option) => (
-                    <option key={option} value={option}>{option}</option>
-                  ))}
+                  {durationOptions.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
                 </select>
               </div>
             </div>
@@ -715,7 +819,7 @@ function AdminCompetencyLibraryPage({ onNavigate }: AdminCompetencyLibraryPagePr
 
       {showLibraryMaterialsModal && (
         <div className="admin-modal-backdrop">
-          <section className="admin-modal" onClick={(event) => event.stopPropagation()}>
+          <section className="admin-modal" onClick={(e) => e.stopPropagation()}>
             <div className="admin-modal-header">
               <div>
                 <h3>Add materials from Library</h3>
@@ -732,14 +836,12 @@ function AdminCompetencyLibraryPage({ onNavigate }: AdminCompetencyLibraryPagePr
                 id="library-material-search"
                 placeholder="Search by name, url, category"
                 value={materialSearchTerm}
-                onChange={(event) => setMaterialSearchTerm(event.target.value)}
+                onChange={(e) => setMaterialSearchTerm(e.target.value)}
               />
             </div>
 
             <div className="admin-library-list">
-              {filteredLibraryMaterials.length === 0 && (
-                <p className="admin-library-empty">No materials found.</p>
-              )}
+              {filteredLibraryMaterials.length === 0 && <p className="admin-library-empty">No materials found.</p>}
               {filteredLibraryMaterials.map((material) => (
                 <label key={material.id} className="admin-library-item">
                   <input
@@ -756,26 +858,21 @@ function AdminCompetencyLibraryPage({ onNavigate }: AdminCompetencyLibraryPagePr
             </div>
 
             <div className="admin-modal-actions">
-              <button className="admin-secondary-btn" onClick={() => setShowLibraryMaterialsModal(false)}>
-                Cancel
-              </button>
-              <button className="admin-primary-btn" onClick={handleAttachSelectedLibraryMaterials}>
-                Add Selected
-              </button>
+              <button className="admin-secondary-btn" onClick={() => setShowLibraryMaterialsModal(false)}>Cancel</button>
+              <button className="admin-primary-btn" onClick={handleAttachSelectedLibraryMaterials}>Add Selected</button>
             </div>
           </section>
         </div>
       )}
+
       <ConfirmationDialog
         isOpen={Boolean(pendingDeleteCompetency)}
         title="Delete Competency"
-        message={`Are you sure you want to delete "${pendingDeleteCompetency?.competencyName ?? ''}"?`}
+        message={`Are you sure you want to delete "${pendingDeleteCompetency?.competency_name ?? ''}"?`}
         confirmLabel="Delete"
         onCancel={() => setPendingDeleteCompetency(null)}
         onConfirm={() => {
-          if (pendingDeleteCompetency) {
-            handleDeleteCompetency(pendingDeleteCompetency.id);
-          }
+          if (pendingDeleteCompetency) handleDeleteCompetency(pendingDeleteCompetency.id);
           setPendingDeleteCompetency(null);
         }}
       />
@@ -787,10 +884,7 @@ function AdminCompetencyLibraryPage({ onNavigate }: AdminCompetencyLibraryPagePr
         onCancel={() => setPendingDeleteLearningMaterial(null)}
         onConfirm={() => {
           if (pendingDeleteLearningMaterial) {
-            removeLearningMaterialFromTarget(
-              pendingDeleteLearningMaterial.target,
-              pendingDeleteLearningMaterial.materialId,
-            );
+            removeLearningMaterialFromTarget(pendingDeleteLearningMaterial.target, pendingDeleteLearningMaterial.materialId);
           }
           setPendingDeleteLearningMaterial(null);
         }}
@@ -800,8 +894,3 @@ function AdminCompetencyLibraryPage({ onNavigate }: AdminCompetencyLibraryPagePr
 }
 
 export default AdminCompetencyLibraryPage;
-
-
-
-
-

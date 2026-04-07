@@ -25,6 +25,7 @@ type AdminUsersPageProps = {
 const ALL_COLUMNS: ColumnConfig[] = [
   { label: 'Employee ID', key: 'employeeId', defaultVisible: false },
   { label: 'Name', key: 'fullName', defaultVisible: true },
+  { label: 'Display Name', key: 'displayName', defaultVisible: false },
   { label: 'E-mail', key: 'email', defaultVisible: true },
   { label: 'Department', key: 'department', defaultVisible: false },
   { label: 'Job Title', key: 'jobTitle', defaultVisible: false },
@@ -59,6 +60,7 @@ function emptyUser(): AdminUser {
     firstName: '',
     middleName: '',
     lastName: '',
+    displayName: '',
     birthdate: '',
     gender: '',
     maritalStatus: '',
@@ -100,6 +102,7 @@ const TEMPLATE_HEADERS = [
   'First Name *',
   'Middle Name',
   'Last Name *',
+  'Display Name',
   'Email',
   'Phone',
   'Birthdate',
@@ -165,6 +168,7 @@ function parseExcelToUsers(data: ArrayBuffer): AdminUser[] {
     firstName: String(row['First Name *'] || row['First Name'] || ''),
     middleName: String(row['Middle Name'] || ''),
     lastName: String(row['Last Name *'] || row['Last Name'] || ''),
+    displayName: String(row['Display Name'] || ''),
     email: String(row['Email'] || ''),
     phone: String(row['Phone'] || ''),
     birthdate: normalizeExcelDate(row['Birthdate']),
@@ -437,6 +441,10 @@ function UserFormFields({
             <input id={`${prefix}-lastName`} value={user.lastName} onChange={(e) => onChange('lastName', e.target.value)} required />
           </div>
           <div className="admin-form-field">
+            <label htmlFor={`${prefix}-displayName`}>Display Name</label>
+            <input id={`${prefix}-displayName`} value={user.displayName} onChange={(e) => onChange('displayName', e.target.value)} placeholder="e.g. Johnny D." />
+          </div>
+          <div className="admin-form-field">
             <label htmlFor={`${prefix}-email`}>Email</label>
             <input id={`${prefix}-email`} type="email" value={user.email} onChange={(e) => onChange('email', e.target.value)} />
           </div>
@@ -638,7 +646,7 @@ function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
       if (!searchText) return true;
 
       const searchableText = [
-        user.employeeId, user.firstName, user.middleName, user.lastName,
+        user.employeeId, user.firstName, user.middleName, user.lastName, user.displayName,
         user.email, user.phone, user.teamflectRole, user.supervisor,
         user.department, user.jobTitle, user.country, user.team,
         user.status, user.officeLocation,

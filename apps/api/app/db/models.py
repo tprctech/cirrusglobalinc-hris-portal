@@ -41,6 +41,7 @@ class Employee(Base):
     first_name = Column(String(100), nullable=False)
     middle_name = Column(String(100), nullable=True, default="")
     last_name = Column(String(100), nullable=False)
+    display_name = Column(String(200), nullable=True, default="")
     birthdate = Column(Date, nullable=True)
     gender = Column(String(20), nullable=True, default="")
     marital_status = Column(String(30), nullable=True, default="")
@@ -92,6 +93,7 @@ class Role(Base):
     users_in_role = Column(Integer, nullable=True, default=0)
     department_id = Column(Integer, ForeignKey("departments.id", ondelete="SET NULL"), nullable=True)
     created_by = Column(String(200), nullable=True, default="")
+    status = Column(String(20), nullable=False, default="Active")
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -109,6 +111,8 @@ class Competency(Base):
     expectations = Column(Text, nullable=True, default="")
     competency_level = Column(String(60), nullable=True, default="")
     competency_experts = Column(String(300), nullable=True, default="")
+    created_by = Column(String(200), nullable=True, default="")
+    status = Column(String(20), nullable=False, default="Active")
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
