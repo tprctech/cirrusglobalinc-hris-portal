@@ -149,6 +149,11 @@ function normalizeExcelDate(val: unknown): string {
   return s;
 }
 
+const PORTAL_ROLE_MAP: Record<string, string> = { employee: 'Employee', manager: 'Manager', hr: 'HR', admin: 'Admin' };
+function normalizePortalRole(val: string): string {
+  return PORTAL_ROLE_MAP[val.trim().toLowerCase()] || 'Employee';
+}
+
 function parseExcelToUsers(data: ArrayBuffer): AdminUser[] {
   const wb = XLSX.read(data, { type: 'array' });
   const ws = wb.Sheets[wb.SheetNames[0]];
@@ -171,7 +176,7 @@ function parseExcelToUsers(data: ArrayBuffer): AdminUser[] {
     department: String(row['Department'] || ''),
     jobTitle: String(row['Job Title'] || ''),
     jobDescription: String(row['Job Description'] || ''),
-    teamflectRole: String(row['Portal Role'] || row['Teamflect Role'] || 'Employee'),
+    teamflectRole: normalizePortalRole(String(row['Portal Role'] || row['Teamflect Role'] || 'Employee')),
     dateHired: normalizeExcelDate(row['Date Hired']),
     status: String(row['Status'] || 'Active'),
     supervisor: String(row['Supervisor'] || ''),
@@ -584,7 +589,7 @@ function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
   const [bulkFile, setBulkFile] = useState<File | null>(null);
   const [bulkParsed, setBulkParsed] = useState<AdminUser[]>([]);
   const [bulkUploading, setBulkUploading] = useState(false);
-  const [bulkResult, setBulkResult] = useState<{ created: number; errors: string[] } | null>(null);
+  const [bulkResult, setBulkResult] = useState<{ created: number; skipped: number; errors: string[] } | null>(null);
   const [formError, setFormError] = useState('');
   const columnPickerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1052,7 +1057,7 @@ function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
 
               {bulkResult && (
                 <div className="admin-bulk-result">
-                  <p className="admin-bulk-result-success">{bulkResult.created} user(s) created successfully.</p>
+                  <p className="admin-bulk-result-success">{bulkResult.created} user(s) created successfully.{bulkResult.skipped > 0 && ` ${bulkResult.skipped} skipped (duplicates).`}</p>
                   {bulkResult.errors.length > 0 && (
                     <div className="admin-bulk-result-errors">
                       <p><strong>{bulkResult.errors.length} error(s):</strong></p>

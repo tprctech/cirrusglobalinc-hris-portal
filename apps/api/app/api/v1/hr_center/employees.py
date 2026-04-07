@@ -15,6 +15,15 @@ router = APIRouter()
 
 PHOTO_MAX_SIZE = (400, 400)
 
+VALID_PORTAL_ROLES = {"employee": "Employee", "manager": "Manager", "hr": "HR", "admin": "Admin"}
+
+
+def normalize_role(role: str | None) -> str:
+    if not role:
+        return "Employee"
+    mapped = VALID_PORTAL_ROLES.get(role.strip().lower())
+    return mapped if mapped else "Employee"
+
 
 class EmployeeCreate(BaseModel):
     employee_id: str
@@ -158,7 +167,9 @@ def get_employee(employee_id: int, db: Session = Depends(get_db)):
 
 @router.post("/", response_model=EmployeeOut, status_code=201)
 def create_employee(payload: EmployeeCreate, db: Session = Depends(get_db)):
-    row = Employee(**payload.model_dump())
+    data = payload.model_dump()
+    data["teamflect_role"] = normalize_role(data.get("teamflect_role"))
+    row = Employee(**data)
     db.add(row)
     try:
         db.commit()
@@ -175,6 +186,8 @@ def update_employee(employee_id: int, payload: EmployeeUpdate, db: Session = Dep
     if not row:
         raise HTTPException(status_code=404, detail="Employee not found")
     updates = payload.model_dump(exclude_unset=True)
+    if "teamflect_role" in updates:
+        updates["teamflect_role"] = normalize_role(updates["teamflect_role"])
     for key, value in updates.items():
         setattr(row, key, value)
     db.commit()

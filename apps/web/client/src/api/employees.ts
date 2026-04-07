@@ -188,18 +188,49 @@ export async function deleteEmployee(id: number): Promise<void> {
   if (!res.ok) throw new Error('Failed to delete employee');
 }
 
-export async function bulkCreateEmployees(users: AdminUser[]): Promise<{ created: number; errors: string[] }> {
+export async function bulkCreateEmployees(users: AdminUser[]): Promise<{ created: number; skipped: number; errors: string[] }> {
+  const existing = await fetchEmployees();
+  const existingEmails = new Set(existing.map((e) => e.email.toLowerCase()).filter(Boolean));
+  const existingIds = new Set(existing.map((e) => e.employeeId.toLowerCase()).filter(Boolean));
+  const existingNames = new Set(existing.map((e) => `${e.firstName} ${e.lastName}`.toLowerCase().trim()));
+
   let created = 0;
+  let skipped = 0;
   const errors: string[] = [];
+
   for (let i = 0; i < users.length; i++) {
+    const u = users[i];
+    const identifier = u.employeeId || u.firstName || `(no ID)`;
+    const rowLabel = `Row ${i + 2} [${identifier}]`;
+
+    const dupReasons: string[] = [];
+    if (u.employeeId && existingIds.has(u.employeeId.toLowerCase())) {
+      dupReasons.push(`Employee ID "${u.employeeId}" already exists`);
+    }
+    if (u.email && existingEmails.has(u.email.toLowerCase())) {
+      dupReasons.push(`Email "${u.email}" already exists`);
+    }
+    const fullName = `${u.firstName} ${u.lastName}`.toLowerCase().trim();
+    if (fullName && existingNames.has(fullName)) {
+      dupReasons.push(`Name "${u.firstName} ${u.lastName}" already exists`);
+    }
+
+    if (dupReasons.length > 0) {
+      skipped++;
+      errors.push(`${rowLabel}: Skipped — ${dupReasons.join('; ')}`);
+      continue;
+    }
+
     try {
-      await createEmployee(users[i]);
+      const created_user = await createEmployee(u);
       created++;
+      existingIds.add(u.employeeId.toLowerCase());
+      if (u.email) existingEmails.add(u.email.toLowerCase());
+      existingNames.add(`${created_user.firstName} ${created_user.lastName}`.toLowerCase().trim());
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
-      const identifier = users[i].employeeId || users[i].firstName || `(no ID)`;
-      errors.push(`Row ${i + 2} [${identifier}]: ${msg}`);
+      errors.push(`${rowLabel}: ${msg}`);
     }
   }
-  return { created, errors };
+  return { created, skipped, errors };
 }
