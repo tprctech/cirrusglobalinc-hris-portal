@@ -105,6 +105,19 @@ export async function fetchEmployees(): Promise<AdminUser[]> {
   return data.map(apiToFrontend);
 }
 
+function formatApiError(err: Record<string, unknown>): string {
+  const detail = err.detail;
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) {
+    return detail.map((d: Record<string, unknown>) => {
+      const loc = Array.isArray(d.loc) ? d.loc.filter((l: unknown) => l !== 'body').join(' → ') : '';
+      const msg = typeof d.msg === 'string' ? d.msg : String(d.msg || '');
+      return loc ? `${loc}: ${msg}` : msg;
+    }).join('; ');
+  }
+  return 'Unknown error';
+}
+
 export async function createEmployee(user: AdminUser): Promise<AdminUser> {
   const res = await fetch(API_BASE + '/', {
     method: 'POST',
@@ -113,7 +126,7 @@ export async function createEmployee(user: AdminUser): Promise<AdminUser> {
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || 'Failed to create employee');
+    throw new Error(formatApiError(err));
   }
   return apiToFrontend(await res.json());
 }
@@ -126,7 +139,7 @@ export async function updateEmployee(id: number, user: AdminUser): Promise<Admin
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || 'Failed to update employee');
+    throw new Error(formatApiError(err));
   }
   return apiToFrontend(await res.json());
 }
@@ -145,7 +158,8 @@ export async function bulkCreateEmployees(users: AdminUser[]): Promise<{ created
       created++;
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
-      errors.push(`Row ${i + 2}: ${msg}`);
+      const identifier = users[i].employeeId || users[i].firstName || `(no ID)`;
+      errors.push(`Row ${i + 2} [${identifier}]: ${msg}`);
     }
   }
   return { created, errors };
