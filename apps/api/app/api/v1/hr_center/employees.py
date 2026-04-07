@@ -8,7 +8,7 @@ from PIL import Image
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.db.models import Employee
+from app.db.models import Employee, UserAccount
 from app.db.session import get_db
 
 router = APIRouter()
@@ -203,6 +203,12 @@ def delete_employee(employee_id: int, db: Session = Depends(get_db)):
     row = db.query(Employee).filter(Employee.id == employee_id).first()
     if not row:
         raise HTTPException(status_code=404, detail="Employee not found")
+    acct_count = db.query(UserAccount).filter(UserAccount.employee_id == employee_id).count()
+    if acct_count > 0:
+        raise HTTPException(
+            status_code=409,
+            detail="Cannot delete this employee because they have a linked user account. Remove the user account first.",
+        )
     db.delete(row)
     db.commit()
 

@@ -188,7 +188,10 @@ export async function updateEmployee(id: number, user: AdminUser): Promise<Admin
 
 export async function deleteEmployee(id: number): Promise<void> {
   const res = await fetch(`${API_BASE}/${id}`, { method: 'DELETE' });
-  if (!res.ok) throw new Error('Failed to delete employee');
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({ detail: 'Failed to delete employee.' }));
+    throw new Error(data.detail || 'Failed to delete employee.');
+  }
 }
 
 export async function bulkCreateEmployees(users: AdminUser[]): Promise<{ created: number; skipped: number; errors: string[] }> {

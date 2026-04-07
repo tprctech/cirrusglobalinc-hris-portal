@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.db.models import Department
+from app.db.models import Department, Role
 from app.db.session import get_db
 
 router = APIRouter()
@@ -116,5 +116,11 @@ def delete_department(department_id: int, db: Session = Depends(get_db)):
     row = db.query(Department).filter(Department.id == department_id).first()
     if not row:
         raise HTTPException(status_code=404, detail="Department not found")
+    role_count = db.query(Role).filter(Role.department_id == department_id).count()
+    if role_count > 0:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Cannot delete this department because it is currently assigned to {role_count} role(s).",
+        )
     db.delete(row)
     db.commit()

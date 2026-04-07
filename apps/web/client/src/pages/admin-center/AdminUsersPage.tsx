@@ -742,12 +742,15 @@ function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
     }
   }
 
+  const [deleteError, setDeleteError] = useState('');
+
   async function handleDeleteUser(userId: number) {
+    setDeleteError('');
     try {
       await deleteEmployee(userId);
       setUsers((prev) => prev.filter((u) => u.id !== userId));
-    } catch {
-      // silent
+    } catch (err: unknown) {
+      setDeleteError(err instanceof Error ? err.message : 'Failed to delete employee.');
     }
   }
 
@@ -889,6 +892,12 @@ function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
               <div className="admin-empty-state" style={{ padding: '2rem', textAlign: 'center' }}>Loading users...</div>
             ) : (
               <>
+                {deleteError && (
+                  <div className="admin-delete-error" style={{ background: '#fff1f2', color: '#b91c1c', padding: '10px 16px', borderRadius: 8, marginBottom: 12, fontSize: 14 }}>
+                    {deleteError}
+                    <button onClick={() => setDeleteError('')} style={{ marginLeft: 12, background: 'none', border: 'none', color: '#b91c1c', cursor: 'pointer', fontWeight: 600 }}>×</button>
+                  </div>
+                )}
                 <div className="admin-users-table-wrap">
                   <table className="admin-users-table">
                     <thead>

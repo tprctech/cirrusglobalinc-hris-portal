@@ -6,7 +6,8 @@ from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.db.models import Competency, CompetencyLearningMaterial
+from sqlalchemy import func
+from app.db.models import Competency, CompetencyLearningMaterial, role_competencies
 from app.db.session import get_db
 
 router = APIRouter()
@@ -136,5 +137,13 @@ def delete_competency(competency_id: int, db: Session = Depends(get_db)):
     row = db.query(Competency).filter(Competency.id == competency_id).first()
     if not row:
         raise HTTPException(status_code=404, detail="Competency not found")
+    role_count = db.scalar(
+        role_competencies.select().where(role_competencies.c.competency_id == competency_id).with_only_columns(func.count())
+    )
+    if role_count and role_count > 0:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Cannot delete this competency because it is currently assigned to {role_count} role(s).",
+        )
     db.delete(row)
     db.commit()

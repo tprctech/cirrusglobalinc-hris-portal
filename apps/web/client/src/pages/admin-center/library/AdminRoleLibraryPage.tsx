@@ -150,11 +150,20 @@ function AdminRoleLibraryPage({ onNavigate }: AdminRoleLibraryPageProps) {
     }
   }
 
+  const [deleteError, setDeleteError] = useState('');
+
   async function handleDeleteRole(id: number) {
+    setDeleteError('');
     try {
-      await fetch(`${ROLES_API}/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${ROLES_API}/${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ detail: 'Failed to delete role.' }));
+        setDeleteError(data.detail || 'Failed to delete role.');
+        return;
+      }
       await loadAll();
     } catch {
+      setDeleteError('Failed to delete role.');
     }
   }
 
@@ -250,6 +259,12 @@ function AdminRoleLibraryPage({ onNavigate }: AdminRoleLibraryPageProps) {
               <div className="admin-empty-state" style={{ padding: '2rem', textAlign: 'center' }}>Loading roles...</div>
             ) : (
               <>
+                {deleteError && (
+                  <div className="admin-delete-error" style={{ background: '#fff1f2', color: '#b91c1c', padding: '10px 16px', borderRadius: 8, marginBottom: 12, fontSize: 14 }}>
+                    {deleteError}
+                    <button onClick={() => setDeleteError('')} style={{ marginLeft: 12, background: 'none', border: 'none', color: '#b91c1c', cursor: 'pointer', fontWeight: 600 }}>×</button>
+                  </div>
+                )}
                 <div className="admin-users-table-wrap">
                   <table className="admin-users-table role-library-table">
                     <thead>

@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.db.models import Competency, Department, Role
+from app.db.models import Competency, Department, Employee, Role
 from app.db.session import get_db
 
 router = APIRouter()
@@ -132,5 +132,11 @@ def delete_role(role_id: int, db: Session = Depends(get_db)):
     row = db.query(Role).filter(Role.id == role_id).first()
     if not row:
         raise HTTPException(status_code=404, detail="Role not found")
+    emp_count = db.query(Employee).filter(Employee.job_title == row.role_job_title).count()
+    if emp_count > 0:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Cannot delete this role because it is currently assigned to {emp_count} employee(s).",
+        )
     db.delete(row)
     db.commit()
