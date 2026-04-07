@@ -255,7 +255,7 @@ function App() {
     { label: 'L&D', icon: <GraduationCap size={20} /> },
     { label: 'Tasks', icon: <ListTodo size={20} /> },
     { label: 'Performance Reviews', icon: <ClipboardList size={20} /> },
-    { label: 'Feedbacks', icon: <MessageSquare size={20} /> },
+    { label: 'Feedback', icon: <MessageSquare size={20} /> },
     { label: 'AI Surveys', icon: <BarChart2 size={20} /> },
     { label: 'Recognitions', icon: <Award size={20} /> },
     { label: 'Organization Chart', icon: <Network size={20} /> },

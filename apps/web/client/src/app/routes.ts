@@ -39,7 +39,7 @@ export const MENU_ROUTE_MAP = {
   'L&D': ROUTES.learningDevelopment,
   Tasks: ROUTES.tasks,
   'Performance Reviews': ROUTES.reviews,
-  Feedbacks: ROUTES.feedback,
+  Feedback: ROUTES.feedback,
   'AI Surveys': ROUTES.surveys,
   Recognitions: ROUTES.recognitions,
   'Organization Chart': ROUTES.orgChart,
