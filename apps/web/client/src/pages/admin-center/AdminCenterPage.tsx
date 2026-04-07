@@ -17,7 +17,7 @@ type ColumnConfig = {
 const userColumns: ColumnConfig[] = [
   { label: 'Name', key: 'fullName' },
   { label: 'E-mail', key: 'email' },
-  { label: 'Teamflect Role', key: 'teamflectRole' },
+  { label: 'Portal Role', key: 'teamflectRole' },
   { label: 'Supervisor', key: 'supervisor' },
   { label: 'Department', key: 'department' },
   { label: 'Job Title', key: 'jobTitle' },
@@ -365,11 +365,12 @@ function AdminCenterPage() {
                 <input id="edit-user-email" value={editingUser.email} onChange={(e) => updateEditingUserField('email', e.target.value)} />
               </div>
               <div className="admin-form-field">
-                <label htmlFor="edit-user-role">Teamflect Role</label>
+                <label htmlFor="edit-user-role">Portal Role</label>
                 <select id="edit-user-role" value={editingUser.teamflectRole} onChange={(e) => updateEditingUserField('teamflectRole', e.target.value)}>
-                  <option value="Admin">Admin</option>
-                  <option value="Manager">Manager</option>
                   <option value="Employee">Employee</option>
+                  <option value="Manager">Manager</option>
+                  <option value="HR">HR</option>
+                  <option value="Admin">Admin</option>
                 </select>
               </div>
               <div className="admin-form-field">

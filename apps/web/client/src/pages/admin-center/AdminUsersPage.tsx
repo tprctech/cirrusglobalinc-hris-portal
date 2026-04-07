@@ -27,7 +27,7 @@ const ALL_COLUMNS: ColumnConfig[] = [
   { label: 'E-mail', key: 'email', defaultVisible: true },
   { label: 'Department', key: 'department', defaultVisible: true },
   { label: 'Job Title', key: 'jobTitle', defaultVisible: true },
-  { label: 'Teamflect Role', key: 'teamflectRole', defaultVisible: true },
+  { label: 'Portal Role', key: 'teamflectRole', defaultVisible: true },
   { label: 'Status', key: 'status', defaultVisible: true },
   { label: 'Supervisor', key: 'supervisor', defaultVisible: true },
   { label: 'Phone', key: 'phone', defaultVisible: false },
@@ -110,7 +110,7 @@ const TEMPLATE_HEADERS = [
   'Department',
   'Job Title',
   'Job Description',
-  'Teamflect Role',
+  'Portal Role',
   'Date Hired',
   'Status',
   'Supervisor',
@@ -170,7 +170,7 @@ function parseExcelToUsers(data: ArrayBuffer): AdminUser[] {
     department: String(row['Department'] || ''),
     jobTitle: String(row['Job Title'] || ''),
     jobDescription: String(row['Job Description'] || ''),
-    teamflectRole: String(row['Teamflect Role'] || 'Employee'),
+    teamflectRole: String(row['Portal Role'] || row['Teamflect Role'] || 'Employee'),
     dateHired: normalizeExcelDate(row['Date Hired']),
     status: String(row['Status'] || 'Active'),
     supervisor: String(row['Supervisor'] || ''),
@@ -291,11 +291,12 @@ function UserFormFields({
             <textarea id={`${prefix}-jobDescription`} rows={2} value={user.jobDescription} onChange={(e) => onChange('jobDescription', e.target.value)} />
           </div>
           <div className="admin-form-field">
-            <label htmlFor={`${prefix}-teamflectRole`}>Teamflect Role</label>
+            <label htmlFor={`${prefix}-teamflectRole`}>Portal Role</label>
             <select id={`${prefix}-teamflectRole`} value={user.teamflectRole} onChange={(e) => onChange('teamflectRole', e.target.value)}>
-              <option value="Admin">Admin</option>
-              <option value="Manager">Manager</option>
               <option value="Employee">Employee</option>
+              <option value="Manager">Manager</option>
+              <option value="HR">HR</option>
+              <option value="Admin">Admin</option>
             </select>
           </div>
           <div className="admin-form-field">
