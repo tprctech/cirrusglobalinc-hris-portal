@@ -3,9 +3,10 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.db.models import Competency, Role
+from app.db.models import Competency, Department, Role
 from app.db.session import get_db
 
 router = APIRouter()
@@ -78,13 +79,21 @@ def get_role(role_id: int, db: Session = Depends(get_db)):
 
 @router.post("/", response_model=RoleOut, status_code=201)
 def create_role(payload: RoleCreate, db: Session = Depends(get_db)):
+    if payload.department_id:
+        dept = db.query(Department).filter(Department.id == payload.department_id).first()
+        if not dept:
+            raise HTTPException(status_code=400, detail="Department not found")
     data = payload.model_dump(exclude={"competency_ids"})
     row = Role(**data)
     if payload.competency_ids:
         comps = db.query(Competency).filter(Competency.id.in_(payload.competency_ids)).all()
         row.competencies = comps
     db.add(row)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="A role with this title already exists")
     db.refresh(row)
     return _to_out(row)
 
