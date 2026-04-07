@@ -67,7 +67,7 @@ def get_department(department_id: int, db: Session = Depends(get_db)):
 
 @router.post("/", response_model=DepartmentOut, status_code=201)
 def create_department(payload: DepartmentCreate, db: Session = Depends(get_db)):
-    VALID_STATUSES = {"active": "Active", "not active": "Not Active", "inactive": "Not Active"}
+    VALID_STATUSES = {"active": "Active", "not active": "Inactive", "inactive": "Inactive"}
     status = VALID_STATUSES.get((payload.status or "Active").strip().lower(), "Active")
 
     row = Department(
@@ -99,7 +99,7 @@ def update_department(department_id: int, payload: DepartmentUpdate, db: Session
     if payload.created_by is not None:
         row.created_by = payload.created_by
     if payload.status is not None:
-        VALID_STATUSES = {"active": "Active", "not active": "Not Active", "inactive": "Not Active"}
+        VALID_STATUSES = {"active": "Active", "not active": "Inactive", "inactive": "Inactive"}
         row.status = VALID_STATUSES.get(payload.status.strip().lower(), "Active")
 
     try:

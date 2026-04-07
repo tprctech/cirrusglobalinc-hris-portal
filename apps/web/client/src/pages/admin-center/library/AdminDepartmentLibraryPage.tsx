@@ -205,7 +205,7 @@ function AdminDepartmentLibraryPage({ onNavigate }: AdminDepartmentLibraryPagePr
               <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}>
                 <option value="All">All Status</option>
                 <option value="Active">Active</option>
-                <option value="Not Active">Not Active</option>
+                <option value="Inactive">Inactive</option>
               </select>
             </div>
 
@@ -309,7 +309,7 @@ function AdminDepartmentLibraryPage({ onNavigate }: AdminDepartmentLibraryPagePr
                   onChange={(e) => setDraft({ ...draft, status: e.target.value })}
                 >
                   <option value="Active">Active</option>
-                  <option value="Not Active">Not Active</option>
+                  <option value="Inactive">Inactive</option>
                 </select>
               </div>
             </div>
@@ -361,7 +361,7 @@ function AdminDepartmentLibraryPage({ onNavigate }: AdminDepartmentLibraryPagePr
                   onChange={(e) => setEditDraft({ ...editDraft, status: e.target.value })}
                 >
                   <option value="Active">Active</option>
-                  <option value="Not Active">Not Active</option>
+                  <option value="Inactive">Inactive</option>
                 </select>
               </div>
             </div>
