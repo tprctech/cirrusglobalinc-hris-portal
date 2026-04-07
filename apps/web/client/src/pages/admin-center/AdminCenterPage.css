@@ -618,8 +618,8 @@
 }
 
 .admin-column-picker-option input[type="checkbox"]:checked {
-  background: var(--primary-blue);
-  border-color: var(--primary-blue);
+  background: var(--primary);
+  border-color: var(--primary);
 }
 
 .admin-column-picker-option input[type="checkbox"]:checked::after {
