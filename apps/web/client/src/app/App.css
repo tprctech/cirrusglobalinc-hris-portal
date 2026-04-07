@@ -1045,7 +1045,7 @@
 
 .change-password-field input:focus {
   outline: none;
-  border-color: var(--cerulean);
+  border-color: var(--primary);
 }
 
 .change-password-error {
@@ -1088,7 +1088,7 @@
   padding: 10px 20px;
   border-radius: 8px;
   border: none;
-  background: var(--cerulean);
+  background: var(--primary);
   color: #fff;
   font-size: 14px;
   font-weight: 600;
