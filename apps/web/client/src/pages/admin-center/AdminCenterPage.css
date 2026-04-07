@@ -951,6 +951,93 @@
   }
 }
 
+.admin-form-error {
+  background: #fff1f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #b91c1c;
+  font-weight: 500;
+}
+
+.admin-form-field .required {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.admin-edit-grid .full-width {
+  grid-column: 1 / -1;
+}
+
+.admin-bulk-upload-body {
+  display: grid;
+  gap: 14px;
+}
+
+.admin-bulk-upload-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.admin-bulk-preview {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-bulk-preview > p {
+  font-size: 14px;
+  color: var(--charcoal);
+}
+
+.admin-bulk-preview-table-wrap {
+  overflow-x: auto;
+  max-height: 280px;
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+}
+
+.admin-bulk-preview-table-wrap .admin-users-table {
+  min-width: 600px;
+}
+
+.admin-bulk-result {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-bulk-result-success {
+  color: #166534;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.admin-bulk-result-errors {
+  background: #fff1f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #b91c1c;
+}
+
+.admin-bulk-result-errors ul {
+  list-style: disc;
+  padding-left: 18px;
+  margin-top: 4px;
+}
+
+.admin-primary-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.admin-secondary-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 @media (max-width: 768px) {
   .admin-users-filters select {
     width: 100%;

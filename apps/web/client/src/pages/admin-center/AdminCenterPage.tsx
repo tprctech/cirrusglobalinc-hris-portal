@@ -1,12 +1,13 @@
-﻿import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ArrowUpDown, BookOpenText, Plus, Users, X } from 'lucide-react';
 import { adminMockData, type AdminCompetency, type AdminUser } from '../../data/mock/adminMockData';
+import { fetchEmployees, updateEmployee, deleteEmployee } from '../../api/employees';
 import './AdminCenterPage.css';
 import ConfirmationDialog from '../../components/ConfirmationDialog';
 
 type AdminMenu = 'users' | 'competencyLibrary';
 type SortDirection = 'asc' | 'desc';
-type SortKey = keyof AdminUser | 'actions';
+type SortKey = 'fullName' | 'email' | 'teamflectRole' | 'supervisor' | 'department' | 'jobTitle' | 'country' | 'status' | 'actions';
 
 type ColumnConfig = {
   label: string;
@@ -14,24 +15,21 @@ type ColumnConfig = {
 };
 
 const userColumns: ColumnConfig[] = [
-  { label: 'Name', key: 'name' },
+  { label: 'Name', key: 'fullName' },
   { label: 'E-mail', key: 'email' },
   { label: 'Teamflect Role', key: 'teamflectRole' },
-  { label: 'Manager', key: 'manager' },
-  { label: 'Attachments', key: 'attachments' },
+  { label: 'Supervisor', key: 'supervisor' },
   { label: 'Department', key: 'department' },
   { label: 'Job Title', key: 'jobTitle' },
+  { label: 'Status', key: 'status' },
   { label: 'Country', key: 'country' },
   { label: 'Actions', key: 'actions' },
 ];
 
 function getComparableValue(user: AdminUser, key: SortKey): string {
-  if (key === 'actions') {
-    return user.name;
-  }
-  const val = user[key];
-  if (Array.isArray(val)) return val.join(', ');
-  return val;
+  if (key === 'actions') return '';
+  if (key === 'fullName') return `${user.firstName} ${user.lastName}`;
+  return String(user[key] ?? '');
 }
 
 function AdminCenterPage() {
@@ -42,14 +40,18 @@ function AdminCenterPage() {
   const [roleFilter, setRoleFilter] = useState('All Roles');
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
   const [editingCompetency, setEditingCompetency] = useState<AdminCompetency | null>(null);
-  const [users, setUsers] = useState<AdminUser[]>(adminMockData.users as AdminUser[]);
+  const [users, setUsers] = useState<AdminUser[]>([]);
   const [competencies, setCompetencies] = useState<AdminCompetency[]>(
     adminMockData.competencies as AdminCompetency[],
   );
-  const [sortKey, setSortKey] = useState<SortKey>('name');
+  const [sortKey, setSortKey] = useState<SortKey>('fullName');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [pendingDeleteUser, setPendingDeleteUser] = useState<AdminUser | null>(null);
   const [pendingDeleteCompetency, setPendingDeleteCompetency] = useState<AdminCompetency | null>(null);
+
+  useEffect(() => {
+    fetchEmployees().then(setUsers).catch(() => setUsers([]));
+  }, []);
 
   const roleFilterOptions = useMemo(() => {
     const roles = new Set(users.map((user) => user.teamflectRole));
@@ -60,26 +62,14 @@ function AdminCenterPage() {
     const searchText = userSearchTerm.trim().toLowerCase();
     const filtered = users.filter((user) => {
       const matchesRole = roleFilter === 'All Roles' || user.teamflectRole === roleFilter;
-      if (!matchesRole) {
-        return false;
-      }
-
-      if (!searchText) {
-        return true;
-      }
+      if (!matchesRole) return false;
+      if (!searchText) return true;
 
       const searchableText = [
-        user.name,
-        user.email,
-        user.teamflectRole,
-        user.manager,
-        user.attachments,
-        user.department,
-        user.jobTitle,
-        user.country,
-      ]
-        .join(' ')
-        .toLowerCase();
+        user.firstName, user.lastName, user.email,
+        user.teamflectRole, user.supervisor, user.department,
+        user.jobTitle, user.country,
+      ].join(' ').toLowerCase();
 
       return searchableText.includes(searchText);
     });
@@ -104,12 +94,7 @@ function AdminCenterPage() {
   }
 
   function handleInviteUser() {
-    if (!inviteSearchUser.trim()) {
-      return;
-    }
-
-    // Placeholder until backend API is connected.
-    console.log('invite_user_payload', { searchUser: inviteSearchUser.trim() });
+    if (!inviteSearchUser.trim()) return;
     setInviteSearchUser('');
     setShowInviteModal(false);
   }
@@ -120,33 +105,30 @@ function AdminCenterPage() {
 
   function updateEditingUserField(field: keyof AdminUser, value: string) {
     setEditingUser((previous) => {
-      if (!previous) {
-        return previous;
-      }
+      if (!previous) return previous;
       return { ...previous, [field]: value };
     });
   }
 
-  function handleSaveEditedUser() {
-    if (!editingUser) {
-      return;
+  async function handleSaveEditedUser() {
+    if (!editingUser) return;
+    if (!editingUser.firstName.trim() || !editingUser.lastName.trim()) return;
+    try {
+      const updated = await updateEmployee(editingUser.id, editingUser);
+      setUsers((previous) => previous.map((user) => (user.id === updated.id ? updated : user)));
+      setEditingUser(null);
+    } catch {
+      // silent
     }
-    if (!editingUser.name.trim() || !editingUser.email.trim()) {
-      return;
-    }
-
-    // Placeholder until backend API is connected.
-    console.log('edit_user_payload', { userId: editingUser.id, user: editingUser });
-    setUsers((previous) => previous.map((user) => (
-      user.id === editingUser.id ? editingUser : user
-    )));
-    setEditingUser(null);
   }
 
-  function handleDeleteUser(userId: string) {
-    // Placeholder until backend API is connected.
-    console.log('delete_user_payload', { userId });
-    setUsers((previous) => previous.filter((user) => user.id !== userId));
+  async function handleDeleteUser(userId: number) {
+    try {
+      await deleteEmployee(userId);
+      setUsers((previous) => previous.filter((user) => user.id !== userId));
+    } catch {
+      // silent
+    }
   }
 
   function handleEditCompetency(competency: AdminCompetency) {
@@ -155,23 +137,13 @@ function AdminCenterPage() {
 
   function updateEditingCompetencyField(field: keyof AdminCompetency, value: string) {
     setEditingCompetency((previous) => {
-      if (!previous) {
-        return previous;
-      }
+      if (!previous) return previous;
       return { ...previous, [field]: value };
     });
   }
 
   function handleSaveEditedCompetency() {
-    if (!editingCompetency) {
-      return;
-    }
-
-    // Placeholder until backend API is connected.
-    console.log('edit_competency_payload', {
-      competencyId: editingCompetency.id,
-      competency: editingCompetency,
-    });
+    if (!editingCompetency) return;
     setCompetencies((previous) => previous.map((competency) => (
       competency.id === editingCompetency.id ? editingCompetency : competency
     )));
@@ -179,9 +151,16 @@ function AdminCenterPage() {
   }
 
   function handleDeleteCompetency(competencyId: string) {
-    // Placeholder until backend API is connected.
-    console.log('delete_competency_payload', { competencyId });
     setCompetencies((previous) => previous.filter((competency) => competency.id !== competencyId));
+  }
+
+  function getUserCellValue(user: AdminUser, key: SortKey): string {
+    if (key === 'fullName') {
+      const parts = [user.firstName, user.middleName, user.lastName].filter(Boolean);
+      return parts.join(' ') || '—';
+    }
+    if (key === 'actions') return '';
+    return String(user[key] ?? '') || '—';
   }
 
   return (
@@ -223,13 +202,11 @@ function AdminCenterPage() {
                 <input
                   value={userSearchTerm}
                   onChange={(event) => setUserSearchTerm(event.target.value)}
-                  placeholder="Search users by name, e-mail, department, manager..."
+                  placeholder="Search users by name, e-mail, department, supervisor..."
                 />
                 <select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)}>
                   {roleFilterOptions.map((role) => (
-                    <option key={role} value={role}>
-                      {role}
-                    </option>
+                    <option key={role} value={role}>{role}</option>
                   ))}
                 </select>
               </div>
@@ -262,24 +239,16 @@ function AdminCenterPage() {
                     )}
                     {filteredAndSortedUsers.map((user) => (
                       <tr key={user.id}>
-                        <td>{user.name}</td>
-                        <td>{user.email}</td>
-                        <td>{user.teamflectRole}</td>
-                        <td>{user.manager}</td>
-                        <td>{user.attachments}</td>
-                        <td>{user.department}</td>
-                        <td>{user.jobTitle}</td>
-                        <td>{user.country}</td>
-                        <td>
-                          <div className="admin-actions-cell">
-                            <button className="admin-edit-btn" onClick={() => handleEditUser(user)}>
-                              Edit
-                            </button>
-                            <button className="admin-delete-btn" onClick={() => setPendingDeleteUser(user)}>
-                              Delete
-                            </button>
-                          </div>
-                        </td>
+                        {userColumns.map((col) => (
+                          <td key={col.key}>
+                            {col.key === 'actions' ? (
+                              <div className="admin-actions-cell">
+                                <button className="admin-edit-btn" onClick={() => handleEditUser(user)}>Edit</button>
+                                <button className="admin-delete-btn" onClick={() => setPendingDeleteUser(user)}>Delete</button>
+                              </div>
+                            ) : getUserCellValue(user, col.key)}
+                          </td>
+                        ))}
                       </tr>
                     ))}
                   </tbody>
@@ -324,18 +293,8 @@ function AdminCenterPage() {
                         <td>{competency.expectations}</td>
                         <td>
                           <div className="admin-actions-cell">
-                            <button
-                              className="admin-edit-btn"
-                              onClick={() => handleEditCompetency(competency)}
-                            >
-                              Edit
-                            </button>
-                            <button
-                              className="admin-delete-btn"
-                              onClick={() => setPendingDeleteCompetency(competency)}
-                            >
-                              Delete
-                            </button>
+                            <button className="admin-edit-btn" onClick={() => handleEditCompetency(competency)}>Edit</button>
+                            <button className="admin-delete-btn" onClick={() => setPendingDeleteCompetency(competency)}>Delete</button>
                           </div>
                         </td>
                       </tr>
@@ -372,12 +331,8 @@ function AdminCenterPage() {
             </div>
 
             <div className="admin-modal-actions">
-              <button className="admin-secondary-btn" onClick={() => setShowInviteModal(false)}>
-                Cancel
-              </button>
-              <button className="admin-primary-btn" onClick={handleInviteUser}>
-                Send Invite
-              </button>
+              <button className="admin-secondary-btn" onClick={() => setShowInviteModal(false)}>Cancel</button>
+              <button className="admin-primary-btn" onClick={handleInviteUser}>Send Invite</button>
             </div>
           </section>
         </div>
@@ -398,78 +353,46 @@ function AdminCenterPage() {
 
             <div className="admin-edit-grid">
               <div className="admin-form-field">
-                <label htmlFor="edit-user-name">Name</label>
-                <input
-                  id="edit-user-name"
-                  value={editingUser.name}
-                  onChange={(event) => updateEditingUserField('name', event.target.value)}
-                />
+                <label htmlFor="edit-user-first-name">First Name</label>
+                <input id="edit-user-first-name" value={editingUser.firstName} onChange={(e) => updateEditingUserField('firstName', e.target.value)} />
+              </div>
+              <div className="admin-form-field">
+                <label htmlFor="edit-user-last-name">Last Name</label>
+                <input id="edit-user-last-name" value={editingUser.lastName} onChange={(e) => updateEditingUserField('lastName', e.target.value)} />
               </div>
               <div className="admin-form-field">
                 <label htmlFor="edit-user-email">E-mail</label>
-                <input
-                  id="edit-user-email"
-                  value={editingUser.email}
-                  onChange={(event) => updateEditingUserField('email', event.target.value)}
-                />
+                <input id="edit-user-email" value={editingUser.email} onChange={(e) => updateEditingUserField('email', e.target.value)} />
               </div>
               <div className="admin-form-field">
                 <label htmlFor="edit-user-role">Teamflect Role</label>
-                <input
-                  id="edit-user-role"
-                  value={editingUser.teamflectRole}
-                  onChange={(event) => updateEditingUserField('teamflectRole', event.target.value)}
-                />
+                <select id="edit-user-role" value={editingUser.teamflectRole} onChange={(e) => updateEditingUserField('teamflectRole', e.target.value)}>
+                  <option value="Admin">Admin</option>
+                  <option value="Manager">Manager</option>
+                  <option value="Employee">Employee</option>
+                </select>
               </div>
               <div className="admin-form-field">
-                <label htmlFor="edit-user-manager">Manager</label>
-                <input
-                  id="edit-user-manager"
-                  value={editingUser.manager}
-                  onChange={(event) => updateEditingUserField('manager', event.target.value)}
-                />
-              </div>
-              <div className="admin-form-field">
-                <label htmlFor="edit-user-attachments">Attachments</label>
-                <input
-                  id="edit-user-attachments"
-                  value={editingUser.attachments}
-                  onChange={(event) => updateEditingUserField('attachments', event.target.value)}
-                />
+                <label htmlFor="edit-user-supervisor">Supervisor</label>
+                <input id="edit-user-supervisor" value={editingUser.supervisor} onChange={(e) => updateEditingUserField('supervisor', e.target.value)} />
               </div>
               <div className="admin-form-field">
                 <label htmlFor="edit-user-department">Department</label>
-                <input
-                  id="edit-user-department"
-                  value={editingUser.department}
-                  onChange={(event) => updateEditingUserField('department', event.target.value)}
-                />
+                <input id="edit-user-department" value={editingUser.department} onChange={(e) => updateEditingUserField('department', e.target.value)} />
               </div>
               <div className="admin-form-field">
                 <label htmlFor="edit-user-job-title">Job Title</label>
-                <input
-                  id="edit-user-job-title"
-                  value={editingUser.jobTitle}
-                  onChange={(event) => updateEditingUserField('jobTitle', event.target.value)}
-                />
+                <input id="edit-user-job-title" value={editingUser.jobTitle} onChange={(e) => updateEditingUserField('jobTitle', e.target.value)} />
               </div>
               <div className="admin-form-field">
                 <label htmlFor="edit-user-country">Country</label>
-                <input
-                  id="edit-user-country"
-                  value={editingUser.country}
-                  onChange={(event) => updateEditingUserField('country', event.target.value)}
-                />
+                <input id="edit-user-country" value={editingUser.country} onChange={(e) => updateEditingUserField('country', e.target.value)} />
               </div>
             </div>
 
             <div className="admin-modal-actions">
-              <button className="admin-secondary-btn" onClick={() => setEditingUser(null)}>
-                Cancel
-              </button>
-              <button className="admin-primary-btn" onClick={handleSaveEditedUser}>
-                Save Changes
-              </button>
+              <button className="admin-secondary-btn" onClick={() => setEditingUser(null)}>Cancel</button>
+              <button className="admin-primary-btn" onClick={handleSaveEditedUser}>Save Changes</button>
             </div>
           </section>
         </div>
@@ -491,47 +414,25 @@ function AdminCenterPage() {
             <div className="admin-edit-grid single-column">
               <div className="admin-form-field">
                 <label htmlFor="edit-competency-code">Competency Code</label>
-                <input
-                  id="edit-competency-code"
-                  value={editingCompetency.competencyCode}
-                  onChange={(event) => updateEditingCompetencyField('competencyCode', event.target.value)}
-                />
+                <input id="edit-competency-code" value={editingCompetency.competencyCode} onChange={(e) => updateEditingCompetencyField('competencyCode', e.target.value)} />
               </div>
               <div className="admin-form-field">
                 <label htmlFor="edit-competency-name">Competency Name</label>
-                <input
-                  id="edit-competency-name"
-                  value={editingCompetency.competencyName}
-                  onChange={(event) => updateEditingCompetencyField('competencyName', event.target.value)}
-                />
+                <input id="edit-competency-name" value={editingCompetency.competencyName} onChange={(e) => updateEditingCompetencyField('competencyName', e.target.value)} />
               </div>
               <div className="admin-form-field">
                 <label htmlFor="edit-competency-description">Competency Description</label>
-                <textarea
-                  id="edit-competency-description"
-                  rows={4}
-                  value={editingCompetency.competencyDescription}
-                  onChange={(event) => updateEditingCompetencyField('competencyDescription', event.target.value)}
-                />
+                <textarea id="edit-competency-description" rows={4} value={editingCompetency.competencyDescription} onChange={(e) => updateEditingCompetencyField('competencyDescription', e.target.value)} />
               </div>
               <div className="admin-form-field">
                 <label htmlFor="edit-competency-expectations">Expectations</label>
-                <textarea
-                  id="edit-competency-expectations"
-                  rows={4}
-                  value={editingCompetency.expectations}
-                  onChange={(event) => updateEditingCompetencyField('expectations', event.target.value)}
-                />
+                <textarea id="edit-competency-expectations" rows={4} value={editingCompetency.expectations} onChange={(e) => updateEditingCompetencyField('expectations', e.target.value)} />
               </div>
             </div>
 
             <div className="admin-modal-actions">
-              <button className="admin-secondary-btn" onClick={() => setEditingCompetency(null)}>
-                Cancel
-              </button>
-              <button className="admin-primary-btn" onClick={handleSaveEditedCompetency}>
-                Save Changes
-              </button>
+              <button className="admin-secondary-btn" onClick={() => setEditingCompetency(null)}>Cancel</button>
+              <button className="admin-primary-btn" onClick={handleSaveEditedCompetency}>Save Changes</button>
             </div>
           </section>
         </div>
@@ -539,13 +440,11 @@ function AdminCenterPage() {
       <ConfirmationDialog
         isOpen={Boolean(pendingDeleteUser)}
         title="Delete User"
-        message={`Are you sure you want to delete "${pendingDeleteUser?.name ?? ''}"?`}
+        message={`Are you sure you want to delete "${pendingDeleteUser ? `${pendingDeleteUser.firstName} ${pendingDeleteUser.lastName}` : ''}"?`}
         confirmLabel="Delete"
         onCancel={() => setPendingDeleteUser(null)}
         onConfirm={() => {
-          if (pendingDeleteUser) {
-            handleDeleteUser(pendingDeleteUser.id);
-          }
+          if (pendingDeleteUser) handleDeleteUser(pendingDeleteUser.id);
           setPendingDeleteUser(null);
         }}
       />
@@ -556,9 +455,7 @@ function AdminCenterPage() {
         confirmLabel="Delete"
         onCancel={() => setPendingDeleteCompetency(null)}
         onConfirm={() => {
-          if (pendingDeleteCompetency) {
-            handleDeleteCompetency(pendingDeleteCompetency.id);
-          }
+          if (pendingDeleteCompetency) handleDeleteCompetency(pendingDeleteCompetency.id);
           setPendingDeleteCompetency(null);
         }}
       />
@@ -567,4 +464,3 @@ function AdminCenterPage() {
 }
 
 export default AdminCenterPage;
-
