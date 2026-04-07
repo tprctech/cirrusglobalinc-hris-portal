@@ -556,37 +556,38 @@
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
-  width: 200px;
-  max-height: 360px;
+  min-width: 170px;
+  max-height: 300px;
   overflow-y: auto;
   background: var(--white);
   border: 1px solid var(--gray-200);
-  border-radius: 10px;
+  border-radius: 8px;
   box-shadow: 0 4px 16px rgba(0,0,0,0.12);
   z-index: 20;
-  padding: 6px 0;
+  padding: 4px 0;
 }
 
 .admin-column-picker-title {
   display: block;
-  padding: 4px 14px 8px;
-  font-size: 12px;
+  padding: 4px 10px 6px;
+  font-size: 10px;
   font-weight: 600;
   color: var(--gray-500);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   border-bottom: 1px solid var(--gray-100);
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .admin-column-picker-option {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 5px 12px;
-  font-size: 13px;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
   cursor: pointer;
   color: var(--charcoal);
+  line-height: 1.2;
 }
 
 .admin-column-picker-option:hover {
@@ -594,11 +595,43 @@
 }
 
 .admin-column-picker-option input[type="checkbox"] {
-  width: 15px;
-  height: 15px;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  min-width: 14px;
+  min-height: 14px;
+  max-width: 14px;
+  max-height: 14px;
   flex-shrink: 0;
   margin: 0;
+  padding: 0;
+  border: 1.5px solid var(--gray-400);
+  border-radius: 3px;
+  background: var(--white);
   cursor: pointer;
+  position: relative;
+  display: inline-block;
+  vertical-align: middle;
+  box-sizing: border-box;
+}
+
+.admin-column-picker-option input[type="checkbox"]:checked {
+  background: var(--primary-blue);
+  border-color: var(--primary-blue);
+}
+
+.admin-column-picker-option input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 1px;
+  width: 5px;
+  height: 8px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
 }
 
 .admin-column-picker-option input:disabled {
