@@ -48,9 +48,13 @@ class LoginRequest(BaseModel):
     password: str
 
 
+def default_password() -> str:
+    return f"cirrus{datetime.utcnow().year}"
+
+
 class RegisterRequest(BaseModel):
     username: str
-    password: str
+    password: str | None = None
     employee_id: int | None = None
     portal_role: str = "Employee"
 
@@ -177,9 +181,11 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db), authorizat
         if not emp:
             raise HTTPException(status_code=400, detail="Employee not found")
 
+    pwd = payload.password if payload.password else default_password()
+
     user = UserAccount(
         username=payload.username,
-        password_hash=hash_password(payload.password),
+        password_hash=hash_password(pwd),
         employee_id=payload.employee_id,
         portal_role=role,
     )
@@ -188,3 +194,25 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db), authorizat
     db.refresh(user)
 
     return {"id": user.id, "username": user.username, "portalRole": user.portal_role}
+
+
+@router.post("/reset-password/{employee_id}")
+def reset_password(employee_id: int, db: Session = Depends(get_db), authorization: str = Header("")):
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Authentication required")
+    token = authorization[7:]
+    caller_data = decode_token(token)
+    caller = db.query(UserAccount).filter(UserAccount.id == int(caller_data["sub"])).first()
+    if not caller or caller.portal_role not in ("Admin", "HR"):
+        raise HTTPException(status_code=403, detail="Only Admin or HR users can reset passwords")
+
+    user = db.query(UserAccount).filter(UserAccount.employee_id == employee_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="No user account found for this employee")
+
+    new_pwd = default_password()
+    user.password_hash = hash_password(new_pwd)
+    user.updated_at = datetime.utcnow()
+    db.commit()
+
+    return {"message": f"Password reset to default (cirrus{datetime.utcnow().year})", "username": user.username}

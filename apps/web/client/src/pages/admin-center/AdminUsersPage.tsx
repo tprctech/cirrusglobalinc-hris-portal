@@ -6,6 +6,7 @@ import AdminTablePagination from '../../components/AdminTablePagination';
 import ConfirmationDialog from '../../components/ConfirmationDialog';
 import type { AdminUser } from '../../data/mock/adminMockData';
 import { fetchEmployees, createEmployee, updateEmployee, deleteEmployee, bulkCreateEmployees, uploadPhoto, searchEmployees } from '../../api/employees';
+import { resetEmployeePassword } from '../../api/auth';
 import './AdminCenterPage.css';
 
 type SortDirection = 'asc' | 'desc';
@@ -591,6 +592,8 @@ function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
   const [bulkUploading, setBulkUploading] = useState(false);
   const [bulkResult, setBulkResult] = useState<{ created: number; skipped: number; errors: string[] } | null>(null);
   const [formError, setFormError] = useState('');
+  const [resetResult, setResetResult] = useState<{ username: string; message: string } | null>(null);
+  const [pendingResetUser, setPendingResetUser] = useState<AdminUser | null>(null);
   const columnPickerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -740,6 +743,16 @@ function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
     }
   }
 
+  async function handleResetPassword(user: AdminUser) {
+    try {
+      const result = await resetEmployeePassword(user.id);
+      setResetResult(result);
+    } catch (err: unknown) {
+      setResetResult({ username: '', message: err instanceof Error ? err.message : 'Reset failed' });
+    }
+    setPendingResetUser(null);
+  }
+
   function handleBulkFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -784,6 +797,7 @@ function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
       return (
         <div className="admin-actions-cell">
           <button className="admin-edit-btn" onClick={() => handleEditUser(user)}>Edit</button>
+          <button className="admin-reset-pwd-btn" onClick={() => setPendingResetUser(user)}>Reset Password</button>
           <button className="admin-delete-btn" onClick={() => setPendingDeleteUser(user)}>Delete</button>
         </div>
       );
@@ -1097,6 +1111,27 @@ function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
           setPendingDeleteUser(null);
         }}
       />
+
+      <ConfirmationDialog
+        isOpen={Boolean(pendingResetUser)}
+        title="Reset Password"
+        message={`Reset password for "${pendingResetUser ? `${pendingResetUser.firstName} ${pendingResetUser.lastName}` : ''}" to the default (cirrus${new Date().getFullYear()})?`}
+        confirmLabel="Reset"
+        onCancel={() => setPendingResetUser(null)}
+        onConfirm={() => {
+          if (pendingResetUser) handleResetPassword(pendingResetUser);
+        }}
+      />
+
+      {resetResult && (
+        <div className="admin-modal-backdrop" onClick={() => setResetResult(null)}>
+          <div className="admin-reset-result-popup" onClick={(e) => e.stopPropagation()}>
+            <p>{resetResult.message}</p>
+            {resetResult.username && <p>Username: <strong>{resetResult.username}</strong></p>}
+            <button className="admin-primary-btn" onClick={() => setResetResult(null)}>OK</button>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

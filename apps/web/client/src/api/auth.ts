@@ -74,3 +74,17 @@ export async function fetchMe(token: string): Promise<AuthUser> {
   }
   return res.json();
 }
+
+export async function resetEmployeePassword(employeeId: number): Promise<{ message: string; username: string }> {
+  const token = getStoredToken();
+  if (!token) throw new Error('Not authenticated');
+  const res = await fetch(`${API_BASE}/reset-password/${employeeId}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({ detail: 'Reset failed' }));
+    throw new Error(data.detail || 'Failed to reset password');
+  }
+  return res.json();
+}
