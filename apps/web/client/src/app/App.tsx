@@ -71,7 +71,7 @@ function normalizePath(pathname: string) {
     return ROUTES.adminUsers;
   }
   if (pathname === '/library' || pathname === '/admin/library') {
-    return ROUTES.adminLibraryRole;
+    return ROUTES.adminLibraryDepartment;
   }
   if (pathname === '/library/role') {
     return ROUTES.adminLibraryRole;

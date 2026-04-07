@@ -101,13 +101,6 @@ function AdminCenterSidebar({ activeMenu, onNavigate }: AdminCenterSidebarProps)
       {libraryExpanded && (
         <div className="admin-center-submenu">
           <button
-            className={`admin-center-sub-link ${activeMenu === 'libraryRole' ? 'active' : ''}`}
-            onClick={(event) => handleNavigate(ROUTES.adminLibraryRole, event)}
-          >
-            <Users size={14} />
-            <span>Role</span>
-          </button>
-          <button
             className={`admin-center-sub-link ${activeMenu === 'libraryDepartment' ? 'active' : ''}`}
             onClick={(event) => handleNavigate(ROUTES.adminLibraryDepartment, event)}
           >
@@ -120,6 +113,13 @@ function AdminCenterSidebar({ activeMenu, onNavigate }: AdminCenterSidebarProps)
           >
             <BookOpenText size={14} />
             <span>Competency</span>
+          </button>
+          <button
+            className={`admin-center-sub-link ${activeMenu === 'libraryRole' ? 'active' : ''}`}
+            onClick={(event) => handleNavigate(ROUTES.adminLibraryRole, event)}
+          >
+            <Users size={14} />
+            <span>Role</span>
           </button>
         </div>
       )}
