@@ -25,20 +25,23 @@ Two workflows are configured:
 
 ## Authentication & Authorization
 
-- **Login**: Username/password auth via JWT tokens stored in localStorage
+- **Login**: Email/password auth via JWT tokens stored in localStorage
 - **Session duration**: 24 hours (configurable via `SESSION_DURATION_HOURS` env var)
 - **JWT secret**: Configurable via `JWT_SECRET` env var (defaults to dev secret)
 - **Portal roles**: Employee, Manager, HR, Admin (case-insensitive, normalized on save)
 - **Role-based access**: HR Center only visible/accessible to HR and Admin roles
 - **Auth context**: `useAuth()` hook provides `user`, `login()`, `logout()`, `hasRole()`
 - **Profile data**: Header and profile page reflect logged-in employee's real DB data
-- **User accounts table**: `user_accounts` (username, password_hash, employee_id FK, portal_role)
-- **Future**: Microsoft SSO login will replace username/password
+- **User accounts table**: `user_accounts` (email, password_hash, employee_id FK, portal_role)
+- **Default password**: `cirrus{year}` (e.g., `cirrus2026`)
+- **Password reset (Admin/HR)**: `/auth/reset-password/{employee_id}` resets to default password
+- **Change password (self-service)**: `/auth/change-password` lets any user change their own password via the profile dropdown
+- **Future**: Microsoft SSO login will replace email/password
 
 ### Test Accounts (dev)
-- `admin` / `admin123` — Admin role (linked to John Brent David)
-- `charlene` / `password123` — HR role (linked to Charlene Quirante)
-- `bary` / `password123` — Employee role (linked to Bary Amalla)
+- `brent.david@cirrusrecruitment.com` / `cirrus2026` — Admin role (linked to John Brent David)
+- `charlene.quirante@cirrusrecruitment.com` / `cirrus2026` — HR role (linked to Charlene Quirante)
+- `bary.amalla@cirrusrecruitment.com` / `cirrus2026` — Employee role (linked to Bary Amalla)
 
 ## Key Files
 

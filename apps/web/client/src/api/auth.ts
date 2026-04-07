@@ -28,7 +28,7 @@ export interface EmployeeProfile {
 
 export interface AuthUser {
   id: number;
-  username: string;
+  email: string;
   portalRole: string;
   employee: EmployeeProfile | null;
 }
@@ -52,11 +52,11 @@ export function clearStoredToken(): void {
   localStorage.removeItem(TOKEN_KEY);
 }
 
-export async function loginApi(username: string, password: string): Promise<LoginResponse> {
+export async function loginApi(email: string, password: string): Promise<LoginResponse> {
   const res = await fetch(`${API_BASE}/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify({ email, password }),
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({ detail: 'Login failed' }));
@@ -75,7 +75,7 @@ export async function fetchMe(token: string): Promise<AuthUser> {
   return res.json();
 }
 
-export async function resetEmployeePassword(employeeId: number): Promise<{ message: string; username: string }> {
+export async function resetEmployeePassword(employeeId: number): Promise<{ message: string; email: string }> {
   const token = getStoredToken();
   if (!token) throw new Error('Not authenticated');
   const res = await fetch(`${API_BASE}/reset-password/${employeeId}`, {
@@ -85,6 +85,24 @@ export async function resetEmployeePassword(employeeId: number): Promise<{ messa
   if (!res.ok) {
     const data = await res.json().catch(() => ({ detail: 'Reset failed' }));
     throw new Error(data.detail || 'Failed to reset password');
+  }
+  return res.json();
+}
+
+export async function changePassword(currentPassword: string, newPassword: string): Promise<{ message: string }> {
+  const token = getStoredToken();
+  if (!token) throw new Error('Not authenticated');
+  const res = await fetch(`${API_BASE}/change-password`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({ detail: 'Failed to change password' }));
+    throw new Error(data.detail || 'Failed to change password');
   }
   return res.json();
 }

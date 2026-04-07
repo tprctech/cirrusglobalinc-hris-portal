@@ -44,7 +44,7 @@ def decode_token(token: str) -> dict:
 
 
 class LoginRequest(BaseModel):
-    username: str
+    email: str
     password: str
 
 
@@ -53,10 +53,15 @@ def default_password() -> str:
 
 
 class RegisterRequest(BaseModel):
-    username: str
+    email: str
     password: str | None = None
     employee_id: int | None = None
     portal_role: str = "Employee"
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
 
 
 class LoginResponse(BaseModel):
@@ -66,7 +71,7 @@ class LoginResponse(BaseModel):
 
 class MeResponse(BaseModel):
     id: int
-    username: str
+    email: str
     portal_role: str
     employee: dict | None
 
@@ -108,9 +113,9 @@ def serialize_employee(emp: Employee) -> dict:
 
 @router.post("/login")
 def login(payload: LoginRequest, db: Session = Depends(get_db)):
-    user = db.query(UserAccount).filter(UserAccount.username == payload.username).first()
+    user = db.query(UserAccount).filter(UserAccount.email == payload.email).first()
     if not user or not verify_password(payload.password, user.password_hash):
-        raise HTTPException(status_code=401, detail="Invalid username or password")
+        raise HTTPException(status_code=401, detail="Invalid email or password")
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Account is disabled")
 
@@ -124,7 +129,7 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
         "token": token,
         "user": {
             "id": user.id,
-            "username": user.username,
+            "email": user.email,
             "portalRole": user.portal_role,
             "employee": employee_data,
         },
@@ -147,7 +152,7 @@ def get_me(db: Session = Depends(get_db), authorization: str = Header("")):
 
     return {
         "id": user.id,
-        "username": user.username,
+        "email": user.email,
         "portalRole": user.portal_role,
         "employee": employee_data,
     }
@@ -169,9 +174,9 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db), authorizat
         if existing_count > 0:
             raise HTTPException(status_code=403, detail="Registration requires admin authentication")
 
-    existing = db.query(UserAccount).filter(UserAccount.username == payload.username).first()
+    existing = db.query(UserAccount).filter(UserAccount.email == payload.email).first()
     if existing:
-        raise HTTPException(status_code=400, detail="Username already taken")
+        raise HTTPException(status_code=400, detail="Email already registered")
 
     VALID_ROLES = {"employee": "Employee", "manager": "Manager", "hr": "HR", "admin": "Admin"}
     role = VALID_ROLES.get(payload.portal_role.strip().lower(), "Employee")
@@ -184,7 +189,7 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db), authorizat
     pwd = payload.password if payload.password else default_password()
 
     user = UserAccount(
-        username=payload.username,
+        email=payload.email,
         password_hash=hash_password(pwd),
         employee_id=payload.employee_id,
         portal_role=role,
@@ -193,7 +198,7 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db), authorizat
     db.commit()
     db.refresh(user)
 
-    return {"id": user.id, "username": user.username, "portalRole": user.portal_role}
+    return {"id": user.id, "email": user.email, "portalRole": user.portal_role}
 
 
 @router.post("/reset-password/{employee_id}")
@@ -215,4 +220,27 @@ def reset_password(employee_id: int, db: Session = Depends(get_db), authorizatio
     user.updated_at = datetime.utcnow()
     db.commit()
 
-    return {"message": f"Password reset to default (cirrus{datetime.utcnow().year})", "username": user.username}
+    return {"message": f"Password reset to default (cirrus{datetime.utcnow().year})", "email": user.email}
+
+
+@router.post("/change-password")
+def change_password(payload: ChangePasswordRequest, db: Session = Depends(get_db), authorization: str = Header("")):
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Authentication required")
+    token = authorization[7:]
+    data = decode_token(token)
+    user = db.query(UserAccount).filter(UserAccount.id == int(data["sub"])).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+
+    if not verify_password(payload.current_password, user.password_hash):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+
+    if len(payload.new_password) < 6:
+        raise HTTPException(status_code=400, detail="New password must be at least 6 characters")
+
+    user.password_hash = hash_password(payload.new_password)
+    user.updated_at = datetime.utcnow()
+    db.commit()
+
+    return {"message": "Password changed successfully"}

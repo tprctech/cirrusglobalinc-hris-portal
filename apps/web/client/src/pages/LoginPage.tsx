@@ -4,21 +4,21 @@ import './LoginPage.css';
 
 function LoginPage() {
   const { login } = useAuth();
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!username.trim() || !password.trim()) {
-      setError('Please enter both username and password.');
+    if (!email.trim() || !password.trim()) {
+      setError('Please enter both email and password.');
       return;
     }
     setError('');
     setLoading(true);
     try {
-      await login(username.trim(), password.trim());
+      await login(email.trim(), password.trim());
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
@@ -39,14 +39,14 @@ function LoginPage() {
           {error && <div className="login-error">{error}</div>}
 
           <div className="login-field">
-            <label htmlFor="username">Username</label>
+            <label htmlFor="email">Email Address</label>
             <input
-              id="username"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter your username"
-              autoComplete="username"
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your email address"
+              autoComplete="email"
               autoFocus
             />
           </div>

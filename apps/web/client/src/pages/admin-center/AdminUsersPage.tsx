@@ -592,7 +592,7 @@ function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
   const [bulkUploading, setBulkUploading] = useState(false);
   const [bulkResult, setBulkResult] = useState<{ created: number; skipped: number; errors: string[] } | null>(null);
   const [formError, setFormError] = useState('');
-  const [resetResult, setResetResult] = useState<{ username: string; message: string } | null>(null);
+  const [resetResult, setResetResult] = useState<{ email: string; message: string } | null>(null);
   const [pendingResetUser, setPendingResetUser] = useState<AdminUser | null>(null);
   const columnPickerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -748,7 +748,7 @@ function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
       const result = await resetEmployeePassword(user.id);
       setResetResult(result);
     } catch (err: unknown) {
-      setResetResult({ username: '', message: err instanceof Error ? err.message : 'Reset failed' });
+      setResetResult({ email: '', message: err instanceof Error ? err.message : 'Reset failed' });
     }
     setPendingResetUser(null);
   }
@@ -1127,7 +1127,7 @@ function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
         <div className="admin-modal-backdrop" onClick={() => setResetResult(null)}>
           <div className="admin-reset-result-popup" onClick={(e) => e.stopPropagation()}>
             <p>{resetResult.message}</p>
-            {resetResult.username && <p>Username: <strong>{resetResult.username}</strong></p>}
+            {resetResult.email && <p>Account: <strong>{resetResult.email}</strong></p>}
             <button className="admin-primary-btn" onClick={() => setResetResult(null)}>OK</button>
           </div>
         </div>

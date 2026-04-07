@@ -11,7 +11,7 @@ import {
 interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
-  login: (username: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   hasRole: (...roles: string[]) => boolean;
 }
@@ -46,8 +46,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false));
   }, []);
 
-  async function login(username: string, password: string) {
-    const res = await loginApi(username, password);
+  async function login(email: string, password: string) {
+    const res = await loginApi(email, password);
     setStoredToken(res.token);
     setUser(res.user);
   }

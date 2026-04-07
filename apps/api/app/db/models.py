@@ -22,7 +22,7 @@ class UserAccount(Base):
     __tablename__ = "user_accounts"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    username = Column(String(150), unique=True, nullable=False)
+    email = Column(String(255), unique=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
     employee_id = Column(Integer, ForeignKey("employees.id", ondelete="CASCADE"), nullable=True)
     portal_role = Column(String(50), nullable=False, default="Employee")

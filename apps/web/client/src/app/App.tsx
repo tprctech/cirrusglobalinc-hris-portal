@@ -23,7 +23,9 @@ import {
   ListTodo,
   User,
   GraduationCap,
+  Lock,
 } from 'lucide-react';
+import { changePassword } from '../api/auth';
 import { useAuth } from './AuthContext';
 import LoginPage from '../pages/LoginPage';
 import HomePage from '../pages/employee-portal/HomePage';
@@ -118,6 +120,13 @@ function App() {
   const { user, loading, logout, hasRole } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+  const [cpCurrentPwd, setCpCurrentPwd] = useState('');
+  const [cpNewPwd, setCpNewPwd] = useState('');
+  const [cpConfirmPwd, setCpConfirmPwd] = useState('');
+  const [cpError, setCpError] = useState('');
+  const [cpSuccess, setCpSuccess] = useState('');
+  const [cpLoading, setCpLoading] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState(mockNotifications);
   const [currentPath, setCurrentPath] = useState(normalizePath(window.location.pathname));
@@ -127,7 +136,7 @@ function App() {
 
   const canAccessAdmin = hasRole('HR', 'Admin');
   const emp = user?.employee;
-  const displayName = emp ? `${emp.firstName} ${emp.lastName}` : user?.username ?? '';
+  const displayName = emp ? `${emp.firstName} ${emp.lastName}` : user?.email ?? '';
   const displayRole = emp?.jobTitle || user?.portalRole || '';
   const displayEmail = emp?.email || '';
   const displayDepartment = emp?.department || '';
@@ -199,6 +208,45 @@ function App() {
   function goToEmployeePortal() {
     setProfileOpen(false);
     navigateTo(ROUTES.home);
+  }
+
+  function openChangePassword() {
+    setProfileOpen(false);
+    setCpCurrentPwd('');
+    setCpNewPwd('');
+    setCpConfirmPwd('');
+    setCpError('');
+    setCpSuccess('');
+    setChangePasswordOpen(true);
+  }
+
+  async function handleChangePassword() {
+    setCpError('');
+    setCpSuccess('');
+    if (!cpCurrentPwd || !cpNewPwd || !cpConfirmPwd) {
+      setCpError('Please fill in all fields.');
+      return;
+    }
+    if (cpNewPwd !== cpConfirmPwd) {
+      setCpError('New passwords do not match.');
+      return;
+    }
+    if (cpNewPwd.length < 6) {
+      setCpError('New password must be at least 6 characters.');
+      return;
+    }
+    setCpLoading(true);
+    try {
+      const result = await changePassword(cpCurrentPwd, cpNewPwd);
+      setCpSuccess(result.message);
+      setCpCurrentPwd('');
+      setCpNewPwd('');
+      setCpConfirmPwd('');
+    } catch (err: unknown) {
+      setCpError(err instanceof Error ? err.message : 'Failed to change password');
+    } finally {
+      setCpLoading(false);
+    }
   }
 
   const sidebarItems = [
@@ -365,6 +413,10 @@ function App() {
                     Employee Portal
                   </button>
                 )}
+                <button className="profile-popup-link" onClick={openChangePassword}>
+                  <Lock size={14} />
+                  Change Password
+                </button>
                 <button className="profile-popup-logout" onClick={() => { setProfileOpen(false); logout(); }}>
                   <LogOut size={14} />
                   Logout
@@ -374,6 +426,43 @@ function App() {
           </div>
         </div>
       </nav>
+
+      {changePasswordOpen && (
+        <div className="admin-modal-backdrop" onClick={() => setChangePasswordOpen(false)}>
+          <div className="change-password-modal" onClick={(e) => e.stopPropagation()}>
+            <h2>Change Password</h2>
+            {cpError && <div className="change-password-error">{cpError}</div>}
+            {cpSuccess && <div className="change-password-success">{cpSuccess}</div>}
+            {!cpSuccess && (
+              <>
+                <div className="change-password-field">
+                  <label>Current Password</label>
+                  <input type="password" value={cpCurrentPwd} onChange={(e) => setCpCurrentPwd(e.target.value)} placeholder="Enter current password" />
+                </div>
+                <div className="change-password-field">
+                  <label>New Password</label>
+                  <input type="password" value={cpNewPwd} onChange={(e) => setCpNewPwd(e.target.value)} placeholder="Enter new password" />
+                </div>
+                <div className="change-password-field">
+                  <label>Confirm New Password</label>
+                  <input type="password" value={cpConfirmPwd} onChange={(e) => setCpConfirmPwd(e.target.value)} placeholder="Confirm new password" />
+                </div>
+                <div className="change-password-actions">
+                  <button className="change-password-cancel" onClick={() => setChangePasswordOpen(false)}>Cancel</button>
+                  <button className="change-password-submit" onClick={handleChangePassword} disabled={cpLoading}>
+                    {cpLoading ? 'Changing...' : 'Change Password'}
+                  </button>
+                </div>
+              </>
+            )}
+            {cpSuccess && (
+              <div className="change-password-actions">
+                <button className="change-password-submit" onClick={() => setChangePasswordOpen(false)}>Close</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="layout">
         {!isAdminCenter && !isLmsCenter && (
