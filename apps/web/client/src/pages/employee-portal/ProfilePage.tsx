@@ -70,8 +70,8 @@ function ProfilePage() {
       phone: emp?.phone || profilePageMockData.contactInformation.phone,
     },
     reportingStructure: {
-      reportsTo: emp?.supervisor || profilePageMockData.reportingStructure.reportsTo,
-      directReports: profilePageMockData.reportingStructure.directReports,
+      reportsTo: emp?.supervisor || '',
+      directReports: [] as string[],
     },
     roleInformation: profilePageMockData.roleInformation,
     profilePhoto: emp?.profilePhoto || '',
