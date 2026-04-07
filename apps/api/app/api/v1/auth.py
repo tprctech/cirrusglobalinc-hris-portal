@@ -105,10 +105,16 @@ def serialize_employee(emp: Employee) -> dict:
         "officeLocation": emp.office_location or "",
         "birthdate": str(emp.birthdate) if emp.birthdate else "",
         "dateHired": str(emp.date_hired) if emp.date_hired else "",
+        "regularizationDate": str(emp.regularization_date) if emp.regularization_date else "",
         "profilePhoto": emp.profile_photo or "",
         "gender": emp.gender or "",
         "maritalStatus": emp.marital_status or "",
         "homeAddress": emp.home_address or "",
+        "permanentAddress": emp.permanent_address or "",
+        "sssNumber": emp.sss_number or "",
+        "hdmfNumber": emp.hdmf_number or "",
+        "philHealthNumber": emp.phil_health_number or "",
+        "tin": emp.tin or "",
     }
 
 

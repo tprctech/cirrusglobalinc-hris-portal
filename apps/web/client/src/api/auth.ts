@@ -21,10 +21,16 @@ export interface EmployeeProfile {
   officeLocation: string;
   birthdate: string;
   dateHired: string;
+  regularizationDate: string;
   profilePhoto: string;
   gender: string;
   maritalStatus: string;
   homeAddress: string;
+  permanentAddress: string;
+  sssNumber: string;
+  hdmfNumber: string;
+  philHealthNumber: string;
+  tin: string;
 }
 
 export interface AuthUser {
