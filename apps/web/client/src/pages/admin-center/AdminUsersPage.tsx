@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowUpDown, Camera, Download, Plus, Settings2, Upload, X } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import AdminCenterSidebar from '../../components/AdminCenterSidebar';
@@ -400,18 +400,99 @@ function ProfilePhotoUpload({ user, onPhotoUploaded }: { user: AdminUser; onPhot
   );
 }
 
+type RoleOption = { id: number; role_job_title: string; department_name: string };
+
+function JobTitlePicker({ value, onChange, onDepartmentResolved, roles, id }: {
+  value: string;
+  onChange: (val: string) => void;
+  onDepartmentResolved: (dept: string) => void;
+  roles: RoleOption[];
+  id?: string;
+}) {
+  const [query, setQuery] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const filtered = useMemo(() => {
+    if (!query.trim()) return roles;
+    const q = query.toLowerCase();
+    return roles.filter((r) => r.role_job_title.toLowerCase().includes(q));
+  }, [roles, query]);
+
+  function selectRole(role: RoleOption) {
+    onChange(role.role_job_title);
+    onDepartmentResolved(role.department_name || '');
+    setQuery('');
+    setShowDropdown(false);
+  }
+
+  return (
+    <div ref={containerRef} style={{ position: 'relative' }}>
+      {value && (
+        <div className="experts-picker-tags" style={{ marginBottom: 6 }}>
+          <span className="experts-picker-tag">
+            {value}
+            <button type="button" onClick={() => { onChange(''); onDepartmentResolved(''); }} className="experts-picker-tag-remove">
+              <X size={12} />
+            </button>
+          </span>
+        </div>
+      )}
+      {!value && (
+        <input
+          id={id}
+          value={query}
+          onChange={(e) => { setQuery(e.target.value); setShowDropdown(true); }}
+          onFocus={() => setShowDropdown(true)}
+          placeholder="Search roles..."
+          autoComplete="off"
+        />
+      )}
+      {showDropdown && !value && (
+        <div className="experts-picker-dropdown">
+          {filtered.length === 0 && (
+            <div className="experts-picker-option" style={{ color: 'var(--gray-400)', cursor: 'default' }}>No roles found</div>
+          )}
+          {filtered.map((role) => (
+            <div
+              key={role.id}
+              className="experts-picker-option"
+              onClick={() => selectRole(role)}
+            >
+              <span className="experts-picker-option-name">{role.role_job_title}</span>
+              {role.department_name && <span className="experts-picker-option-email">{role.department_name}</span>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function UserFormFields({
   user,
   onChange,
   prefix,
   isEditing = false,
   onPhotoUploaded,
+  roles = [],
 }: {
   user: AdminUser;
   onChange: (field: keyof AdminUser, value: string) => void;
   prefix: string;
   isEditing?: boolean;
   onPhotoUploaded?: (updated: AdminUser) => void;
+  roles?: RoleOption[];
 }) {
   return (
     <div className="admin-user-form-sections">
@@ -504,12 +585,18 @@ function UserFormFields({
         <legend>Employment Details</legend>
         <div className="admin-edit-grid">
           <div className="admin-form-field">
-            <label htmlFor={`${prefix}-department`}>Department</label>
-            <input id={`${prefix}-department`} value={user.department} onChange={(e) => onChange('department', e.target.value)} />
+            <label htmlFor={`${prefix}-jobTitle`}>Job Title</label>
+            <JobTitlePicker
+              id={`${prefix}-jobTitle`}
+              value={user.jobTitle}
+              onChange={(val) => onChange('jobTitle', val)}
+              onDepartmentResolved={(dept) => onChange('department', dept)}
+              roles={roles}
+            />
           </div>
           <div className="admin-form-field">
-            <label htmlFor={`${prefix}-jobTitle`}>Job Title</label>
-            <input id={`${prefix}-jobTitle`} value={user.jobTitle} onChange={(e) => onChange('jobTitle', e.target.value)} />
+            <label htmlFor={`${prefix}-department`}>Department</label>
+            <input id={`${prefix}-department`} value={user.department} readOnly style={{ background: 'var(--gray-50)', cursor: 'default' }} />
           </div>
           <div className="admin-form-field full-width">
             <label htmlFor={`${prefix}-jobDescription`}>Job Description</label>
@@ -526,7 +613,11 @@ function UserFormFields({
           </div>
           <div className="admin-form-field">
             <label htmlFor={`${prefix}-team`}>Team</label>
-            <input id={`${prefix}-team`} value={user.team} onChange={(e) => onChange('team', e.target.value)} />
+            <select id={`${prefix}-team`} value={user.team} onChange={(e) => onChange('team', e.target.value)}>
+              <option value="">Select Team</option>
+              <option value="CIRRUS">CIRRUS</option>
+              <option value="TPRC">TPRC</option>
+            </select>
           </div>
           <DatePickerField id={`${prefix}-dateHired`} label="Date Hired" value={user.dateHired} onChange={(v) => onChange('dateHired', v)} />
           <DatePickerField id={`${prefix}-regularizationDate`} label="Regularization Date" value={user.regularizationDate} onChange={(v) => onChange('regularizationDate', v)} />
@@ -580,10 +671,13 @@ function UserFormFields({
   );
 }
 
+const ROLES_API = '/api/v1/hr/roles';
+
 function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [newUser, setNewUser] = useState<AdminUser>(emptyUser);
+  const [rolesForPicker, setRolesForPicker] = useState<RoleOption[]>([]);
   const [userSearchTerm, setUserSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('All Roles');
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
@@ -607,7 +701,22 @@ function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
 
   useEffect(() => {
     loadUsers();
+    loadRoles();
   }, []);
+
+  async function loadRoles() {
+    try {
+      const res = await fetch(ROLES_API + '/');
+      if (res.ok) {
+        const data = await res.json();
+        setRolesForPicker(data.map((r: { id: number; role_job_title: string; department_name?: string }) => ({
+          id: r.id,
+          role_job_title: r.role_job_title,
+          department_name: r.department_name || '',
+        })));
+      }
+    } catch {}
+  }
 
   async function loadUsers() {
     setLoading(true);
@@ -965,6 +1074,7 @@ function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
               user={newUser}
               onChange={updateNewUserField}
               prefix="add"
+              roles={rolesForPicker}
             />
 
             <div className="admin-modal-actions">
@@ -995,6 +1105,7 @@ function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
               onChange={updateEditingUserField}
               prefix="edit"
               isEditing
+              roles={rolesForPicker}
               onPhotoUploaded={(updated) => {
                 setEditingUser(updated);
                 setUsers((prev) => prev.map((u) => u.id === updated.id ? updated : u));
