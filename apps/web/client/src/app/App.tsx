@@ -45,6 +45,7 @@ import AdminUsersPage from '../pages/admin-center/AdminUsersPage';
 import AdminLmsCoursesPage from '../pages/admin-center/AdminLmsCoursesPage';
 import AdminCompetencyLibraryPage from '../pages/admin-center/library/AdminCompetencyLibraryPage';
 import AdminRoleLibraryPage from '../pages/admin-center/library/AdminRoleLibraryPage';
+import AdminDepartmentLibraryPage from '../pages/admin-center/library/AdminDepartmentLibraryPage';
 import AdminPortalConfigPage from '../pages/admin-center/AdminPortalConfigPage';
 import AdminReviewsConfigPage from '../pages/admin-center/config/reviews/AdminReviewsConfigPage';
 import AdminSurveysConfigPage from '../pages/admin-center/config/surveys/AdminSurveysConfigPage';
@@ -545,6 +546,7 @@ function App() {
           {currentPath === ROUTES.adminUsers && <AdminUsersPage onNavigate={navigateTo} />}
           {currentPath === ROUTES.adminLms && <AdminLmsCoursesPage onNavigate={navigateTo} />}
           {currentPath === ROUTES.adminLibraryRole && <AdminRoleLibraryPage onNavigate={navigateTo} />}
+          {currentPath === ROUTES.adminLibraryDepartment && <AdminDepartmentLibraryPage onNavigate={navigateTo} />}
           {currentPath === ROUTES.adminCompetencyLib && (
             <AdminCompetencyLibraryPage onNavigate={navigateTo} />
           )}

@@ -1,9 +1,8 @@
-import { Copy, PenSquare, Plus, Trash2, X } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { Copy, Plus, Trash2, X } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import AdminCenterSidebar from '../../../components/AdminCenterSidebar';
 import AdminTablePagination from '../../../components/AdminTablePagination';
 import ConfirmationDialog from '../../../components/ConfirmationDialog';
-import { adminMockData, type AdminRole } from '../../../data/mock/adminMockData';
 import '../AdminCenterPage.css';
 
 type AdminRoleLibraryPageProps = {
@@ -11,56 +10,57 @@ type AdminRoleLibraryPageProps = {
 };
 
 const PAGE_SIZE = 8;
+const ROLES_API = '/api/v1/hr/roles';
+const DEPARTMENTS_API = '/api/v1/hr/departments';
+const COMPETENCIES_API = '/api/v1/hr/competencies';
+
+interface RoleRecord {
+  id: number;
+  role_job_title: string;
+  role_description: string;
+  users_in_role: number;
+  department_id: number | null;
+  department_name: string;
+  required_competencies: string;
+  created_by: string;
+}
+
+interface DeptRecord {
+  id: number;
+  name: string;
+}
+
+interface CompRecord {
+  id: number;
+  competency_name: string;
+}
 
 type RoleDraft = {
   roleJobTitle: string;
   roleDescription: string;
-  department: string;
-  requiredCompetencies: string[];
+  departmentId: number | null;
+  competencyIds: number[];
 };
 
-function getInitialRoleDraft(defaultDepartment = ''): RoleDraft {
-  return {
-    roleJobTitle: '',
-    roleDescription: '',
-    department: defaultDepartment,
-    requiredCompetencies: [],
-  };
-}
-
-function getInitialDepartments(): string[] {
-  const departmentSet = new Set<string>();
-
-  (adminMockData.users ?? []).forEach((user) => {
-    if (user.department?.trim()) {
-      departmentSet.add(user.department.trim());
-    }
-  });
-
-  (adminMockData.roles ?? []).forEach((role) => {
-    if (role.department?.trim()) {
-      departmentSet.add(role.department.trim());
-    }
-  });
-
-  return Array.from(departmentSet).sort((left, right) => left.localeCompare(right));
+function emptyDraft(): RoleDraft {
+  return { roleJobTitle: '', roleDescription: '', departmentId: null, competencyIds: [] };
 }
 
 function AdminRoleLibraryPage({ onNavigate }: AdminRoleLibraryPageProps) {
-  const [roles, setRoles] = useState<AdminRole[]>(adminMockData.roles as AdminRole[]);
-  const [departments, setDepartments] = useState<string[]>(getInitialDepartments());
+  const [roles, setRoles] = useState<RoleRecord[]>([]);
+  const [departments, setDepartments] = useState<DeptRecord[]>([]);
+  const [competencies, setCompetencies] = useState<CompRecord[]>([]);
+  const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
-  const [showDepartmentModal, setShowDepartmentModal] = useState(false);
-  const [newDepartmentName, setNewDepartmentName] = useState('');
   const [showAddRoleModal, setShowAddRoleModal] = useState(false);
-  const [newRole, setNewRole] = useState<RoleDraft>(getInitialRoleDraft(getInitialDepartments()[0] ?? ''));
+  const [newRole, setNewRole] = useState<RoleDraft>(emptyDraft());
   const [competencySearchTerm, setCompetencySearchTerm] = useState('');
   const [roleTitleError, setRoleTitleError] = useState('');
   const [departmentError, setDepartmentError] = useState('');
   const [competencyError, setCompetencyError] = useState('');
-  const [pendingDeleteRole, setPendingDeleteRole] = useState<AdminRole | null>(null);
-  const [pendingDeleteDepartment, setPendingDeleteDepartment] = useState<string | null>(null);
-  const [pendingDeleteRequiredCompetency, setPendingDeleteRequiredCompetency] = useState<string | null>(null);
+  const [pendingDeleteRole, setPendingDeleteRole] = useState<RoleRecord | null>(null);
+  const [pendingDeleteRequiredCompetency, setPendingDeleteRequiredCompetency] = useState<number | null>(null);
+  const [submitError, setSubmitError] = useState('');
 
   const navigate = onNavigate ?? ((path: string) => {
     if (window.location.pathname !== path) {
@@ -69,155 +69,150 @@ function AdminRoleLibraryPage({ onNavigate }: AdminRoleLibraryPageProps) {
     }
   });
 
-  const competencyOptions = useMemo(() => {
-    const uniqueNames = new Set<string>();
-    adminMockData.competencies.forEach((competency) => {
-      if (competency.competencyName.trim()) {
-        uniqueNames.add(competency.competencyName.trim());
-      }
-    });
-    return Array.from(uniqueNames).sort((left, right) => left.localeCompare(right));
+  useEffect(() => {
+    loadAll();
   }, []);
+
+  async function loadAll() {
+    try {
+      const [rolesRes, deptsRes, compsRes] = await Promise.all([
+        fetch(ROLES_API + '/'),
+        fetch(DEPARTMENTS_API + '/'),
+        fetch(COMPETENCIES_API + '/'),
+      ]);
+      if (rolesRes.ok) setRoles(await rolesRes.json());
+      if (deptsRes.ok) setDepartments(await deptsRes.json());
+      if (compsRes.ok) setCompetencies(await compsRes.json());
+    } catch {
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const competencyOptions = useMemo(() => {
+    return competencies
+      .filter((c) => c.competency_name?.trim())
+      .sort((a, b) => a.competency_name.localeCompare(b.competency_name));
+  }, [competencies]);
 
   const filteredCompetencyOptions = useMemo(() => {
     const query = competencySearchTerm.trim().toLowerCase();
-    return competencyOptions.filter((name) => {
-      if (newRole.requiredCompetencies.includes(name)) {
-        return false;
-      }
-      if (!query) {
-        return true;
-      }
-      return name.toLowerCase().includes(query);
+    return competencyOptions.filter((c) => {
+      if (newRole.competencyIds.includes(c.id)) return false;
+      if (!query) return true;
+      return c.competency_name.toLowerCase().includes(query);
     });
-  }, [competencyOptions, competencySearchTerm, newRole.requiredCompetencies]);
+  }, [competencyOptions, competencySearchTerm, newRole.competencyIds]);
+
+  const selectedCompetencyNames = useMemo(() => {
+    const map = new Map(competencies.map((c) => [c.id, c.competency_name]));
+    return newRole.competencyIds.map((id) => ({ id, name: map.get(id) || `#${id}` }));
+  }, [newRole.competencyIds, competencies]);
 
   function handleAddRole() {
     setRoleTitleError('');
     setDepartmentError('');
     setCompetencyError('');
+    setSubmitError('');
     setCompetencySearchTerm('');
-    setNewRole(getInitialRoleDraft(departments[0] ?? ''));
+    setNewRole(emptyDraft());
     setShowAddRoleModal(true);
   }
 
-  function handleEditRole(role: AdminRole) {
-    console.log('edit_role_payload', { roleId: role.id });
-  }
+  async function handleCopyRole(role: RoleRecord) {
+    try {
+      const detailRes = await fetch(`${ROLES_API}/${role.id}`);
+      const detail = detailRes.ok ? await detailRes.json() : null;
 
-  function handleCopyRole(role: AdminRole) {
-    const copyRole: AdminRole = {
-      ...role,
-      id: `role-copy-${Date.now()}`,
-      roleJobTitle: `${role.roleJobTitle} (Copy)`,
-    };
-    console.log('copy_role_payload', { sourceRoleId: role.id });
-    setRoles((previous) => [copyRole, ...previous]);
-  }
+      const compNames = (role.required_competencies || '').split(',').map((s: string) => s.trim()).filter(Boolean);
+      const compIds = competencies
+        .filter((c) => compNames.includes(c.competency_name))
+        .map((c) => c.id);
 
-  function handleDeleteRole(roleId: string) {
-    console.log('delete_role_payload', { roleId });
-    setRoles((previous) => previous.filter((role) => role.id !== roleId));
-  }
-
-  function updateNewRoleField(field: keyof RoleDraft, value: string) {
-    setNewRole((previous) => ({ ...previous, [field]: value }));
-  }
-
-  function handleAddDepartment() {
-    const cleanedName = newDepartmentName.trim();
-    if (!cleanedName) {
-      return;
+      const res = await fetch(ROLES_API + '/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          role_job_title: `${role.role_job_title} (Copy)`,
+          role_description: role.role_description,
+          department_id: role.department_id,
+          created_by: role.created_by || 'Admin',
+          competency_ids: compIds.length > 0 ? compIds : (detail?.competency_ids ?? []),
+        }),
+      });
+      if (res.ok) await loadAll();
+    } catch {
     }
+  }
 
-    const exists = departments.some((department) => department.toLowerCase() === cleanedName.toLowerCase());
-    if (exists) {
-      return;
+  async function handleDeleteRole(id: number) {
+    try {
+      await fetch(`${ROLES_API}/${id}`, { method: 'DELETE' });
+      await loadAll();
+    } catch {
     }
-
-    setDepartments((previous) => [...previous, cleanedName].sort((left, right) => left.localeCompare(right)));
-    setNewDepartmentName('');
-
-    setNewRole((previous) => (
-      previous.department
-        ? previous
-        : { ...previous, department: cleanedName }
-    ));
   }
 
-  function handleDeleteDepartment(departmentName: string) {
-    setDepartments((previous) => previous.filter((department) => department !== departmentName));
-
-    setRoles((previous) => previous.map((role) => (
-      role.department === departmentName ? { ...role, department: 'Unassigned' } : role
-    )));
-
-    setNewRole((previous) => (
-      previous.department === departmentName ? { ...previous, department: '' } : previous
-    ));
-  }
-
-  function addRequiredCompetency(name: string) {
-    setNewRole((previous) => {
-      if (previous.requiredCompetencies.includes(name)) {
-        return previous;
-      }
-      return { ...previous, requiredCompetencies: [...previous.requiredCompetencies, name] };
+  function addRequiredCompetency(comp: CompRecord) {
+    setNewRole((prev) => {
+      if (prev.competencyIds.includes(comp.id)) return prev;
+      return { ...prev, competencyIds: [...prev.competencyIds, comp.id] };
     });
     setCompetencySearchTerm('');
     setCompetencyError('');
   }
 
-  function removeRequiredCompetency(name: string) {
-    setNewRole((previous) => ({
-      ...previous,
-      requiredCompetencies: previous.requiredCompetencies.filter((item) => item !== name),
+  function removeRequiredCompetency(id: number) {
+    setNewRole((prev) => ({
+      ...prev,
+      competencyIds: prev.competencyIds.filter((cid) => cid !== id),
     }));
   }
 
-  function handleSubmitNewRole() {
-    const trimmedTitle = newRole.roleJobTitle.trim();
-    const trimmedDescription = newRole.roleDescription.trim();
-
+  async function handleSubmitNewRole() {
     setRoleTitleError('');
     setDepartmentError('');
     setCompetencyError('');
+    setSubmitError('');
 
     let hasError = false;
-
-    if (!trimmedTitle) {
+    if (!newRole.roleJobTitle.trim()) {
       setRoleTitleError('Role (Job Title) is required.');
       hasError = true;
     }
-
-    if (!newRole.department.trim()) {
+    if (!newRole.departmentId) {
       setDepartmentError('Department is required.');
       hasError = true;
     }
-
-    if (newRole.requiredCompetencies.length === 0) {
+    if (newRole.competencyIds.length === 0) {
       setCompetencyError('Select at least one required competency.');
       hasError = true;
     }
+    if (hasError) return;
 
-    if (hasError) {
-      return;
+    try {
+      const res = await fetch(ROLES_API + '/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          role_job_title: newRole.roleJobTitle.trim(),
+          role_description: newRole.roleDescription.trim(),
+          department_id: newRole.departmentId,
+          created_by: 'Admin',
+          competency_ids: newRole.competencyIds,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ detail: 'Failed to create' }));
+        setSubmitError(data.detail || 'Failed to create role');
+        return;
+      }
+      setShowAddRoleModal(false);
+      setCurrentPage(1);
+      await loadAll();
+    } catch {
+      setSubmitError('Network error');
     }
-
-    const role: AdminRole = {
-      id: `role-${Date.now()}`,
-      roleJobTitle: trimmedTitle,
-      roleDescription: trimmedDescription,
-      usersInRole: '0',
-      department: newRole.department,
-      requiredCompetencies: newRole.requiredCompetencies.join(', '),
-      createdBy: 'Current Admin',
-    };
-
-    console.log('add_role_payload', { role });
-    setRoles((previous) => [role, ...previous]);
-    setCurrentPage(1);
-    setShowAddRoleModal(false);
   }
 
   const totalRoles = roles.length;
@@ -238,10 +233,6 @@ function AdminRoleLibraryPage({ onNavigate }: AdminRoleLibraryPageProps) {
                 <p>Manage role definitions and required competencies.</p>
               </div>
               <div className="admin-toolbar-actions">
-                <button className="admin-invite-btn" onClick={() => setShowDepartmentModal(true)}>
-                  <Plus size={16} />
-                  Add Department
-                </button>
                 <button className="admin-invite-btn" onClick={handleAddRole}>
                   <Plus size={16} />
                   Add New Role
@@ -249,148 +240,63 @@ function AdminRoleLibraryPage({ onNavigate }: AdminRoleLibraryPageProps) {
               </div>
             </div>
 
-            <div className="admin-users-table-wrap">
-              <table className="admin-users-table role-library-table">
-                <thead>
-                  <tr>
-                    <th>Role (Job Title)</th>
-                    <th>Role Description</th>
-                    <th>Users in this role</th>
-                    <th>Department</th>
-                    <th>Required Competencies</th>
-                    <th>Created by</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {totalRoles === 0 && (
-                    <tr>
-                      <td colSpan={7} className="admin-empty-state">
-                        No roles available.
-                      </td>
-                    </tr>
-                  )}
-                  {pagedRoles.map((role) => (
-                    <tr key={role.id}>
-                      <td>{role.roleJobTitle}</td>
-                      <td>{role.roleDescription}</td>
-                      <td>{role.usersInRole}</td>
-                      <td>{role.department}</td>
-                      <td>{role.requiredCompetencies}</td>
-                      <td>{role.createdBy}</td>
-                      <td>
-                        <div className="admin-actions-cell">
-                          <button
-                            className="admin-icon-action-btn"
-                            title="Edit role"
-                            onClick={() => handleEditRole(role)}
-                          >
-                            <PenSquare size={14} />
-                          </button>
-                          <button
-                            className="admin-icon-action-btn"
-                            title="Copy role"
-                            onClick={() => handleCopyRole(role)}
-                          >
-                            <Copy size={14} />
-                          </button>
-                          <button
-                            className="admin-icon-action-btn danger"
-                            title="Delete role"
-                            onClick={() => setPendingDeleteRole(role)}
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <AdminTablePagination
-              currentPage={safeCurrentPage}
-              totalItems={totalRoles}
-              pageSize={PAGE_SIZE}
-              onPageChange={setCurrentPage}
-            />
+            {loading ? (
+              <div className="admin-empty-state" style={{ padding: '2rem', textAlign: 'center' }}>Loading roles...</div>
+            ) : (
+              <>
+                <div className="admin-users-table-wrap">
+                  <table className="admin-users-table role-library-table">
+                    <thead>
+                      <tr>
+                        <th>Role (Job Title)</th>
+                        <th>Role Description</th>
+                        <th>Users in this role</th>
+                        <th>Department</th>
+                        <th>Required Competencies</th>
+                        <th>Created by</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {totalRoles === 0 && (
+                        <tr>
+                          <td colSpan={7} className="admin-empty-state">No roles available.</td>
+                        </tr>
+                      )}
+                      {pagedRoles.map((role) => (
+                        <tr key={role.id}>
+                          <td>{role.role_job_title}</td>
+                          <td>{role.role_description}</td>
+                          <td>{role.users_in_role}</td>
+                          <td>{role.department_name}</td>
+                          <td>{role.required_competencies}</td>
+                          <td>{role.created_by}</td>
+                          <td>
+                            <div className="admin-actions-cell">
+                              <button className="admin-icon-action-btn" title="Copy role" onClick={() => handleCopyRole(role)}>
+                                <Copy size={14} />
+                              </button>
+                              <button className="admin-icon-action-btn danger" title="Delete role" onClick={() => setPendingDeleteRole(role)}>
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <AdminTablePagination
+                  currentPage={safeCurrentPage}
+                  totalItems={totalRoles}
+                  pageSize={PAGE_SIZE}
+                  onPageChange={setCurrentPage}
+                />
+              </>
+            )}
           </section>
         </div>
       </div>
-
-      {showDepartmentModal && (
-        <div className="admin-modal-backdrop" role="dialog" aria-modal="true">
-          <div className="admin-modal admin-learning-modal">
-            <div className="admin-modal-header">
-              <div>
-                <h3>Departments</h3>
-                <p>Add or remove departments used by roles.</p>
-              </div>
-              <button className="admin-modal-close-btn" onClick={() => setShowDepartmentModal(false)}>
-                <X size={16} />
-              </button>
-            </div>
-
-            <div className="admin-learning-select-grid">
-              <div className="admin-form-field">
-                <label htmlFor="new-department-name">Department Name</label>
-                <input
-                  id="new-department-name"
-                  type="text"
-                  value={newDepartmentName}
-                  onChange={(event) => setNewDepartmentName(event.target.value)}
-                  placeholder="Enter department name"
-                />
-              </div>
-              <div className="admin-modal-actions">
-                <button className="admin-primary-btn" onClick={handleAddDepartment}>
-                  Add Department
-                </button>
-              </div>
-            </div>
-
-            <div className="admin-users-table-wrap admin-compact-modal-table-wrap">
-              <table className="admin-users-table admin-compact-modal-table">
-                <thead>
-                  <tr>
-                    <th>Department</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {departments.length === 0 && (
-                    <tr>
-                      <td colSpan={2} className="admin-empty-state">
-                        No departments available.
-                      </td>
-                    </tr>
-                  )}
-                  {departments.map((department) => (
-                    <tr key={department}>
-                      <td>{department}</td>
-                      <td>
-                        <button
-                          className="admin-icon-action-btn danger"
-                          title="Delete department"
-                          onClick={() => setPendingDeleteDepartment(department)}
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="admin-modal-actions">
-              <button className="admin-secondary-btn" onClick={() => setShowDepartmentModal(false)}>
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {showAddRoleModal && (
         <div className="admin-modal-backdrop" role="dialog" aria-modal="true">
@@ -406,6 +312,8 @@ function AdminRoleLibraryPage({ onNavigate }: AdminRoleLibraryPageProps) {
             </div>
 
             <div className="admin-edit-grid single-column">
+              {submitError && <div className="admin-form-error">{submitError}</div>}
+
               <div className="admin-form-field">
                 <label htmlFor="add-role-job-title">Role (Job Title)</label>
                 <input
@@ -413,7 +321,7 @@ function AdminRoleLibraryPage({ onNavigate }: AdminRoleLibraryPageProps) {
                   className={roleTitleError ? 'admin-input-invalid' : undefined}
                   type="text"
                   value={newRole.roleJobTitle}
-                  onChange={(event) => updateNewRoleField('roleJobTitle', event.target.value)}
+                  onChange={(e) => setNewRole({ ...newRole, roleJobTitle: e.target.value })}
                   placeholder="e.g. Product Manager"
                 />
                 {roleTitleError && <small className="admin-field-error">{roleTitleError}</small>}
@@ -425,7 +333,7 @@ function AdminRoleLibraryPage({ onNavigate }: AdminRoleLibraryPageProps) {
                   id="add-role-description"
                   rows={4}
                   value={newRole.roleDescription}
-                  onChange={(event) => updateNewRoleField('roleDescription', event.target.value)}
+                  onChange={(e) => setNewRole({ ...newRole, roleDescription: e.target.value })}
                   placeholder="Describe the role responsibilities."
                 />
               </div>
@@ -435,17 +343,15 @@ function AdminRoleLibraryPage({ onNavigate }: AdminRoleLibraryPageProps) {
                 <select
                   id="add-role-department"
                   className={departmentError ? 'admin-input-invalid' : undefined}
-                  value={newRole.department}
-                  onChange={(event) => {
-                    updateNewRoleField('department', event.target.value);
+                  value={newRole.departmentId ?? ''}
+                  onChange={(e) => {
+                    setNewRole({ ...newRole, departmentId: e.target.value ? Number(e.target.value) : null });
                     setDepartmentError('');
                   }}
                 >
                   <option value="">Select department</option>
-                  {departments.map((department) => (
-                    <option key={department} value={department}>
-                      {department}
-                    </option>
+                  {departments.map((d) => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
                   ))}
                 </select>
                 {departmentError && <small className="admin-field-error">{departmentError}</small>}
@@ -459,10 +365,10 @@ function AdminRoleLibraryPage({ onNavigate }: AdminRoleLibraryPageProps) {
                   type="text"
                   value={competencySearchTerm}
                   placeholder="Type to filter competencies..."
-                  onChange={(event) => setCompetencySearchTerm(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' && filteredCompetencyOptions.length > 0) {
-                      event.preventDefault();
+                  onChange={(e) => setCompetencySearchTerm(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && filteredCompetencyOptions.length > 0) {
+                      e.preventDefault();
                       addRequiredCompetency(filteredCompetencyOptions[0]);
                     }
                   }}
@@ -470,29 +376,25 @@ function AdminRoleLibraryPage({ onNavigate }: AdminRoleLibraryPageProps) {
 
                 {filteredCompetencyOptions.length > 0 && (
                   <div className="admin-suggestion-list">
-                    {filteredCompetencyOptions.map((competencyName) => (
-                      <button
-                        key={competencyName}
-                        className="admin-suggestion-item"
-                        onClick={() => addRequiredCompetency(competencyName)}
-                      >
-                        {competencyName}
+                    {filteredCompetencyOptions.map((comp) => (
+                      <button key={comp.id} className="admin-suggestion-item" onClick={() => addRequiredCompetency(comp)}>
+                        {comp.competency_name}
                       </button>
                     ))}
                   </div>
                 )}
 
                 <div className="admin-selected-tag-list">
-                  {newRole.requiredCompetencies.length === 0 && (
+                  {selectedCompetencyNames.length === 0 && (
                     <p className="admin-library-empty">No competencies selected.</p>
                   )}
-                  {newRole.requiredCompetencies.map((competencyName) => (
-                    <span key={competencyName} className="admin-selected-tag">
-                      {competencyName}
+                  {selectedCompetencyNames.map((c) => (
+                    <span key={c.id} className="admin-selected-tag">
+                      {c.name}
                       <button
                         className="admin-selected-tag-remove"
                         title="Remove competency"
-                        onClick={() => setPendingDeleteRequiredCompetency(competencyName)}
+                        onClick={() => setPendingDeleteRequiredCompetency(c.id)}
                       >
                         <X size={12} />
                       </button>
@@ -504,52 +406,33 @@ function AdminRoleLibraryPage({ onNavigate }: AdminRoleLibraryPageProps) {
             </div>
 
             <div className="admin-modal-actions">
-              <button className="admin-secondary-btn" onClick={() => setShowAddRoleModal(false)}>
-                Cancel
-              </button>
-              <button className="admin-primary-btn" onClick={handleSubmitNewRole}>
-                Add Role
-              </button>
+              <button className="admin-secondary-btn" onClick={() => setShowAddRoleModal(false)}>Cancel</button>
+              <button className="admin-primary-btn" onClick={handleSubmitNewRole}>Add Role</button>
             </div>
           </div>
         </div>
       )}
+
       <ConfirmationDialog
         isOpen={Boolean(pendingDeleteRole)}
         title="Delete Role"
-        message={`Are you sure you want to delete "${pendingDeleteRole?.roleJobTitle ?? ''}"?`}
+        message={`Are you sure you want to delete "${pendingDeleteRole?.role_job_title ?? ''}"?`}
         confirmLabel="Delete"
         onCancel={() => setPendingDeleteRole(null)}
         onConfirm={() => {
-          if (pendingDeleteRole) {
-            handleDeleteRole(pendingDeleteRole.id);
-          }
+          if (pendingDeleteRole) handleDeleteRole(pendingDeleteRole.id);
           setPendingDeleteRole(null);
         }}
       />
-      <ConfirmationDialog
-        isOpen={Boolean(pendingDeleteDepartment)}
-        title="Delete Department"
-        message={`Are you sure you want to delete "${pendingDeleteDepartment ?? ''}"?`}
-        confirmLabel="Delete"
-        onCancel={() => setPendingDeleteDepartment(null)}
-        onConfirm={() => {
-          if (pendingDeleteDepartment) {
-            handleDeleteDepartment(pendingDeleteDepartment);
-          }
-          setPendingDeleteDepartment(null);
-        }}
-      />
+
       <ConfirmationDialog
         isOpen={Boolean(pendingDeleteRequiredCompetency)}
         title="Remove Competency"
-        message={`Are you sure you want to remove "${pendingDeleteRequiredCompetency ?? ''}" from required competencies?`}
+        message="Are you sure you want to remove this competency from the selection?"
         confirmLabel="Remove"
         onCancel={() => setPendingDeleteRequiredCompetency(null)}
         onConfirm={() => {
-          if (pendingDeleteRequiredCompetency) {
-            removeRequiredCompetency(pendingDeleteRequiredCompetency);
-          }
+          if (pendingDeleteRequiredCompetency !== null) removeRequiredCompetency(pendingDeleteRequiredCompetency);
           setPendingDeleteRequiredCompetency(null);
         }}
       />

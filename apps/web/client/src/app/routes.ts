@@ -15,6 +15,7 @@ export const ROUTES = {
   adminUsers: '/admin/users',
   adminLms: '/admin/lms',
   adminLibraryRole: '/admin/library/role',
+  adminLibraryDepartment: '/admin/library/department',
   adminCompetencyLib: '/admin/library/competency',
   adminConfigOrgChart: '/admin/config/org-chart',
   adminConfigKpi: '/admin/config/kpi',

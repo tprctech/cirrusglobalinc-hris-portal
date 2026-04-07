@@ -74,7 +74,11 @@ class Department(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(150), unique=True, nullable=False)
+    description = Column(Text, nullable=True, default="")
+    created_by = Column(String(200), nullable=True, default="")
+    status = Column(String(20), nullable=False, default="Active")
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     roles = relationship("Role", back_populates="department_rel")
 

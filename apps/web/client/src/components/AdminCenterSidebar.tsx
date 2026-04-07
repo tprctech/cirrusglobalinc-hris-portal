@@ -20,6 +20,7 @@ type AdminMenu = (
   | 'users'
   | 'lms'
   | 'libraryRole'
+  | 'libraryDepartment'
   | 'libraryCompetency'
   | 'configOrgChart'
   | 'configKpi'
@@ -37,7 +38,7 @@ type AdminCenterSidebarProps = {
 
 function AdminCenterSidebar({ activeMenu, onNavigate }: AdminCenterSidebarProps) {
   const [libraryExpanded, setLibraryExpanded] = useState(
-    activeMenu === 'libraryRole' || activeMenu === 'libraryCompetency',
+    activeMenu === 'libraryRole' || activeMenu === 'libraryDepartment' || activeMenu === 'libraryCompetency',
   );
   const [configExpanded, setConfigExpanded] = useState(
     activeMenu === 'configOrgChart'
@@ -49,7 +50,7 @@ function AdminCenterSidebar({ activeMenu, onNavigate }: AdminCenterSidebarProps)
     || activeMenu === 'configRecognitions',
   );
 
-  const isLibraryMenuActive = activeMenu === 'libraryRole' || activeMenu === 'libraryCompetency';
+  const isLibraryMenuActive = activeMenu === 'libraryRole' || activeMenu === 'libraryDepartment' || activeMenu === 'libraryCompetency';
   const isConfigMenuActive = (
     activeMenu === 'configOrgChart'
     || activeMenu === 'configKpi'
@@ -105,6 +106,13 @@ function AdminCenterSidebar({ activeMenu, onNavigate }: AdminCenterSidebarProps)
           >
             <Users size={14} />
             <span>Role</span>
+          </button>
+          <button
+            className={`admin-center-sub-link ${activeMenu === 'libraryDepartment' ? 'active' : ''}`}
+            onClick={(event) => handleNavigate(ROUTES.adminLibraryDepartment, event)}
+          >
+            <FolderOpen size={14} />
+            <span>Department</span>
           </button>
           <button
             className={`admin-center-sub-link ${activeMenu === 'libraryCompetency' ? 'active' : ''}`}

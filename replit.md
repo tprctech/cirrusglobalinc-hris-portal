@@ -57,6 +57,8 @@ Two workflows are configured:
 - `apps/api/app/db/models.py` - All SQLAlchemy ORM models (22 tables)
 - `apps/api/app/db/init_db.py` - Table creation script
 - `apps/api/app/api/v1/hr_center/` - HR Center CRUD route modules
+- `apps/web/client/src/pages/admin-center/library/AdminDepartmentLibraryPage.tsx` - Department Library page (live API)
+- `apps/web/client/src/pages/admin-center/library/AdminRoleLibraryPage.tsx` - Role Library page (live API)
 - `apps/api/requirements.txt` - Python dependencies
 
 ## API Endpoints
@@ -79,7 +81,7 @@ Two workflows are configured:
 ### HR Center API (PostgreSQL-backed CRUD)
 
 - `/api/v1/hr/employees/*` - Employee management (full profile with PH gov IDs, profile photo upload, employee search/lookup)
-- `/api/v1/hr/departments/*` - Department CRUD
+- `/api/v1/hr/departments/*` - Department CRUD (name, description, created_by, status Active/Not Active)
 - `/api/v1/hr/roles/*` - Role management (linked to competencies & departments)
 - `/api/v1/hr/competencies/*` - Competencies with learning materials
 - `/api/v1/hr/reviews/templates` - Review templates (sections + questions)
