@@ -23,14 +23,14 @@ type AdminUsersPageProps = {
 };
 
 const ALL_COLUMNS: ColumnConfig[] = [
-  { label: 'Employee ID', key: 'employeeId', defaultVisible: true },
+  { label: 'Employee ID', key: 'employeeId', defaultVisible: false },
   { label: 'Name', key: 'fullName', defaultVisible: true },
   { label: 'E-mail', key: 'email', defaultVisible: true },
-  { label: 'Department', key: 'department', defaultVisible: true },
-  { label: 'Job Title', key: 'jobTitle', defaultVisible: true },
+  { label: 'Department', key: 'department', defaultVisible: false },
+  { label: 'Job Title', key: 'jobTitle', defaultVisible: false },
   { label: 'Portal Role', key: 'teamflectRole', defaultVisible: true },
-  { label: 'Status', key: 'status', defaultVisible: true },
-  { label: 'Supervisor', key: 'supervisor', defaultVisible: true },
+  { label: 'Status', key: 'status', defaultVisible: false },
+  { label: 'Supervisor', key: 'supervisor', defaultVisible: false },
   { label: 'Phone', key: 'phone', defaultVisible: false },
   { label: 'Gender', key: 'gender', defaultVisible: false },
   { label: 'Marital Status', key: 'maritalStatus', defaultVisible: false },
@@ -866,7 +866,7 @@ function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
                         <input
                           type="checkbox"
                           checked={visibleColumns.has(col.key)}
-                          disabled={col.key === 'fullName' || col.key === 'employeeId'}
+                          disabled={col.key === 'fullName'}
                           onChange={() => toggleColumn(col.key)}
                         />
                         {col.label}

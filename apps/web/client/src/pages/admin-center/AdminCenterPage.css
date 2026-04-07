@@ -554,10 +554,10 @@
 
 .admin-column-picker-dropdown {
   position: absolute;
-  top: calc(100% + 4px);
+  top: calc(100% + 6px);
   right: 0;
-  width: 220px;
-  max-height: 340px;
+  width: 240px;
+  max-height: 360px;
   overflow-y: auto;
   background: var(--white);
   border: 1px solid var(--gray-200);
