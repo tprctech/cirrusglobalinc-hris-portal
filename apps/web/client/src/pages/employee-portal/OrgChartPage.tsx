@@ -42,6 +42,8 @@ const LAYOUT_BASE_X = 120;
 const LAYOUT_BASE_Y = 30;
 const LAYOUT_HORIZONTAL_UNIT = 270;
 const LAYOUT_LEVEL_GAP = 230;
+const RELAY_NODE_OFFSET = 60;
+const RELAY_PREFIX = '__relay__';
 
 function getInitials(name: string) {
   return name
@@ -278,14 +280,14 @@ function buildNodePositions(
     return totalHeight;
   };
 
+  const relayNodes: { id: string; x: number; y: number }[] = [];
+
   const placeNode = (nodeId: string, leftSpan: number, y: number) => {
     const span = getSpan(nodeId);
     const centerSpan = leftSpan + span / 2;
+    const parentX = LAYOUT_BASE_X + centerSpan * LAYOUT_HORIZONTAL_UNIT - NODE_WIDTH / 2;
 
-    positions[nodeId] = {
-      x: LAYOUT_BASE_X + centerSpan * LAYOUT_HORIZONTAL_UNIT - NODE_WIDTH / 2,
-      y,
-    };
+    positions[nodeId] = { x: parentX, y };
 
     const children = childrenByParent[nodeId] ?? [];
     if (!children.length || collapsedNodeIds.has(nodeId)) return;
@@ -293,7 +295,8 @@ function buildNodePositions(
     const rows = chunkArray(children, MAX_ROW_WIDTH);
     let currentY = y + LAYOUT_LEVEL_GAP;
 
-    for (const row of rows) {
+    for (let rowIdx = 0; rowIdx < rows.length; rowIdx++) {
+      const row = rows[rowIdx];
       const rowSpan = row.reduce((sum, cid) => sum + getSpan(cid), 0);
       let childLeft = leftSpan + (span - rowSpan) / 2;
 
@@ -301,6 +304,13 @@ function buildNodePositions(
       for (const cid of row) {
         const ch = getSubtreeHeight(cid);
         if (ch > maxChildSubtreeHeight) maxChildSubtreeHeight = ch;
+      }
+
+      if (rowIdx > 0) {
+        const relayId = `${RELAY_PREFIX}${nodeId}_r${rowIdx}`;
+        const relayX = parentX + NODE_WIDTH / 2 - 1;
+        const relayY = currentY - RELAY_NODE_OFFSET;
+        relayNodes.push({ id: relayId, x: relayX, y: relayY });
       }
 
       for (const cid of row) {
@@ -318,7 +328,7 @@ function buildNodePositions(
     currentLeft += getSpan(rootId) + 1;
   }
 
-  return positions;
+  return { positions, relayNodes };
 }
 
 function OrgChartCanvas({ employees }: { employees: ApiEmployee[] }) {
@@ -396,10 +406,12 @@ function OrgChartCanvas({ employees }: { employees: ApiEmployee[] }) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const { zoomTo, fitView } = useReactFlow();
 
-  const nodePositionsById = useMemo(
+  const layoutResult = useMemo(
     () => buildNodePositions(orgPeople, childrenByParent, collapsedNodeIds),
     [orgPeople, childrenByParent, collapsedNodeIds],
   );
+  const nodePositionsById = layoutResult.positions;
+  const relayNodes = layoutResult.relayNodes;
 
   const hiddenNodeIds = useMemo(
     () => collectHiddenDescendants(collapsedNodeIds, childrenByParent),
@@ -443,8 +455,27 @@ function OrgChartCanvas({ employees }: { employees: ApiEmployee[] }) {
     });
   }, []);
 
-  const nodes = useMemo<Node[]>(
-    () => orgPeople
+  const visibleRelayNodes = useMemo(() => {
+    return relayNodes.filter((r) => {
+      const parentId = r.id.replace(RELAY_PREFIX, '').split('_r')[0];
+      return !hiddenNodeIds.has(parentId) && !collapsedNodeIds.has(parentId);
+    });
+  }, [relayNodes, hiddenNodeIds, collapsedNodeIds]);
+
+  const relayEdgeMap = useMemo(() => {
+    const map = new Map<string, { relayId: string; rowIdx: number }[]>();
+    for (const relay of visibleRelayNodes) {
+      const parts = relay.id.replace(RELAY_PREFIX, '').split('_r');
+      const parentId = parts[0];
+      const rowIdx = parseInt(parts[1], 10);
+      if (!map.has(parentId)) map.set(parentId, []);
+      map.get(parentId)!.push({ relayId: relay.id, rowIdx });
+    }
+    return map;
+  }, [visibleRelayNodes]);
+
+  const nodes = useMemo<Node[]>(() => {
+    const personNodes: Node[] = orgPeople
       .filter((person) => !hiddenNodeIds.has(person.id))
       .map((person) => ({
         id: person.id,
@@ -466,22 +497,95 @@ function OrgChartCanvas({ employees }: { employees: ApiEmployee[] }) {
           ),
         },
         draggable: false,
-      })),
-    [orgPeople, collapsedNodeIds, currentFocusNodeId, handleToggleCollapse, hiddenNodeIds, nodePositionsById, parentNodeIds],
-  );
+      }));
 
-  const edges = useMemo<Edge[]>(
-    () => orgConnections
-      .filter((connection) => !hiddenNodeIds.has(connection.source) && !hiddenNodeIds.has(connection.target))
-      .map((connection) => ({
-        id: connection.id,
-        source: connection.source,
-        target: connection.target,
-        style: { stroke: '#cbd5e1', strokeWidth: 2.2 },
-        type: 'smoothstep',
-      })),
-    [orgConnections, hiddenNodeIds],
-  );
+    const relayNodeElements: Node[] = visibleRelayNodes.map((r) => ({
+      id: r.id,
+      position: { x: r.x, y: r.y },
+      sourcePosition: Position.Bottom,
+      targetPosition: Position.Top,
+      data: { label: '' },
+      draggable: false,
+      selectable: false,
+      style: {
+        width: 2,
+        height: 2,
+        minWidth: 2,
+        minHeight: 2,
+        padding: 0,
+        border: 'none',
+        background: 'transparent',
+        opacity: 0,
+        pointerEvents: 'none' as const,
+      },
+    }));
+
+    return [...personNodes, ...relayNodeElements];
+  }, [orgPeople, collapsedNodeIds, currentFocusNodeId, handleToggleCollapse, hiddenNodeIds, nodePositionsById, parentNodeIds, visibleRelayNodes]);
+
+  const edges = useMemo<Edge[]>(() => {
+    const edgeStyle = { stroke: '#cbd5e1', strokeWidth: 2.2 };
+    const result: Edge[] = [];
+
+    for (const connection of orgConnections) {
+      if (hiddenNodeIds.has(connection.source) || hiddenNodeIds.has(connection.target)) continue;
+
+      const parentId = connection.source;
+      const childId = connection.target;
+      const parentRelays = relayEdgeMap.get(parentId);
+      const children = childrenByParent[parentId] ?? [];
+      const rows = chunkArray(children, MAX_ROW_WIDTH);
+
+      let childRowIdx = 0;
+      for (let ri = 0; ri < rows.length; ri++) {
+        if (rows[ri].includes(childId)) {
+          childRowIdx = ri;
+          break;
+        }
+      }
+
+      if (childRowIdx === 0) {
+        result.push({
+          id: connection.id,
+          source: parentId,
+          target: childId,
+          style: edgeStyle,
+          type: 'smoothstep',
+        });
+      } else {
+        const relay = parentRelays?.find((r) => r.rowIdx === childRowIdx);
+        if (relay) {
+          const relayToParentId = `relay-up-${relay.relayId}`;
+          if (!result.some((e) => e.id === relayToParentId)) {
+            result.push({
+              id: relayToParentId,
+              source: parentId,
+              target: relay.relayId,
+              style: { ...edgeStyle, strokeDasharray: '6 3' },
+              type: 'smoothstep',
+            });
+          }
+          result.push({
+            id: `relay-${relay.relayId}-${childId}`,
+            source: relay.relayId,
+            target: childId,
+            style: edgeStyle,
+            type: 'smoothstep',
+          });
+        } else {
+          result.push({
+            id: connection.id,
+            source: parentId,
+            target: childId,
+            style: edgeStyle,
+            type: 'smoothstep',
+          });
+        }
+      }
+    }
+
+    return result;
+  }, [orgConnections, hiddenNodeIds, relayEdgeMap, childrenByParent]);
 
   const viewportConfig = useMemo<Viewport>(
     () => ({ x: 0, y: 0, zoom: 1 }),
