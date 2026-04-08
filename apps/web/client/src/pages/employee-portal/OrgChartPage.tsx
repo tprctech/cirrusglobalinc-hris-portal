@@ -213,6 +213,16 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
   return chunks;
 }
 
+function sortChildrenForEdges(
+  ids: string[],
+  childrenByParent: Record<string, string[]>,
+  collapsedNodeIds: Set<string>,
+) {
+  const leaves = ids.filter((cid) => !(childrenByParent[cid]?.length) || collapsedNodeIds.has(cid));
+  const branches = ids.filter((cid) => (childrenByParent[cid]?.length) && !collapsedNodeIds.has(cid));
+  return [...leaves, ...branches];
+}
+
 function buildNodePositions(
   people: OrgPerson[],
   childrenByParent: Record<string, string[]>,
@@ -222,6 +232,12 @@ function buildNodePositions(
   const childIds = new Set(Object.values(childrenByParent).flat());
   const rootIds = allIds.filter((id) => !childIds.has(id));
   const positions: Record<string, { x: number; y: number }> = {};
+
+  const sortChildren = (ids: string[]) => {
+    const leaves = ids.filter((cid) => !(childrenByParent[cid]?.length) || collapsedNodeIds.has(cid));
+    const branches = ids.filter((cid) => (childrenByParent[cid]?.length) && !collapsedNodeIds.has(cid));
+    return [...leaves, ...branches];
+  };
 
   const spanCache = new Map<string, number>();
   const getSpan = (nodeId: string): number => {
@@ -238,7 +254,7 @@ function buildNodePositions(
       return 1;
     }
 
-    const rows = chunkArray(children, MAX_ROW_WIDTH);
+    const rows = chunkArray(sortChildren(children), MAX_ROW_WIDTH);
     let maxRowSpan = 0;
     for (const row of rows) {
       const rowSpan = row.reduce((sum, cid) => sum + getSpan(cid), 0);
@@ -264,7 +280,7 @@ function buildNodePositions(
       return 0;
     }
 
-    const rows = chunkArray(children, MAX_ROW_WIDTH);
+    const rows = chunkArray(sortChildren(children), MAX_ROW_WIDTH);
     let totalHeight = 0;
 
     for (const row of rows) {
@@ -292,7 +308,7 @@ function buildNodePositions(
     const children = childrenByParent[nodeId] ?? [];
     if (!children.length || collapsedNodeIds.has(nodeId)) return;
 
-    const rows = chunkArray(children, MAX_ROW_WIDTH);
+    const rows = chunkArray(sortChildren(children), MAX_ROW_WIDTH);
     let currentY = y + LAYOUT_LEVEL_GAP;
 
     for (let rowIdx = 0; rowIdx < rows.length; rowIdx++) {
@@ -534,7 +550,8 @@ function OrgChartCanvas({ employees }: { employees: ApiEmployee[] }) {
       const childId = connection.target;
       const parentRelays = relayEdgeMap.get(parentId);
       const children = childrenByParent[parentId] ?? [];
-      const rows = chunkArray(children, MAX_ROW_WIDTH);
+      const sortedEdge = sortChildrenForEdges(children, childrenByParent, collapsedNodeIds);
+      const rows = chunkArray(sortedEdge, MAX_ROW_WIDTH);
 
       let childRowIdx = 0;
       for (let ri = 0; ri < rows.length; ri++) {
