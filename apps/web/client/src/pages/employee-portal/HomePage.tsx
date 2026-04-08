@@ -236,14 +236,12 @@ function HomePage() {
             )}
           </div>
 
-          <div className="announcement-section">
-            <div className="announcement-section-header">
-              <Gift />
-              <h3>{currentMonth} Work Anniversaries</h3>
-            </div>
-            {anniversaryCelebrants.length === 0 ? (
-              <div className="bday-empty">No work anniversaries this month</div>
-            ) : (
+          {anniversaryCelebrants.length > 0 && (
+            <div className="announcement-section">
+              <div className="announcement-section-header">
+                <Gift />
+                <h3>{currentMonth} Work Anniversaries</h3>
+              </div>
               <div className="bday-grid">
                 {anniversaryCelebrants.map((emp) => {
                   const label = formatAnniversaryLabel(emp);
@@ -261,8 +259,8 @@ function HomePage() {
                   );
                 })}
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
           <div className="announcement-section">
             <div className="announcement-section-header">
