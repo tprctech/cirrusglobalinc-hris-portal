@@ -881,6 +881,12 @@
   object-fit: contain;
 }
 
+.resource-preview-loading {
+  color: var(--gray-400);
+  font-size: 14px;
+  font-weight: 500;
+}
+
 .resources-card {
   margin-bottom: 24px;
 }

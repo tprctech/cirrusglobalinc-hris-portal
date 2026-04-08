@@ -71,8 +71,33 @@ function HomePage() {
   const [employees, setEmployees] = useState<BdayEmployee[]>([]);
   const [resources, setResources] = useState<CompanyResource[]>([]);
   const [previewResource, setPreviewResource] = useState<CompanyResource | null>(null);
+  const [previewBlobUrl, setPreviewBlobUrl] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
   const currentMonth = new Date().toLocaleString('en-US', { month: 'long' });
   const currentMonthIdx = new Date().getMonth();
+
+  useEffect(() => {
+    if (!previewResource) {
+      if (previewBlobUrl) {
+        URL.revokeObjectURL(previewBlobUrl);
+        setPreviewBlobUrl(null);
+      }
+      return;
+    }
+    setPreviewLoading(true);
+    fetch(`/api/v1/hr/company-resources/${previewResource.id}/download`)
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to load file');
+        return res.blob();
+      })
+      .then((blob) => {
+        const url = URL.createObjectURL(blob);
+        setPreviewBlobUrl(url);
+      })
+      .catch(() => setPreviewBlobUrl(null))
+      .finally(() => setPreviewLoading(false));
+    return () => {};
+  }, [previewResource]);
 
   useEffect(() => {
     listResources()
@@ -313,18 +338,24 @@ function HomePage() {
               </div>
             </div>
             <div className="resource-preview-body">
-              {isImageFile(previewResource.file_name) ? (
-                <img
-                  src={`/api/v1/hr/company-resources/${previewResource.id}/download`}
-                  alt={previewResource.title}
-                  className="resource-preview-image"
-                />
+              {previewLoading ? (
+                <div className="resource-preview-loading">Loading preview...</div>
+              ) : previewBlobUrl ? (
+                isImageFile(previewResource.file_name) ? (
+                  <img
+                    src={previewBlobUrl}
+                    alt={previewResource.title}
+                    className="resource-preview-image"
+                  />
+                ) : (
+                  <iframe
+                    src={previewBlobUrl}
+                    title={previewResource.title}
+                    className="resource-preview-iframe"
+                  />
+                )
               ) : (
-                <iframe
-                  src={`/api/v1/hr/company-resources/${previewResource.id}/download`}
-                  title={previewResource.title}
-                  className="resource-preview-iframe"
-                />
+                <div className="resource-preview-loading">Unable to load preview</div>
               )}
             </div>
           </div>
