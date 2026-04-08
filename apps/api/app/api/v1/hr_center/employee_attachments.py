@@ -36,12 +36,12 @@ def list_attachments(employee_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/{employee_id}/attachments")
-def upload_attachment(
+async def upload_attachment(
     employee_id: int,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
-    content = file.file.read()
+    content = await file.read()
     if len(content) > MAX_FILE_SIZE:
         raise HTTPException(400, "File size exceeds 25MB limit")
 

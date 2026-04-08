@@ -40,7 +40,7 @@ def get_resource(resource_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/")
-def create_resource(
+async def create_resource(
     title: str = Form(...),
     category: str = Form(...),
     uploaded_by: str = Form(""),
@@ -54,13 +54,13 @@ def create_resource(
     if ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(400, f"File type '{ext}' not allowed")
 
-    content = file.file.read()
+    content = await file.read()
     if len(content) > MAX_FILE_SIZE:
         raise HTTPException(400, "File size exceeds 25MB limit")
 
     unique_name = f"{uuid.uuid4().hex}{ext}"
-    file_path = os.path.join(UPLOAD_DIR, unique_name)
-    with open(file_path, "wb") as f:
+    dest_path = os.path.join(UPLOAD_DIR, unique_name)
+    with open(dest_path, "wb") as f:
         f.write(content)
 
     resource = CompanyResource(
@@ -79,7 +79,7 @@ def create_resource(
 
 
 @router.put("/{resource_id}")
-def update_resource(
+async def update_resource(
     resource_id: int,
     title: str = Form(None),
     category: str = Form(None),
@@ -111,7 +111,7 @@ def update_resource(
         if ext not in ALLOWED_EXTENSIONS:
             raise HTTPException(400, f"File type '{ext}' not allowed")
 
-        content = file.file.read()
+        content = await file.read()
         if len(content) > MAX_FILE_SIZE:
             raise HTTPException(400, "File size exceeds 25MB limit")
 
