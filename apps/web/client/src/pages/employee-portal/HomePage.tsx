@@ -3,6 +3,8 @@ import {
   Award,
   Cake,
   ClipboardList,
+  Download,
+  Eye,
   FileText,
   Gift,
   HeartHandshake,
@@ -11,6 +13,7 @@ import {
   Newspaper,
   TrendingUp,
   Users,
+  X,
 } from 'lucide-react';
 import {
   anniversaries,
@@ -19,7 +22,7 @@ import {
   nextSteps,
   valuesCards,
 } from '../../data/mock/homeMockData';
-import { listResources, downloadResource, type CompanyResource } from '../../api/companyResources';
+import { listResources, type CompanyResource } from '../../api/companyResources';
 
 const statIcons: Record<string, React.ReactNode> = {
   'clipboard-list': <ClipboardList size={22} />,
@@ -49,10 +52,25 @@ function formatBirthdayLabel(emp: BdayEmployee): { name: string; date: string } 
   return { name: displayName, date: `${month} ${day}` };
 }
 
+function getFileExtension(filename: string): string {
+  return (filename.split('.').pop() || '').toLowerCase();
+}
+
+function isPreviewable(filename: string): boolean {
+  const ext = getFileExtension(filename);
+  return ['pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp'].includes(ext);
+}
+
+function isImageFile(filename: string): boolean {
+  const ext = getFileExtension(filename);
+  return ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp'].includes(ext);
+}
+
 function HomePage() {
   const [activeTab, setActiveTab] = useState('policies');
   const [employees, setEmployees] = useState<BdayEmployee[]>([]);
   const [resources, setResources] = useState<CompanyResource[]>([]);
+  const [previewResource, setPreviewResource] = useState<CompanyResource | null>(null);
   const currentMonth = new Date().toLocaleString('en-US', { month: 'long' });
   const currentMonthIdx = new Date().getMonth();
 
@@ -226,8 +244,15 @@ function HomePage() {
                     <div className="policy-date">Updated: {item.updated_at ? new Date(item.updated_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '-'}</div>
                   </div>
                 </div>
-                <button className="download-btn" onClick={() => downloadResource(item.id)}>
-                  Download
+                <button className="download-btn" onClick={() => {
+                  if (isPreviewable(item.file_name)) {
+                    setPreviewResource(item);
+                  } else {
+                    window.open(`/api/v1/hr/company-resources/${item.id}/download`, '_blank');
+                  }
+                }}>
+                  <Eye size={14} />
+                  Preview
                 </button>
               </div>
             ))
@@ -265,6 +290,46 @@ function HomePage() {
           ))}
         </div>
       </div>
+      {previewResource && (
+        <div className="resource-preview-backdrop" onClick={() => setPreviewResource(null)}>
+          <div className="resource-preview-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="resource-preview-header">
+              <div className="resource-preview-title">
+                <FileText size={18} />
+                <span>{previewResource.title}</span>
+              </div>
+              <div className="resource-preview-actions">
+                <a
+                  className="resource-preview-download-btn"
+                  href={`/api/v1/hr/company-resources/${previewResource.id}/download?disposition=attachment`}
+                  download={previewResource.file_name}
+                >
+                  <Download size={14} />
+                  Download
+                </a>
+                <button className="resource-preview-close-btn" onClick={() => setPreviewResource(null)}>
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+            <div className="resource-preview-body">
+              {isImageFile(previewResource.file_name) ? (
+                <img
+                  src={`/api/v1/hr/company-resources/${previewResource.id}/download`}
+                  alt={previewResource.title}
+                  className="resource-preview-image"
+                />
+              ) : (
+                <iframe
+                  src={`/api/v1/hr/company-resources/${previewResource.id}/download`}
+                  title={previewResource.title}
+                  className="resource-preview-iframe"
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

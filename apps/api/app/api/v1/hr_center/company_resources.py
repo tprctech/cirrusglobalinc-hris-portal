@@ -149,7 +149,7 @@ def delete_resource(resource_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/{resource_id}/download")
-def download_resource(resource_id: int, db: Session = Depends(get_db)):
+def download_resource(resource_id: int, disposition: str = "inline", db: Session = Depends(get_db)):
     r = db.query(CompanyResource).filter(
         CompanyResource.id == resource_id,
         CompanyResource.is_deleted == False,
@@ -159,6 +159,19 @@ def download_resource(resource_id: int, db: Session = Depends(get_db)):
     file_path = os.path.join(UPLOAD_DIR, r.file_path)
     if not os.path.exists(file_path):
         raise HTTPException(404, "File not found on server")
+    import mimetypes
+    content_type, _ = mimetypes.guess_type(r.file_name)
+    content_type = content_type or "application/octet-stream"
+    previewable_types = [
+        "application/pdf",
+        "image/png", "image/jpeg", "image/gif", "image/webp", "image/svg+xml", "image/bmp",
+    ]
+    if disposition != "attachment" and content_type in previewable_types:
+        return FileResponse(
+            file_path,
+            media_type=content_type,
+            headers={"Content-Disposition": f'inline; filename="{r.file_name}"'},
+        )
     return FileResponse(file_path, filename=r.file_name)
 
 
