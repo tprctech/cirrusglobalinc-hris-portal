@@ -143,22 +143,24 @@ function buildOrgData(employees: ApiEmployee[]) {
     .filter((e) => !hasParent.has(String(e.id)) && childrenByParent[String(e.id)]?.length > 0)
     .map((e) => String(e.id));
 
-  const orphans = activeEmployees
-    .filter((e) => !hasParent.has(String(e.id)) && !childrenByParent[String(e.id)]?.length)
-    .map((e) => String(e.id));
+  const connectedIds = new Set<string>();
+  for (const id of hasParent) connectedIds.add(id);
+  for (const id of Object.keys(childrenByParent)) connectedIds.add(id);
 
-  const people: OrgPerson[] = activeEmployees.map((emp) => {
-    const nodeId = String(emp.id);
-    const isRoot = rootIds.includes(nodeId);
-    return {
-      id: nodeId,
-      name: emp.display_name || `${emp.first_name} ${emp.last_name}`.trim(),
-      role: emp.job_title || emp.department || '',
-      avatarUrl: emp.profile_photo || undefined,
-      isCeo: isRoot,
-      email: emp.email || '',
-    };
-  });
+  const people: OrgPerson[] = activeEmployees
+    .filter((emp) => connectedIds.has(String(emp.id)))
+    .map((emp) => {
+      const nodeId = String(emp.id);
+      const isRoot = rootIds.includes(nodeId);
+      return {
+        id: nodeId,
+        name: emp.display_name || `${emp.first_name} ${emp.last_name}`.trim(),
+        role: emp.job_title || emp.department || '',
+        avatarUrl: emp.profile_photo || undefined,
+        isCeo: isRoot,
+        email: emp.email || '',
+      };
+    });
 
   const connections: { id: string; source: string; target: string }[] = [];
   for (const [parentId, children] of Object.entries(childrenByParent)) {
