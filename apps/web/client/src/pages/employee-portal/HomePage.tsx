@@ -189,10 +189,13 @@ function HomePage() {
               ) : (
                 birthdayCelebrants.map((emp) => {
                   const label = formatBirthdayLabel(emp);
+                  const today = new Date();
+                  const bd = emp.birthdate ? new Date(emp.birthdate + 'T00:00:00') : null;
+                  const isToday = bd && bd.getMonth() === today.getMonth() && bd.getDate() === today.getDate();
                   return (
-                    <div key={emp.id} className="event-item">
-                      <div className="event-name">{label.name} ({label.date})</div>
-                      <div className="event-message">Happy Birthday, {label.name}! 🎂</div>
+                    <div key={emp.id} className={`event-item${isToday ? ' event-item-today' : ''}`}>
+                      <div className="event-name">{label.name} ({label.date}){isToday ? ' ⭐' : ''}</div>
+                      <div className="event-message">{isToday ? `🎉 Happy Birthday today, ${label.name}! 🎂` : `Happy Birthday, ${label.name}! 🎂`}</div>
                     </div>
                   );
                 })
