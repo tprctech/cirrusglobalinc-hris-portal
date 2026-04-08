@@ -438,6 +438,7 @@ function UserFormFields({
   isEditing = false,
   onPhotoUploaded,
   roles = [],
+  allUsers = [],
 }: {
   user: AdminUser;
   onChange: (field: keyof AdminUser, value: string) => void;
