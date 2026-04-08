@@ -93,6 +93,7 @@ function ProfilePage() {
   const [certifications, setCertifications] = useState<CertificationRecord[]>(getStoredCertifications());
   const [roleInfo, setRoleInfo] = useState<RoleDetail | null>(null);
   const [competencyNames, setCompetencyNames] = useState<string[]>([]);
+  const [directReports, setDirectReports] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadRoleInfo = useCallback(async () => {
@@ -114,6 +115,25 @@ function ProfilePage() {
   useEffect(() => {
     loadRoleInfo();
   }, [loadRoleInfo]);
+
+  useEffect(() => {
+    if (!emp?.email) return;
+    const empEmail = emp.email.toLowerCase();
+    fetch('/api/v1/hr/employees/')
+      .then((res) => res.ok ? res.json() : [])
+      .then((data: { supervisor?: string; display_name?: string; first_name?: string; last_name?: string; status?: string }[]) => {
+        const reports = data
+          .filter((e) => {
+            if (e.status !== 'Active' || !e.supervisor) return false;
+            const sv = e.supervisor.toLowerCase().trim();
+            const emailOnly = sv.includes('(') ? (sv.match(/\(([^)]+)\)/)?.[1] || sv) : sv;
+            return emailOnly === empEmail;
+          })
+          .map((e) => e.display_name || [e.first_name, e.last_name].filter(Boolean).join(' ') || '');
+        setDirectReports(reports.filter(Boolean));
+      })
+      .catch(() => {});
+  }, [emp?.email]);
 
   const loadAttachments = useCallback(async () => {
     if (!emp?.id) return;
@@ -329,28 +349,34 @@ function ProfilePage() {
             </button>
           </div>
           <div className="profile-field-list">
-            <div className="profile-field">
-              <span>Reports To</span>
-              <div className="profile-person-list">
-                {emp?.supervisor ? (
+            {emp?.supervisor && (
+              <div className="profile-field">
+                <span>Reports To</span>
+                <div className="profile-person-list">
                   <div className="profile-person-pill">
                     <UserRound size={16} />
                     {emp.supervisor}
                   </div>
-                ) : <strong>—</strong>}
+                </div>
               </div>
-            </div>
-            {emp?.reviewers && (
+            )}
+            {directReports.length > 0 && (
               <div className="profile-field">
-                <span>Reviewers</span>
+                <span>Direct Reports</span>
                 <div className="profile-person-list">
-                  {emp.reviewers.split(',').map((r) => r.trim()).filter(Boolean).map((reviewer) => (
-                    <div key={reviewer} className="profile-person-pill">
+                  {directReports.map((reportName) => (
+                    <div key={reportName} className="profile-person-pill">
                       <UserRound size={16} />
-                      {reviewer}
+                      {reportName}
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+            {!emp?.supervisor && directReports.length === 0 && (
+              <div className="profile-field">
+                <span>&nbsp;</span>
+                <strong style={{ color: 'var(--gray-400)' }}>No reporting structure assigned</strong>
               </div>
             )}
           </div>
