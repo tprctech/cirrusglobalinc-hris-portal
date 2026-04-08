@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.api.v1 import admin, auth, feedback, kpis, notifications, profile, recognitions, reviews, rewards, surveys
 from app.api.v1.hr_center import (
+    company_resources as hr_company_resources,
     competencies as hr_competencies,
     departments as hr_departments,
     employees as hr_employees,
@@ -30,3 +31,4 @@ api_router.include_router(hr_competencies.router, prefix="/hr/competencies", tag
 api_router.include_router(hr_reviews.router, prefix="/hr/reviews", tags=["hr-reviews-config"])
 api_router.include_router(hr_surveys.router, prefix="/hr/surveys", tags=["hr-surveys-config"])
 api_router.include_router(hr_recognition.router, prefix="/hr/recognitions", tags=["hr-recognitions-config"])
+api_router.include_router(hr_company_resources.router, prefix="/hr/company-resources", tags=["hr-company-resources"])

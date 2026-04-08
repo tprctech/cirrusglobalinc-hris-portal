@@ -5,6 +5,7 @@ import {
   ChevronDown,
   ChevronRight,
   ClipboardList,
+  FileText,
   FolderOpen,
   MessageSquare,
   Network,
@@ -19,6 +20,7 @@ import { ROUTES } from '../app/routes';
 type AdminMenu = (
   | 'users'
   | 'lms'
+  | 'companyResources'
   | 'libraryRole'
   | 'libraryDepartment'
   | 'libraryCompetency'
@@ -86,6 +88,13 @@ function AdminCenterSidebar({ activeMenu, onNavigate }: AdminCenterSidebarProps)
       >
         <BookOpenText size={16} />
         <span>L&amp;D</span>
+      </button>
+      <button
+        className={`admin-center-side-link ${activeMenu === 'companyResources' ? 'active' : ''}`}
+        onClick={(event) => handleNavigate(ROUTES.adminCompanyResources, event)}
+      >
+        <FileText size={16} />
+        <span>Company Resources</span>
       </button>
       <button
         className={`admin-center-side-link ${isLibraryMenuActive ? 'active' : ''}`}

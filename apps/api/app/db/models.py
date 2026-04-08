@@ -325,6 +325,22 @@ class Reward(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class CompanyResource(Base):
+    __tablename__ = "company_resources"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    title = Column(String(300), nullable=False)
+    category = Column(String(50), nullable=False)
+    file_name = Column(String(500), nullable=False)
+    file_path = Column(String(1000), nullable=False)
+    file_size = Column(Integer, nullable=True, default=0)
+    is_active = Column(Boolean, nullable=False, default=True)
+    uploaded_by = Column(String(200), nullable=False, default="")
+    is_deleted = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class RewardRedeem(Base):
     __tablename__ = "reward_redeems"
 

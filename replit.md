@@ -54,7 +54,7 @@ Two workflows are configured:
 - `apps/api/app/api/v1/auth.py` - Auth endpoints (login, register, me)
 - `apps/api/app/core/middleware.py` - Audit logging middleware
 - `apps/api/app/db/session.py` - SQLAlchemy engine/session factory
-- `apps/api/app/db/models.py` - All SQLAlchemy ORM models (22 tables)
+- `apps/api/app/db/models.py` - All SQLAlchemy ORM models (23 tables)
 - `apps/api/app/db/init_db.py` - Table creation script
 - `apps/api/app/api/v1/hr_center/` - HR Center CRUD route modules
 - `apps/web/client/src/pages/admin-center/library/AdminDepartmentLibraryPage.tsx` - Department Library page (live API)
@@ -91,10 +91,11 @@ Two workflows are configured:
 - `/api/v1/hr/recognitions/badges` - Recognition badge management
 - `/api/v1/hr/recognitions/rewards` - Reward catalog management
 - `/api/v1/hr/recognitions/redeems` - Reward redeem tracking
+- `/api/v1/hr/company-resources/*` - Company resources (file upload/download, category: Policies/Employee Handbook, is_active toggle)
 
-## Database Tables (22 total)
+## Database Tables (23 total)
 
-user_accounts, employees, departments, roles, role_competencies, competencies, competency_learning_materials,
+user_accounts, employees, departments, roles, role_competencies, competencies, competency_learning_materials, company_resources,
 review_templates, review_template_sections, review_template_questions,
 review_question_sets, review_question_set_sections, review_question_set_questions,
 survey_templates, survey_template_sections, survey_template_questions,
@@ -105,7 +106,7 @@ recognition_badges, rewards, reward_redeems
 
 All main entity tables use **soft delete** — records are never physically removed from the database. Instead, an `is_deleted` boolean column (default `FALSE`) is set to `TRUE` when a record is "deleted."
 
-Tables with `is_deleted`: `user_accounts`, `employees`, `departments`, `roles`, `competencies`, `recognition_badges`, `rewards`, `reward_redeems`, `review_templates`, `review_question_sets`, `survey_templates`, `survey_question_sets`
+Tables with `is_deleted`: `user_accounts`, `employees`, `departments`, `roles`, `competencies`, `recognition_badges`, `rewards`, `reward_redeems`, `review_templates`, `review_question_sets`, `survey_templates`, `survey_question_sets`, `company_resources`
 
 Child tables (sections, questions, learning materials) do not have `is_deleted` — they remain in the DB when their parent is soft-deleted.
 
@@ -117,7 +118,8 @@ All list/get/update/delete endpoints filter by `is_deleted = FALSE`. Auth login 
 - Backend uses localhost as host in dev; frontend uses 0.0.0.0
 - PostgreSQL via Replit's DATABASE_URL; tables auto-created on FastAPI startup
 - Training calendar default month hardcoded to April 2026
-- Organization Chart export uses html-to-image; edge type is smoothstep
+- Organization Chart export uses backend PDF generation via fpdf2
+- Company Resources: files stored in `apps/api/uploads/`; DB tracks metadata (title, category, file_name, file_path, file_size, is_active, uploaded_by); Home page fetches active resources from API
 - AdminUser type uses `teamflectRole` internally but displays as "Portal Role" (values: Employee, Manager, HR, Admin)
 - Date fields displayed as mm/dd/yyyy; stored as ISO yyyy-mm-dd; converted in employees.ts
 - Profile photos stored as base64 data URIs in DB; resized to max 400x400 JPEG on upload

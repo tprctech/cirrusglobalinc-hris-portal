@@ -15,12 +15,11 @@ import {
 import {
   anniversaries,
   dashboardStats,
-  handbookItems,
   newsletters,
   nextSteps,
-  policies,
   valuesCards,
 } from '../../data/mock/homeMockData';
+import { listResources, downloadResource, type CompanyResource } from '../../api/companyResources';
 
 const statIcons: Record<string, React.ReactNode> = {
   'clipboard-list': <ClipboardList size={22} />,
@@ -53,8 +52,18 @@ function formatBirthdayLabel(emp: BdayEmployee): { name: string; date: string } 
 function HomePage() {
   const [activeTab, setActiveTab] = useState('policies');
   const [employees, setEmployees] = useState<BdayEmployee[]>([]);
+  const [resources, setResources] = useState<CompanyResource[]>([]);
   const currentMonth = new Date().toLocaleString('en-US', { month: 'long' });
   const currentMonthIdx = new Date().getMonth();
+
+  useEffect(() => {
+    listResources()
+      .then((data) => setResources(data.filter((r) => r.is_active)))
+      .catch(() => {});
+  }, []);
+
+  const policyResources = resources.filter((r) => r.category === 'Policies');
+  const handbookResources = resources.filter((r) => r.category === 'Employee Handbook');
 
   useEffect(() => {
     fetch('/api/v1/hr/employees/')
@@ -135,22 +144,31 @@ function HomePage() {
           </button>
         </div>
         <div>
-          {(activeTab === 'policies' ? policies : handbookItems).map((item) => (
-            <div key={item.name} className="policy-item">
+          {(activeTab === 'policies' ? policyResources : handbookResources).length === 0 ? (
+            <div className="policy-item">
               <div className="policy-info">
-                <div className="policy-icon">
-                  <FileText />
-                </div>
-                <div>
-                  <div className="policy-name">{item.name}</div>
-                  <div className="policy-date">Updated: {item.updated}</div>
-                </div>
+                <div className="policy-icon"><FileText /></div>
+                <div><div className="policy-name" style={{ color: 'var(--gray-400)' }}>No {activeTab === 'policies' ? 'policies' : 'handbook items'} uploaded yet</div></div>
               </div>
-              <button className="download-btn">
-                Download
-              </button>
             </div>
-          ))}
+          ) : (
+            (activeTab === 'policies' ? policyResources : handbookResources).map((item) => (
+              <div key={item.id} className="policy-item">
+                <div className="policy-info">
+                  <div className="policy-icon">
+                    <FileText />
+                  </div>
+                  <div>
+                    <div className="policy-name">{item.title}</div>
+                    <div className="policy-date">Updated: {item.updated_at ? new Date(item.updated_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '-'}</div>
+                  </div>
+                </div>
+                <button className="download-btn" onClick={() => downloadResource(item.id)}>
+                  Download
+                </button>
+              </div>
+            ))
+          )}
         </div>
       </div>
 

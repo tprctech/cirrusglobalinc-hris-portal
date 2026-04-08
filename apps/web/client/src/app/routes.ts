@@ -31,6 +31,7 @@ export const ROUTES = {
   adminConfigRecognitionBadges: '/admin/config/recognitions/badges',
   adminConfigManageRewards: '/admin/config/recognitions/rewards',
   adminConfigManageRewardRedeems: '/admin/config/recognitions/redeems',
+  adminCompanyResources: '/admin/company-resources',
   profile: '/profile',
 } as const;
 

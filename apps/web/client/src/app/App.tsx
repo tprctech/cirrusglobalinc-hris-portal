@@ -50,6 +50,7 @@ import AdminPortalConfigPage from '../pages/admin-center/AdminPortalConfigPage';
 import AdminReviewsConfigPage from '../pages/admin-center/config/reviews/AdminReviewsConfigPage';
 import AdminSurveysConfigPage from '../pages/admin-center/config/surveys/AdminSurveysConfigPage';
 import AdminRecognitionsConfigPage from '../pages/admin-center/config/recognitions/AdminRecognitionsConfigPage';
+import AdminCompanyResourcesPage from '../pages/admin-center/AdminCompanyResourcesPage';
 import {
   LMS_MENU_ROUTE_MAP,
   MENU_ROUTE_MAP,
@@ -597,6 +598,9 @@ function App() {
             || currentPath === ROUTES.adminConfigManageRewards
             || currentPath === ROUTES.adminConfigManageRewardRedeems) && (
             <AdminRecognitionsConfigPage onNavigate={navigateTo} />
+          )}
+          {currentPath === ROUTES.adminCompanyResources && (
+            <AdminCompanyResourcesPage onNavigate={navigateTo} />
           )}
           {currentPath === ROUTES.profile && <ProfilePage />}
         </main>
