@@ -5,6 +5,7 @@ from app.api.v1.hr_center import (
     company_resources as hr_company_resources,
     competencies as hr_competencies,
     departments as hr_departments,
+    employee_attachments as hr_employee_attachments,
     employees as hr_employees,
     recognition_config as hr_recognition,
     review_config as hr_reviews,
@@ -31,4 +32,5 @@ api_router.include_router(hr_competencies.router, prefix="/hr/competencies", tag
 api_router.include_router(hr_reviews.router, prefix="/hr/reviews", tags=["hr-reviews-config"])
 api_router.include_router(hr_surveys.router, prefix="/hr/surveys", tags=["hr-surveys-config"])
 api_router.include_router(hr_recognition.router, prefix="/hr/recognitions", tags=["hr-recognitions-config"])
+api_router.include_router(hr_employee_attachments.router, prefix="/hr/employees", tags=["hr-employee-attachments"])
 api_router.include_router(hr_company_resources.router, prefix="/hr/company-resources", tags=["hr-company-resources"])

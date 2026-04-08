@@ -54,7 +54,7 @@ Two workflows are configured:
 - `apps/api/app/api/v1/auth.py` - Auth endpoints (login, register, me)
 - `apps/api/app/core/middleware.py` - Audit logging middleware
 - `apps/api/app/db/session.py` - SQLAlchemy engine/session factory
-- `apps/api/app/db/models.py` - All SQLAlchemy ORM models (23 tables)
+- `apps/api/app/db/models.py` - All SQLAlchemy ORM models (24 tables)
 - `apps/api/app/db/init_db.py` - Table creation script
 - `apps/api/app/api/v1/hr_center/` - HR Center CRUD route modules
 - `apps/web/client/src/pages/admin-center/library/AdminDepartmentLibraryPage.tsx` - Department Library page (live API)
@@ -91,11 +91,12 @@ Two workflows are configured:
 - `/api/v1/hr/recognitions/badges` - Recognition badge management
 - `/api/v1/hr/recognitions/rewards` - Reward catalog management
 - `/api/v1/hr/recognitions/redeems` - Reward redeem tracking
+- `/api/v1/hr/employees/{id}/attachments` - Employee attachments (upload, list, download, delete)
 - `/api/v1/hr/company-resources/*` - Company resources (file upload/download, category: Policies/Employee Handbook, is_active toggle)
 
-## Database Tables (23 total)
+## Database Tables (24 total)
 
-user_accounts, employees, departments, roles, role_competencies, competencies, competency_learning_materials, company_resources,
+user_accounts, employees, departments, roles, role_competencies, competencies, competency_learning_materials, employee_attachments, company_resources,
 review_templates, review_template_sections, review_template_questions,
 review_question_sets, review_question_set_sections, review_question_set_questions,
 survey_templates, survey_template_sections, survey_template_questions,
@@ -106,7 +107,7 @@ recognition_badges, rewards, reward_redeems
 
 All main entity tables use **soft delete** — records are never physically removed from the database. Instead, an `is_deleted` boolean column (default `FALSE`) is set to `TRUE` when a record is "deleted."
 
-Tables with `is_deleted`: `user_accounts`, `employees`, `departments`, `roles`, `competencies`, `recognition_badges`, `rewards`, `reward_redeems`, `review_templates`, `review_question_sets`, `survey_templates`, `survey_question_sets`, `company_resources`
+Tables with `is_deleted`: `user_accounts`, `employees`, `departments`, `roles`, `competencies`, `recognition_badges`, `rewards`, `reward_redeems`, `review_templates`, `review_question_sets`, `survey_templates`, `survey_question_sets`, `employee_attachments`, `company_resources`
 
 Child tables (sections, questions, learning materials) do not have `is_deleted` — they remain in the DB when their parent is soft-deleted.
 

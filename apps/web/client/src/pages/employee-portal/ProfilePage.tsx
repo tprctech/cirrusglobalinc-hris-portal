@@ -3,6 +3,7 @@ import {
   Award,
   BadgeCheck,
   Building2,
+  Download,
   GraduationCap,
   Mail,
   MapPin,
@@ -60,11 +61,13 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-type UploadedAttachment = {
-  id: string;
-  name: string;
-  size: number;
-};
+import {
+  listAttachments,
+  uploadAttachment,
+  deleteAttachment,
+  downloadAttachment,
+  type EmployeeAttachment,
+} from '../../api/employeeAttachments';
 
 function formatDisplayDate(dateStr: string) {
   if (!dateStr) return '—';
@@ -83,9 +86,10 @@ function ProfilePage() {
   const name = emp ? (emp.displayName || `${emp.firstName} ${emp.lastName}`) : '—';
   const profilePhoto = emp?.profilePhoto || '';
 
-  const [attachments, setAttachments] = useState<UploadedAttachment[]>([]);
+  const [attachments, setAttachments] = useState<EmployeeAttachment[]>([]);
+  const [attachmentUploading, setAttachmentUploading] = useState(false);
   const [selectedCompetency, setSelectedCompetency] = useState<CompetencyDetail | null>(null);
-  const [pendingDeleteAttachment, setPendingDeleteAttachment] = useState<UploadedAttachment | null>(null);
+  const [pendingDeleteAttachment, setPendingDeleteAttachment] = useState<EmployeeAttachment | null>(null);
   const [certifications, setCertifications] = useState<CertificationRecord[]>(getStoredCertifications());
   const [roleInfo, setRoleInfo] = useState<RoleDetail | null>(null);
   const [competencyNames, setCompetencyNames] = useState<string[]>([]);
@@ -111,6 +115,18 @@ function ProfilePage() {
     loadRoleInfo();
   }, [loadRoleInfo]);
 
+  const loadAttachments = useCallback(async () => {
+    if (!emp?.id) return;
+    try {
+      const data = await listAttachments(emp.id);
+      setAttachments(data);
+    } catch { /* ignore */ }
+  }, [emp?.id]);
+
+  useEffect(() => {
+    loadAttachments();
+  }, [loadAttachments]);
+
   useEffect(() => {
     const unsubscribe = subscribeToCertificationUpdates(() => {
       setCertifications(getStoredCertifications());
@@ -123,29 +139,27 @@ function ProfilePage() {
     fileInputRef.current?.click();
   }
 
-  function handleFileUpload(event: ChangeEvent<HTMLInputElement>) {
+  async function handleFileUpload(event: ChangeEvent<HTMLInputElement>) {
     const selectedFiles = Array.from(event.target.files ?? []);
-    if (!selectedFiles.length) {
-      return;
+    if (!selectedFiles.length || !emp?.id) return;
+
+    setAttachmentUploading(true);
+    for (const file of selectedFiles) {
+      try {
+        await uploadAttachment(emp.id, file);
+      } catch { /* ignore */ }
     }
-
-    const nextAttachments = selectedFiles.map((file) => ({
-      id: `${file.name}-${file.size}-${file.lastModified}`,
-      name: file.name,
-      size: file.size,
-    }));
-
-    setAttachments((previous) => {
-      const existingIds = new Set(previous.map((item) => item.id));
-      const deduplicatedNew = nextAttachments.filter((item) => !existingIds.has(item.id));
-      return [...previous, ...deduplicatedNew];
-    });
-
     event.target.value = '';
+    await loadAttachments();
+    setAttachmentUploading(false);
   }
 
-  function removeAttachment(attachmentId: string) {
-    setAttachments((previous) => previous.filter((item) => item.id !== attachmentId));
+  async function removeAttachment(attachmentId: number) {
+    if (!emp?.id) return;
+    try {
+      await deleteAttachment(emp.id, attachmentId);
+      await loadAttachments();
+    } catch { /* ignore */ }
   }
 
   function openOrgChartPage() {
@@ -429,8 +443,8 @@ function ProfilePage() {
         </div>
 
         <div className="profile-attachments-actions">
-          <button className="profile-upload-btn" onClick={handleOpenFilePicker}>
-            Upload Attachments
+          <button className="profile-upload-btn" onClick={handleOpenFilePicker} disabled={attachmentUploading}>
+            {attachmentUploading ? 'Uploading...' : 'Upload Attachments'}
           </button>
           <input
             ref={fileInputRef}
@@ -446,16 +460,25 @@ function ProfilePage() {
           {attachments.map((attachment) => (
             <div key={attachment.id} className="profile-attachment-item">
               <div>
-                <strong>{attachment.name}</strong>
-                <span>{formatFileSize(attachment.size)}</span>
+                <strong>{attachment.file_name}</strong>
+                <span>{formatFileSize(attachment.file_size)} &middot; {attachment.created_at ? new Date(attachment.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : ''}</span>
               </div>
-              <button
-                className="profile-attachment-remove-btn"
-                onClick={() => setPendingDeleteAttachment(attachment)}
-                title={`Remove ${attachment.name}`}
-              >
-                <X size={14} />
-              </button>
+              <div className="profile-attachment-actions">
+                <button
+                  className="profile-attachment-download-btn"
+                  onClick={() => emp && downloadAttachment(emp.id, attachment.id)}
+                  title={`Download ${attachment.file_name}`}
+                >
+                  <Download size={14} />
+                </button>
+                <button
+                  className="profile-attachment-remove-btn"
+                  onClick={() => setPendingDeleteAttachment(attachment)}
+                  title={`Remove ${attachment.file_name}`}
+                >
+                  <X size={14} />
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -513,12 +536,12 @@ function ProfilePage() {
       <ConfirmationDialog
         isOpen={Boolean(pendingDeleteAttachment)}
         title="Delete Attachment"
-        message={`Are you sure you want to delete "${pendingDeleteAttachment?.name ?? ''}"?`}
+        message={`Are you sure you want to delete "${pendingDeleteAttachment?.file_name ?? ''}"?`}
         confirmLabel="Delete"
         onCancel={() => setPendingDeleteAttachment(null)}
-        onConfirm={() => {
+        onConfirm={async () => {
           if (pendingDeleteAttachment) {
-            removeAttachment(pendingDeleteAttachment.id);
+            await removeAttachment(pendingDeleteAttachment.id);
           }
           setPendingDeleteAttachment(null);
         }}

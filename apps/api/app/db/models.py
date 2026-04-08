@@ -325,6 +325,21 @@ class Reward(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class EmployeeAttachment(Base):
+    __tablename__ = "employee_attachments"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False)
+    file_name = Column(String(500), nullable=False)
+    file_path = Column(String(1000), nullable=False)
+    file_size = Column(Integer, nullable=True, default=0)
+    is_deleted = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    employee = relationship("Employee", backref="attachments")
+
+
 class CompanyResource(Base):
     __tablename__ = "company_resources"
 

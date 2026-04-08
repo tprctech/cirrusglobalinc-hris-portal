@@ -354,6 +354,32 @@
   color: var(--gray-500);
 }
 
+.profile-attachment-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.profile-attachment-download-btn {
+  width: 26px;
+  min-width: 26px;
+  min-height: 26px;
+  border: 1px solid var(--gray-200);
+  border-radius: 6px;
+  background: var(--white);
+  color: var(--gray-500);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.profile-attachment-download-btn:hover {
+  background: var(--gray-50);
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
 .profile-attachment-remove-btn {
   width: 26px;
   min-width: 26px;
