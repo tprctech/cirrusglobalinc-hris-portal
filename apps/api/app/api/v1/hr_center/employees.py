@@ -242,13 +242,14 @@ def upload_photo(employee_id: int, file: UploadFile = File(...), db: Session = D
 
 # --------------- Org Chart PDF Export ---------------
 
-_ORG_NODE_W = 180
-_ORG_NODE_H = 52
-_ORG_H_GAP = 40
-_ORG_V_GAP = 70
+_ORG_NODE_W = 200
+_ORG_NODE_H = 72
+_ORG_H_GAP = 36
+_ORG_V_GAP = 60
 _ORG_MAX_ROW = 4
 _ORG_CELL_W = _ORG_NODE_W + _ORG_H_GAP
-_ORG_PADDING = 40
+_ORG_PADDING = 60
+_ORG_HEADER_H = 80
 
 
 def _extract_email(supervisor: str) -> str:
@@ -360,7 +361,7 @@ def _layout_positions(root_ids, children_by_parent):
 
     cur_left = 0
     for rid in root_ids:
-        place(rid, cur_left, _ORG_PADDING)
+        place(rid, cur_left, _ORG_PADDING + _ORG_HEADER_H)
         cur_left += _get_span(rid, children_by_parent, span_cache) + 1
 
     return positions
@@ -383,6 +384,40 @@ def _display_name(emp):
     return _sanitize_text(" ".join(p for p in parts if p).strip() or "-")
 
 
+_DEPT_COLORS = {
+    "Executive":       (0, 166, 227),
+    "Operations":      (15, 118, 110),
+    "Talent Delivery":  (124, 58, 237),
+    "Candidate Processing": (217, 119, 6),
+    "Client Services":  (6, 95, 70),
+    "Global Mobility":  (30, 64, 175),
+    "Finance And HR":   (190, 24, 93),
+    "Marketing":        (234, 88, 12),
+    "Lifetime Relations": (79, 70, 229),
+    "Strategic Sourcing & Candidate Engagement": (13, 148, 136),
+}
+_DEFAULT_DEPT_COLOR = (71, 85, 105)
+
+
+def _wrap_text_by_width(pdf, text: str, max_width: float) -> list[str]:
+    if pdf.get_string_width(text) <= max_width:
+        return [text]
+    words = text.split()
+    lines: list[str] = []
+    cur = ""
+    for w in words:
+        test = f"{cur} {w}".strip()
+        if pdf.get_string_width(test) <= max_width:
+            cur = test
+        else:
+            if cur:
+                lines.append(cur)
+            cur = w
+    if cur:
+        lines.append(cur)
+    return lines[:2]
+
+
 @router.get("/org-chart/export")
 def export_org_chart_pdf(db: Session = Depends(get_db)):
     from fpdf import FPDF
@@ -395,14 +430,50 @@ def export_org_chart_pdf(db: Session = Depends(get_db)):
 
     positions = _layout_positions(root_ids, children_by_parent)
 
-    max_x = max(x + _ORG_NODE_W for x, _ in positions.values()) + _ORG_PADDING
-    max_y = max(y + _ORG_NODE_H for _, y in positions.values()) + _ORG_PADDING
+    content_max_x = max(x + _ORG_NODE_W for x, _ in positions.values()) + _ORG_PADDING
+    content_max_y = max(y + _ORG_NODE_H for _, y in positions.values()) + _ORG_PADDING + 40
 
-    pdf = FPDF(orientation="L" if max_x > max_y else "P", unit="pt", format=(max_x, max_y))
+    page_w = max(content_max_x, 842)
+    page_h = max(content_max_y, 595)
+
+    if page_w >= page_h:
+        pdf = FPDF(orientation="L", unit="pt", format=(page_h, page_w))
+    else:
+        pdf = FPDF(orientation="P", unit="pt", format=(page_w, page_h))
     pdf.set_auto_page_break(auto=False)
     pdf.add_page()
-    pdf.set_fill_color(255, 255, 255)
-    pdf.rect(0, 0, max_x, max_y, "F")
+
+    pdf.set_fill_color(248, 250, 252)
+    pdf.rect(0, 0, page_w, page_h, "F")
+
+    pdf.set_fill_color(0, 166, 227)
+    pdf.rect(0, 0, page_w, 56, "F")
+
+    pdf.set_font("Helvetica", "B", 18)
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_xy(24, 10)
+    pdf.cell(page_w - 48, 22, "CIRRUS RECRUITMENT", align="L")
+
+    pdf.set_font("Helvetica", "", 11)
+    pdf.set_text_color(220, 240, 255)
+    pdf.set_xy(24, 30)
+    pdf.cell(page_w - 48, 16, "Organization Chart", align="L")
+
+    today_str = _sanitize_text(datetime.now().strftime("%B %d, %Y"))
+    pdf.set_font("Helvetica", "", 9)
+    pdf.set_text_color(200, 230, 255)
+    pdf.set_xy(24, 30)
+    pdf.cell(page_w - 48, 16, f"Generated: {today_str}", align="R")
+
+    total_people = len(people)
+    depts_set = set()
+    for emp in people.values():
+        if emp.department:
+            depts_set.add(emp.department)
+    pdf.set_font("Helvetica", "", 8)
+    pdf.set_text_color(200, 230, 255)
+    pdf.set_xy(24, 14)
+    pdf.cell(page_w - 48, 16, _sanitize_text(f"{total_people} employees - {len(depts_set)} departments"), align="R")
 
     edges: list[tuple[int, int]] = []
     for parent_id, kids in children_by_parent.items():
@@ -412,8 +483,8 @@ def export_org_chart_pdf(db: Session = Depends(get_db)):
             if kid_id in positions:
                 edges.append((parent_id, kid_id))
 
-    pdf.set_draw_color(180, 190, 200)
-    pdf.set_line_width(1.2)
+    pdf.set_draw_color(190, 200, 215)
+    pdf.set_line_width(1.0)
     for parent_id, kid_id in edges:
         px, py = positions[parent_id]
         cx, cy = positions[kid_id]
@@ -432,33 +503,69 @@ def export_org_chart_pdf(db: Session = Depends(get_db)):
             continue
 
         is_root = nid in root_ids
-        if is_root:
-            pdf.set_fill_color(0, 166, 227)
-            pdf.set_text_color(255, 255, 255)
-        else:
-            pdf.set_fill_color(245, 248, 252)
-            pdf.set_text_color(30, 41, 59)
+        dept = emp.department or ""
+        dept_color = _DEPT_COLORS.get(dept, _DEFAULT_DEPT_COLOR)
 
-        pdf.set_draw_color(200, 210, 220)
-        pdf.set_line_width(0.5)
+        pdf.set_fill_color(255, 255, 255)
+        pdf.set_draw_color(210, 218, 230)
+        pdf.set_line_width(0.6)
         pdf.rect(x, y, _ORG_NODE_W, _ORG_NODE_H, "FD")
 
+        bar_h = 4
+        pdf.set_fill_color(*dept_color)
+        pdf.rect(x + 0.3, y + 0.3, _ORG_NODE_W - 0.6, bar_h, "F")
+
         name = _display_name(emp)
-        role = _sanitize_text(emp.job_title or emp.department or "")
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.set_text_color(30, 41, 59)
+        pdf.set_xy(x + 6, y + bar_h + 5)
+        pdf.cell(_ORG_NODE_W - 12, 13, name[:30], align="C")
 
-        pdf.set_font("Helvetica", "B", 9)
-        pdf.set_xy(x + 4, y + 8)
-        pdf.cell(_ORG_NODE_W - 8, 12, name[:28], align="C")
-
-        if is_root:
-            pdf.set_text_color(220, 240, 255)
-        else:
+        role = _sanitize_text(emp.job_title or "")
+        if role:
+            pdf.set_font("Helvetica", "", 7.5)
             pdf.set_text_color(100, 116, 139)
-        pdf.set_font("Helvetica", "", 7)
-        pdf.set_xy(x + 4, y + 22)
-        pdf.cell(_ORG_NODE_W - 8, 10, role[:34], align="C")
+            role_lines = _wrap_text_by_width(pdf, role, _ORG_NODE_W - 16)
+            line_y = y + bar_h + 18
+            for rl in role_lines:
+                pdf.set_xy(x + 6, line_y)
+                pdf.cell(_ORG_NODE_W - 12, 9, rl, align="C")
+                line_y += 9
+
+        dept_label = _sanitize_text(dept)
+        if dept_label:
+            pdf.set_font("Helvetica", "I", 6.5)
+            pdf.set_text_color(*dept_color)
+            pdf.set_xy(x + 6, y + _ORG_NODE_H - 14)
+            pdf.cell(_ORG_NODE_W - 12, 10, dept_label[:36], align="C")
 
         pdf.set_text_color(0, 0, 0)
+
+    footer_y = page_h - 24
+    pdf.set_draw_color(210, 218, 230)
+    pdf.set_line_width(0.4)
+    pdf.line(24, footer_y - 6, page_w - 24, footer_y - 6)
+
+    legend_depts = sorted(depts_set)
+    pdf.set_font("Helvetica", "", 6.5)
+    pdf.set_text_color(120, 130, 150)
+    lx = 24
+    for dept_name in legend_depts:
+        dc = _DEPT_COLORS.get(dept_name, _DEFAULT_DEPT_COLOR)
+        pdf.set_fill_color(*dc)
+        pdf.rect(lx, footer_y - 1, 8, 8, "F")
+        pdf.set_xy(lx + 10, footer_y - 2)
+        label = _sanitize_text(dept_name)
+        tw = pdf.get_string_width(label) + 4
+        pdf.cell(tw, 10, label, align="L")
+        lx += tw + 16
+        if lx > page_w - 100:
+            break
+
+    pdf.set_font("Helvetica", "", 7)
+    pdf.set_text_color(160, 170, 180)
+    pdf.set_xy(24, footer_y - 2)
+    pdf.cell(page_w - 48, 10, "Cirrus Performance Hub", align="R")
 
     buf = io.BytesIO()
     pdf.output(buf)
@@ -467,5 +574,5 @@ def export_org_chart_pdf(db: Session = Depends(get_db)):
     return StreamingResponse(
         buf,
         media_type="application/pdf",
-        headers={"Content-Disposition": "attachment; filename=organization-chart.pdf"},
+        headers={"Content-Disposition": "attachment; filename=cirrus-organization-chart.pdf"},
     )
