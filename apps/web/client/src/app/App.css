@@ -779,8 +779,8 @@
 }
 
 .announcement-sections {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 16px;
 }
 
@@ -934,10 +934,6 @@
   }
 
   .home-split-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .announcement-sections {
     grid-template-columns: 1fr;
   }
 
