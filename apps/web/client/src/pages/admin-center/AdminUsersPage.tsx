@@ -263,17 +263,16 @@ function EmployeeSearchField({ id, label, value, onChange }: { id: string; label
   }
 
   function select(r: LookupResult) {
-    const name = [r.first_name, r.middle_name, r.last_name].filter(Boolean).join(' ');
-    const display = r.email ? `${name} (${r.email})` : name;
-    setQuery(display);
-    onChange(display);
+    const email = r.email || '';
+    setQuery(email);
+    onChange(email);
     setOpen(false);
   }
 
   return (
     <div className="admin-form-field" ref={ref} style={{ position: 'relative' }}>
       <label htmlFor={id}>{label}</label>
-      <input id={id} value={query} onChange={(e) => handleInput(e.target.value)} onFocus={() => { if (results.length > 0) setOpen(true); }} autoComplete="off" />
+      <input id={id} value={query} onChange={(e) => handleInput(e.target.value)} onFocus={() => { if (results.length > 0) setOpen(true); }} autoComplete="off" placeholder="Search by name or email..." />
       {open && results.length > 0 && (
         <ul className="admin-search-dropdown">
           {results.map((r) => (
@@ -288,76 +287,29 @@ function EmployeeSearchField({ id, label, value, onChange }: { id: string; label
   );
 }
 
-function ReviewerMultiSelect({ id, label, value, onChange }: { id: string; label: string; value: string; onChange: (val: string) => void }) {
-  const reviewers = value ? value.split(',').map((s) => s.trim()).filter(Boolean) : [];
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState<LookupResult[]>([]);
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
-
-  function handleInput(val: string) {
-    setQuery(val);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(async () => {
-      if (val.length >= 1) {
-        const res = await searchEmployees(val);
-        setResults(res);
-        setOpen(true);
-      } else {
-        setResults([]);
-        setOpen(false);
-      }
-    }, 250);
-  }
-
-  function addReviewer(r: LookupResult) {
-    const name = [r.first_name, r.middle_name, r.last_name].filter(Boolean).join(' ');
-    const display = r.email ? `${name} (${r.email})` : name;
-    if (!reviewers.includes(display)) {
-      const updated = [...reviewers, display].join(', ');
-      onChange(updated);
-    }
-    setQuery('');
-    setOpen(false);
-  }
-
-  function removeReviewer(idx: number) {
-    const updated = reviewers.filter((_, i) => i !== idx).join(', ');
-    onChange(updated);
-  }
+function ReviewersPreview({ id, label, userEmail, allUsers }: { id: string; label: string; userEmail: string; allUsers: AdminUser[] }) {
+  const directReports = useMemo(() => {
+    if (!userEmail) return [];
+    const emailLower = userEmail.toLowerCase();
+    return allUsers.filter((u) => {
+      const sup = (u.supervisor || '').toLowerCase();
+      return sup === emailLower || sup.includes(`(${emailLower})`);
+    });
+  }, [userEmail, allUsers]);
 
   return (
-    <div className="admin-form-field full-width" ref={ref} style={{ position: 'relative' }}>
+    <div className="admin-form-field full-width">
       <label htmlFor={id}>{label}</label>
-      {reviewers.length > 0 && (
+      {directReports.length === 0 ? (
+        <div style={{ padding: '8px 0', color: 'var(--gray-400)', fontSize: 14 }}>No direct reports found</div>
+      ) : (
         <div className="admin-reviewer-tags">
-          {reviewers.map((r, i) => (
-            <span key={i} className="admin-reviewer-tag">
-              {r}
-              <button type="button" onClick={() => removeReviewer(i)} className="admin-reviewer-tag-remove"><X size={12} /></button>
+          {directReports.map((u) => (
+            <span key={u.id} className="admin-reviewer-tag">
+              {u.displayName || `${u.firstName} ${u.lastName}`}
             </span>
           ))}
         </div>
-      )}
-      <input id={id} value={query} onChange={(e) => handleInput(e.target.value)} onFocus={() => { if (results.length > 0) setOpen(true); }} placeholder="Search to add reviewer..." autoComplete="off" />
-      {open && results.length > 0 && (
-        <ul className="admin-search-dropdown">
-          {results.map((r) => (
-            <li key={r.id} onClick={() => addReviewer(r)}>
-              <span className="admin-search-name">{r.first_name} {r.middle_name ? r.middle_name + ' ' : ''}{r.last_name}</span>
-              {r.email && <span className="admin-search-email">{r.email}</span>}
-            </li>
-          ))}
-        </ul>
       )}
     </div>
   );
@@ -493,6 +445,7 @@ function UserFormFields({
   isEditing?: boolean;
   onPhotoUploaded?: (updated: AdminUser) => void;
   roles?: RoleOption[];
+  allUsers?: AdminUser[];
 }) {
   return (
     <div className="admin-user-form-sections">
@@ -642,7 +595,7 @@ function UserFormFields({
         <legend>Reporting & Reviews</legend>
         <div className="admin-edit-grid">
           <EmployeeSearchField id={`${prefix}-supervisor`} label="Supervisor" value={user.supervisor} onChange={(v) => onChange('supervisor', v)} />
-          <ReviewerMultiSelect id={`${prefix}-reviewers`} label="Reviewers" value={user.reviewers} onChange={(v) => onChange('reviewers', v)} />
+          <ReviewersPreview id={`${prefix}-reviewers`} label="Reviewers (Direct Reports)" userEmail={user.email} allUsers={allUsers || []} />
         </div>
       </fieldset>
 
@@ -1075,6 +1028,7 @@ function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
               onChange={updateNewUserField}
               prefix="add"
               roles={rolesForPicker}
+              allUsers={users}
             />
 
             <div className="admin-modal-actions">
@@ -1106,6 +1060,7 @@ function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
               prefix="edit"
               isEditing
               roles={rolesForPicker}
+              allUsers={users}
               onPhotoUploaded={(updated) => {
                 setEditingUser(updated);
                 setUsers((prev) => prev.map((u) => u.id === updated.id ? updated : u));
