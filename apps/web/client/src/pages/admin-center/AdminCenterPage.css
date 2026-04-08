@@ -99,6 +99,9 @@
 
 .admin-center-content {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
 .admin-users-section {
