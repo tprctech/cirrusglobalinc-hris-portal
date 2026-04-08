@@ -766,16 +766,10 @@
   margin-bottom: 24px;
 }
 
-.home-split-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(340px, 1fr);
-  gap: 24px;
-  margin-bottom: 24px;
-}
-
 .announcement-card {
   display: flex;
   flex-direction: column;
+  margin-bottom: 24px;
 }
 
 .announcement-sections {
@@ -849,6 +843,7 @@
 .voe-card {
   display: flex;
   flex-direction: column;
+  margin-bottom: 24px;
 }
 
 .voe-description {
@@ -938,10 +933,6 @@
 
 @media (max-width: 1024px) {
   .values-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .home-split-grid {
     grid-template-columns: 1fr;
   }
 

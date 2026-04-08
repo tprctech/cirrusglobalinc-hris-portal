@@ -37,6 +37,12 @@ export const policies = [
   { name: 'Time Off Policy', updated: '2026-01-01', type: 'policy' },
 ];
 
+export const handbookItems = [
+  { name: 'Employee Handbook 2026', updated: '2026-01-01', type: 'handbook' },
+  { name: 'Benefits & Compensation Guide', updated: '2025-12-15', type: 'handbook' },
+  { name: 'Onboarding Guide', updated: '2025-11-01', type: 'handbook' },
+];
+
 export const birthdays = [
   { name: 'Emily Davis', message: 'Join us in wishing Emily Davis a happy birthday!' },
 ];

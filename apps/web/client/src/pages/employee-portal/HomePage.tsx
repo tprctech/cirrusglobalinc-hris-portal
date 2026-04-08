@@ -15,6 +15,7 @@ import {
 import {
   anniversaries,
   dashboardStats,
+  handbookItems,
   newsletters,
   nextSteps,
   policies,
@@ -134,15 +135,15 @@ function HomePage() {
           </button>
         </div>
         <div>
-          {policies.map((policy) => (
-            <div key={policy.name} className="policy-item">
+          {(activeTab === 'policies' ? policies : handbookItems).map((item) => (
+            <div key={item.name} className="policy-item">
               <div className="policy-info">
                 <div className="policy-icon">
                   <FileText />
                 </div>
                 <div>
-                  <div className="policy-name">{policy.name}</div>
-                  <div className="policy-date">Updated: {policy.updated}</div>
+                  <div className="policy-name">{item.name}</div>
+                  <div className="policy-date">Updated: {item.updated}</div>
                 </div>
               </div>
               <button className="download-btn">
@@ -153,82 +154,80 @@ function HomePage() {
         </div>
       </div>
 
-      <div className="home-split-grid">
-        <div className="card voe-card">
-          <div className="card-header">
-            <MessageSquare />
-            <h2>Voice of Employee</h2>
-          </div>
-          <p className="voe-description">
-            Share your anonymous feedback to help us improve our workplace
-            environment and culture.
-          </p>
-          <textarea
-            className="voe-textarea"
-            placeholder="Type your anonymous feedback here..."
-          />
-          <button className="submit-btn">Submit Feedback</button>
+      <div className="card announcement-card">
+        <div className="card-header">
+          <Megaphone />
+          <h2>Announcements</h2>
         </div>
 
-        <div className="card announcement-card">
-          <div className="card-header">
-            <Megaphone />
-            <h2>Announcements</h2>
+        <div className="announcement-sections">
+          <div className="announcement-section">
+            <div className="announcement-section-header">
+              <Cake />
+              <h3>{currentMonth} Birthday Celebrants</h3>
+            </div>
+            {birthdayCelebrants.length === 0 ? (
+              <div className="event-item">
+                <div className="event-message" style={{ color: 'var(--gray-400)' }}>No birthdays this month</div>
+              </div>
+            ) : (
+              birthdayCelebrants.map((emp) => {
+                const label = formatBirthdayLabel(emp);
+                const today = new Date();
+                const bd = emp.birthdate ? new Date(emp.birthdate + 'T00:00:00') : null;
+                const isToday = bd && bd.getMonth() === today.getMonth() && bd.getDate() === today.getDate();
+                return (
+                  <div key={emp.id} className={`event-item${isToday ? ' event-item-today' : ''}`}>
+                    <div className="event-name">{label.name} ({label.date}){isToday ? ' ⭐' : ''}</div>
+                    <div className="event-message">{isToday ? `🎉 Happy Birthday today, ${label.name}! 🎂` : `Happy Birthday, ${label.name}! 🎂`}</div>
+                  </div>
+                );
+              })
+            )}
           </div>
 
-          <div className="announcement-sections">
-            <div className="announcement-section">
-              <div className="announcement-section-header">
-                <Cake />
-                <h3>{currentMonth} Birthday Celebrants</h3>
-              </div>
-              {birthdayCelebrants.length === 0 ? (
-                <div className="event-item">
-                  <div className="event-message" style={{ color: 'var(--gray-400)' }}>No birthdays this month</div>
-                </div>
-              ) : (
-                birthdayCelebrants.map((emp) => {
-                  const label = formatBirthdayLabel(emp);
-                  const today = new Date();
-                  const bd = emp.birthdate ? new Date(emp.birthdate + 'T00:00:00') : null;
-                  const isToday = bd && bd.getMonth() === today.getMonth() && bd.getDate() === today.getDate();
-                  return (
-                    <div key={emp.id} className={`event-item${isToday ? ' event-item-today' : ''}`}>
-                      <div className="event-name">{label.name} ({label.date}){isToday ? ' ⭐' : ''}</div>
-                      <div className="event-message">{isToday ? `🎉 Happy Birthday today, ${label.name}! 🎂` : `Happy Birthday, ${label.name}! 🎂`}</div>
-                    </div>
-                  );
-                })
-              )}
+          <div className="announcement-section">
+            <div className="announcement-section-header">
+              <Gift />
+              <h3>Work Anniversaries</h3>
             </div>
+            {anniversaries.map((a) => (
+              <div key={a.name} className="event-item">
+                <div className="event-name">{a.name}</div>
+                <div className="event-message">{a.message}</div>
+              </div>
+            ))}
+          </div>
 
-            <div className="announcement-section">
-              <div className="announcement-section-header">
-                <Gift />
-                <h3>Work Anniversaries</h3>
-              </div>
-              {anniversaries.map((a) => (
-                <div key={a.name} className="event-item">
-                  <div className="event-name">{a.name}</div>
-                  <div className="event-message">{a.message}</div>
-                </div>
-              ))}
+          <div className="announcement-section">
+            <div className="announcement-section-header">
+              <Newspaper />
+              <h3>Newsletter</h3>
             </div>
-
-            <div className="announcement-section">
-              <div className="announcement-section-header">
-                <Newspaper />
-                <h3>Newsletter</h3>
+            {newsletters.map((item) => (
+              <div key={item.title} className="event-item">
+                <div className="event-name">{item.title}</div>
+                <div className="event-message">{item.description}</div>
               </div>
-              {newsletters.map((item) => (
-                <div key={item.title} className="event-item">
-                  <div className="event-name">{item.title}</div>
-                  <div className="event-message">{item.description}</div>
-                </div>
-              ))}
-            </div>
+            ))}
           </div>
         </div>
+      </div>
+
+      <div className="card voe-card">
+        <div className="card-header">
+          <MessageSquare />
+          <h2>Voice of Employee</h2>
+        </div>
+        <p className="voe-description">
+          Share your anonymous feedback to help us improve our workplace
+          environment and culture.
+        </p>
+        <textarea
+          className="voe-textarea"
+          placeholder="Type your anonymous feedback here..."
+        />
+        <button className="submit-btn">Submit Feedback</button>
       </div>
 
       <div className="card whats-next-card">
