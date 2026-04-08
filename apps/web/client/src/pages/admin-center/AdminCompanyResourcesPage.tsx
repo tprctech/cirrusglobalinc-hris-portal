@@ -43,6 +43,7 @@ function AdminCompanyResourcesPage({ onNavigate }: AdminCompanyResourcesPageProp
   const [formTitle, setFormTitle] = useState('');
   const [formCategory, setFormCategory] = useState('Policies');
   const [formFile, setFormFile] = useState<File | null>(null);
+  const [formStatus, setFormStatus] = useState(true);
   const [fileError, setFileError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<CompanyResource | null>(null);
@@ -98,6 +99,7 @@ function AdminCompanyResourcesPage({ onNavigate }: AdminCompanyResourcesPageProp
     setFormTitle('');
     setFormCategory('Policies');
     setFormFile(null);
+    setFormStatus(true);
     setFileError('');
     setShowModal(true);
   }
@@ -107,6 +109,7 @@ function AdminCompanyResourcesPage({ onNavigate }: AdminCompanyResourcesPageProp
     setFormTitle(r.title);
     setFormCategory(r.category);
     setFormFile(null);
+    setFormStatus(r.is_active);
     setFileError('');
     setShowModal(true);
   }
@@ -131,6 +134,7 @@ function AdminCompanyResourcesPage({ onNavigate }: AdminCompanyResourcesPageProp
         await updateResource(editingResource.id, {
           title: formTitle.trim(),
           category: formCategory,
+          is_active: formStatus,
           uploaded_by: currentUser,
           file: formFile || undefined,
         });
@@ -332,6 +336,16 @@ function AdminCompanyResourcesPage({ onNavigate }: AdminCompanyResourcesPageProp
                 >
                   <option value="Policies">Policies</option>
                   <option value="Employee Handbook">Employee Handbook</option>
+                </select>
+              </div>
+              <div className="admin-form-field">
+                <label>Status</label>
+                <select
+                  value={formStatus ? 'Active' : 'Inactive'}
+                  onChange={(e) => setFormStatus(e.target.value === 'Active')}
+                >
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
                 </select>
               </div>
               <div className="admin-form-field">
