@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, ChevronUp, Download, Minus, Plus, RotateCcw } from 'lucide-react';
-import { toPng } from 'html-to-image';
-import { jsPDF } from 'jspdf';
 import {
   Background,
   Position,
@@ -638,111 +636,24 @@ function OrgChartCanvas({ employees }: { employees: ApiEmployee[] }) {
   }, [fitView]);
 
   const handleExportPdf = useCallback(async () => {
-    if (!viewportRef.current || exporting) return;
+    if (exporting) return;
     setExporting(true);
-
-    const prevCollapsed = new Set(collapsedNodeIds);
-
     try {
-      setCollapsedNodeIds(new Set());
-
-      await new Promise((r) => setTimeout(r, 400));
-
-      const flowViewport = viewportRef.current.querySelector('.react-flow__viewport') as HTMLElement | null;
-      if (!flowViewport) {
-        setCollapsedNodeIds(prevCollapsed);
-        setExporting(false);
-        return;
-      }
-
-      const nodesContainer = viewportRef.current.querySelector('.react-flow__nodes') as HTMLElement | null;
-      if (!nodesContainer) {
-        setCollapsedNodeIds(prevCollapsed);
-        setExporting(false);
-        return;
-      }
-
-      const nodeElements = nodesContainer.querySelectorAll('.react-flow__node');
-      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-      nodeElements.forEach((el) => {
-        const node = el as HTMLElement;
-        const x = parseFloat(node.style.transform?.match(/translate\(([^,]+)/)?.[1] || '0');
-        const y = parseFloat(node.style.transform?.match(/,\s*([^)]+)/)?.[1] || '0');
-        const w = node.offsetWidth;
-        const h = node.offsetHeight;
-        if (x < minX) minX = x;
-        if (y < minY) minY = y;
-        if (x + w > maxX) maxX = x + w;
-        if (y + h > maxY) maxY = y + h;
-      });
-
-      const PADDING = 60;
-      minX -= PADDING;
-      minY -= PADDING;
-      maxX += PADDING;
-      maxY += PADDING;
-
-      const contentWidth = maxX - minX;
-      const contentHeight = maxY - minY;
-
-      const origTransform = flowViewport.style.transform;
-      flowViewport.style.transform = `translate(${-minX}px, ${-minY}px) scale(1)`;
-
-      const containerEl = viewportRef.current;
-      const origWidth = containerEl.style.width;
-      const origHeight = containerEl.style.height;
-      const origOverflow = containerEl.style.overflow;
-      containerEl.style.width = `${contentWidth}px`;
-      containerEl.style.height = `${contentHeight}px`;
-      containerEl.style.overflow = 'visible';
-
-      await new Promise((r) => setTimeout(r, 200));
-
-      const EXPORT_PIXEL_RATIO = 3;
-
-      const dataUrl = await toPng(containerEl, {
-        width: contentWidth,
-        height: contentHeight,
-        pixelRatio: EXPORT_PIXEL_RATIO,
-        backgroundColor: '#ffffff',
-        filter: (node: HTMLElement) => {
-          if (node.classList?.contains('react-flow__minimap') ||
-              node.classList?.contains('react-flow__controls') ||
-              node.classList?.contains('react-flow__background') ||
-              node.classList?.contains('react-flow__panel')) {
-            return false;
-          }
-          return true;
-        },
-      });
-
-      containerEl.style.width = origWidth;
-      containerEl.style.height = origHeight;
-      containerEl.style.overflow = origOverflow;
-      flowViewport.style.transform = origTransform;
-
-      const img = new Image();
-      img.src = dataUrl;
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve();
-        img.onerror = reject;
-      });
-
-      const imgWidth = img.width;
-      const imgHeight = img.height;
-      const orientation = imgWidth > imgHeight ? 'landscape' : 'portrait';
-      const pdf = new jsPDF({
-        orientation,
-        unit: 'px',
-        format: [imgWidth, imgHeight],
-      });
-      pdf.addImage(dataUrl, 'PNG', 0, 0, imgWidth, imgHeight);
-      pdf.save('organization-chart.pdf');
+      const res = await fetch('/api/v1/hr/employees/org-chart/export');
+      if (!res.ok) throw new Error('Export failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'organization-chart.pdf';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     } finally {
-      setCollapsedNodeIds(prevCollapsed);
       setExporting(false);
     }
-  }, [exporting, collapsedNodeIds]);
+  }, [exporting]);
 
   if (orgPeople.length === 0) {
     return (
