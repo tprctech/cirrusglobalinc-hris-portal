@@ -140,11 +140,19 @@ function ProfilePage() {
   }
 
   async function handleFileUpload(event: ChangeEvent<HTMLInputElement>) {
+    const MAX_SIZE = 10 * 1024 * 1024;
     const selectedFiles = Array.from(event.target.files ?? []);
     if (!selectedFiles.length || !emp?.id) return;
 
+    const oversized = selectedFiles.filter((f) => f.size > MAX_SIZE);
+    if (oversized.length) {
+      alert(`The following file(s) exceed the 10 MB limit and were skipped:\n${oversized.map((f) => f.name).join('\n')}`);
+    }
+    const valid = selectedFiles.filter((f) => f.size <= MAX_SIZE);
+    if (!valid.length) { event.target.value = ''; return; }
+
     setAttachmentUploading(true);
-    for (const file of selectedFiles) {
+    for (const file of valid) {
       try {
         await uploadAttachment(emp.id, file);
       } catch { /* ignore */ }

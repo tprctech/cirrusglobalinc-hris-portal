@@ -18,6 +18,7 @@ type AdminCompanyResourcesPageProps = {
 };
 
 const PAGE_SIZE = 8;
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -42,6 +43,7 @@ function AdminCompanyResourcesPage({ onNavigate }: AdminCompanyResourcesPageProp
   const [formTitle, setFormTitle] = useState('');
   const [formCategory, setFormCategory] = useState('Policies');
   const [formFile, setFormFile] = useState<File | null>(null);
+  const [fileError, setFileError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<CompanyResource | null>(null);
 
@@ -96,6 +98,7 @@ function AdminCompanyResourcesPage({ onNavigate }: AdminCompanyResourcesPageProp
     setFormTitle('');
     setFormCategory('Policies');
     setFormFile(null);
+    setFileError('');
     setShowModal(true);
   }
 
@@ -104,7 +107,20 @@ function AdminCompanyResourcesPage({ onNavigate }: AdminCompanyResourcesPageProp
     setFormTitle(r.title);
     setFormCategory(r.category);
     setFormFile(null);
+    setFileError('');
     setShowModal(true);
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const selected = e.target.files?.[0] || null;
+    if (selected && selected.size > MAX_FILE_SIZE) {
+      setFileError(`File is too large (${formatFileSize(selected.size)}). Maximum allowed size is 10 MB.`);
+      setFormFile(null);
+      e.target.value = '';
+      return;
+    }
+    setFileError('');
+    setFormFile(selected);
   }
 
   async function handleSubmit() {
@@ -323,11 +339,15 @@ function AdminCompanyResourcesPage({ onNavigate }: AdminCompanyResourcesPageProp
                 <input
                   type="file"
                   accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.png,.jpg,.jpeg"
-                  onChange={(e) => setFormFile(e.target.files?.[0] || null)}
+                  onChange={handleFileChange}
                 />
-                {editingResource && !formFile && (
-                  <span style={{ fontSize: 12, color: 'var(--gray-400)', marginTop: 4 }}>Current file: {editingResource.file_name}</span>
-                )}
+                <span style={{ fontSize: 12, color: 'var(--gray-400)', marginTop: 4 }}>
+                  {fileError
+                    ? <span style={{ color: '#d32f2f' }}>{fileError}</span>
+                    : editingResource && !formFile
+                      ? `Current file: ${editingResource.file_name}`
+                      : 'Maximum file size: 10 MB'}
+                </span>
               </div>
             </div>
             <div className="admin-modal-actions">
@@ -337,7 +357,7 @@ function AdminCompanyResourcesPage({ onNavigate }: AdminCompanyResourcesPageProp
               <button
                 className="admin-primary-btn"
                 onClick={handleSubmit}
-                disabled={submitting || !formTitle.trim() || (!editingResource && !formFile)}
+                disabled={submitting || !formTitle.trim() || (!editingResource && !formFile) || !!fileError}
               >
                 {submitting ? 'Saving...' : editingResource ? 'Save Changes' : 'Upload'}
               </button>

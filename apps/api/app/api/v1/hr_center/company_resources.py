@@ -15,7 +15,7 @@ UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.pat
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 ALLOWED_EXTENSIONS = {".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".csv", ".png", ".jpg", ".jpeg"}
-MAX_FILE_SIZE = 25 * 1024 * 1024
+MAX_FILE_SIZE = 10 * 1024 * 1024
 
 
 @router.get("/")

@@ -18,7 +18,7 @@ UPLOAD_DIR = os.path.join(
 )
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-MAX_FILE_SIZE = 25 * 1024 * 1024
+MAX_FILE_SIZE = 10 * 1024 * 1024
 
 
 @router.get("/{employee_id}/attachments")
