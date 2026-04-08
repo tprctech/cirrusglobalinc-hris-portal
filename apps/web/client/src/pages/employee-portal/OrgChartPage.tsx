@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, ChevronUp, Download, Minus, Plus, RotateCcw } from 'lucide-react';
+import { ChevronDown, ChevronUp, Minus, Plus, RotateCcw } from 'lucide-react';
 import {
   Background,
   Position,
@@ -416,7 +416,6 @@ function OrgChartCanvas({ employees }: { employees: ApiEmployee[] }) {
     () => new Set(initialCollapsedNodeIds),
   );
   const [zoom, setZoom] = useState(1);
-  const [exporting, setExporting] = useState(false);
   const viewportRef = useRef<HTMLDivElement>(null);
   const { zoomTo, fitView } = useReactFlow();
 
@@ -635,26 +634,6 @@ function OrgChartCanvas({ employees }: { employees: ApiEmployee[] }) {
     fitView({ duration: 220, padding: 0.25 });
   }, [fitView]);
 
-  const handleExportPdf = useCallback(async () => {
-    if (exporting) return;
-    setExporting(true);
-    try {
-      const res = await fetch('/api/v1/hr/employees/org-chart/export');
-      if (!res.ok) throw new Error('Export failed');
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'organization-chart.pdf';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } finally {
-      setExporting(false);
-    }
-  }, [exporting]);
-
   if (orgPeople.length === 0) {
     return (
       <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>
@@ -686,14 +665,6 @@ function OrgChartCanvas({ employees }: { employees: ApiEmployee[] }) {
         <button className="org-chart-reset-btn" onClick={handleReset}>
           <RotateCcw size={14} />
           Reset View
-        </button>
-        <button
-          className="org-chart-export-btn"
-          onClick={handleExportPdf}
-          disabled={exporting}
-        >
-          <Download size={14} />
-          {exporting ? 'Exporting…' : 'Export Organization View'}
         </button>
       </div>
 

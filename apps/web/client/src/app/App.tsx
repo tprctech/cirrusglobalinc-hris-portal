@@ -50,6 +50,7 @@ import AdminPortalConfigPage from '../pages/admin-center/AdminPortalConfigPage';
 import AdminReviewsConfigPage from '../pages/admin-center/config/reviews/AdminReviewsConfigPage';
 import AdminSurveysConfigPage from '../pages/admin-center/config/surveys/AdminSurveysConfigPage';
 import AdminRecognitionsConfigPage from '../pages/admin-center/config/recognitions/AdminRecognitionsConfigPage';
+import AdminOrgChartConfigPage from '../pages/admin-center/config/AdminOrgChartConfigPage';
 import AdminCompanyResourcesPage from '../pages/admin-center/AdminCompanyResourcesPage';
 import {
   LMS_MENU_ROUTE_MAP,
@@ -552,12 +553,7 @@ function App() {
             <AdminCompetencyLibraryPage onNavigate={navigateTo} />
           )}
           {currentPath === ROUTES.adminConfigOrgChart && (
-            <AdminPortalConfigPage
-              activeMenu="configOrgChart"
-              title="Organization Chart"
-              description="Manage admin-side settings for the employee portal Organization Chart."
-              onNavigate={navigateTo}
-            />
+            <AdminOrgChartConfigPage onNavigate={navigateTo} />
           )}
           {currentPath === ROUTES.adminConfigKpi && (
             <AdminPortalConfigPage
