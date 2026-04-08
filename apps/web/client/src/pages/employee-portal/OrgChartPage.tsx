@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, ChevronUp, Minus, Plus, RotateCcw } from 'lucide-react';
+import { ChevronDown, ChevronUp, Minus, Plus, RotateCcw, Search, X } from 'lucide-react';
 import {
   Background,
   Position,
@@ -58,11 +58,13 @@ function OrgNodeLabel({
   avatarUrl,
   isCeo,
   isCurrentFocus,
+  isSearchFocus,
   isParent,
   isCollapsed,
   onToggleCollapse,
 }: Pick<OrgPerson, 'name' | 'role' | 'avatarUrl' | 'isCeo'> & {
   isCurrentFocus: boolean;
+  isSearchFocus: boolean;
   isParent: boolean;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
@@ -70,7 +72,7 @@ function OrgNodeLabel({
   const initials = getInitials(name);
 
   return (
-    <div className={`org-flow-node ${isCeo ? 'org-flow-node-ceo' : ''} ${isCurrentFocus ? 'org-flow-node-current' : ''}`}>
+    <div className={`org-flow-node ${isCeo ? 'org-flow-node-ceo' : ''} ${isSearchFocus ? 'org-flow-node-search' : isCurrentFocus ? 'org-flow-node-current' : ''}`}>
       <div className="org-flow-node-avatar" aria-hidden={!avatarUrl}>
         {avatarUrl ? <img src={avatarUrl} alt={`${name} profile`} /> : <span>{initials}</span>}
       </div>
@@ -416,8 +418,36 @@ function OrgChartCanvas({ employees }: { employees: ApiEmployee[] }) {
     () => new Set(initialCollapsedNodeIds),
   );
   const [zoom, setZoom] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchNodeId, setSearchNodeId] = useState<string | null>(null);
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
-  const { zoomTo, fitView } = useReactFlow();
+  const { zoomTo, fitView, setCenter } = useReactFlow();
+
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const q = searchQuery.toLowerCase();
+    return orgPeople
+      .filter((p) => p.name.toLowerCase().includes(q) || p.role.toLowerCase().includes(q) || p.email.toLowerCase().includes(q))
+      .slice(0, 10);
+  }, [searchQuery, orgPeople]);
+
+  const handleClearSearch = useCallback(() => {
+    setSearchQuery('');
+    setSearchNodeId(null);
+    setShowSearchDropdown(false);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as HTMLElement)) {
+        setShowSearchDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const layoutResult = useMemo(
     () => buildNodePositions(orgPeople, childrenByParent, collapsedNodeIds),
@@ -425,6 +455,41 @@ function OrgChartCanvas({ employees }: { employees: ApiEmployee[] }) {
   );
   const nodePositionsById = layoutResult.positions;
   const relayNodes = layoutResult.relayNodes;
+  const positionsRef = useRef(nodePositionsById);
+  positionsRef.current = nodePositionsById;
+
+  const [pendingFocusNodeId, setPendingFocusNodeId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!pendingFocusNodeId) return;
+    const pos = positionsRef.current[pendingFocusNodeId];
+    if (pos) {
+      setCenter(pos.x + NODE_WIDTH / 2, pos.y + 40, { zoom: 1.2, duration: 400 });
+      setPendingFocusNodeId(null);
+    }
+  }, [pendingFocusNodeId, nodePositionsById, setCenter]);
+
+  const handleSelectSearchResult = useCallback((personId: string) => {
+    setSearchNodeId(personId);
+    setShowSearchDropdown(false);
+
+    const pathToRoot: string[] = [personId];
+    let cursor: string | undefined = personId;
+    while (cursor && parentByChild[cursor]) {
+      cursor = parentByChild[cursor];
+      if (cursor) pathToRoot.push(cursor);
+    }
+
+    setCollapsedNodeIds((prev) => {
+      const next = new Set(prev);
+      for (const nodeId of pathToRoot) {
+        next.delete(nodeId);
+      }
+      return next;
+    });
+
+    setPendingFocusNodeId(personId);
+  }, [parentByChild]);
 
   const hiddenNodeIds = useMemo(
     () => collectHiddenDescendants(collapsedNodeIds, childrenByParent),
@@ -497,6 +562,7 @@ function OrgChartCanvas({ employees }: { employees: ApiEmployee[] }) {
               avatarUrl={person.avatarUrl}
               isCeo={person.isCeo}
               isCurrentFocus={currentFocusNodeId === person.id}
+              isSearchFocus={searchNodeId === person.id}
               isParent={parentNodeIds.has(person.id)}
               isCollapsed={collapsedNodeIds.has(person.id)}
               onToggleCollapse={() => handleToggleCollapse(person.id)}
@@ -528,7 +594,7 @@ function OrgChartCanvas({ employees }: { employees: ApiEmployee[] }) {
     }));
 
     return [...personNodes, ...relayNodeElements];
-  }, [orgPeople, collapsedNodeIds, currentFocusNodeId, handleToggleCollapse, hiddenNodeIds, nodePositionsById, parentNodeIds, visibleRelayNodes]);
+  }, [orgPeople, collapsedNodeIds, currentFocusNodeId, searchNodeId, handleToggleCollapse, hiddenNodeIds, nodePositionsById, parentNodeIds, visibleRelayNodes]);
 
   const edges = useMemo<Edge[]>(() => {
     const edgeStyle = { stroke: '#cbd5e1', strokeWidth: 2.2 };
@@ -639,27 +705,69 @@ function OrgChartCanvas({ employees }: { employees: ApiEmployee[] }) {
   return (
     <>
       <div className="org-chart-controls">
-        <button
-          className="org-chart-control-btn"
-          onClick={handleZoomOut}
-          title="Zoom out"
-          disabled={zoom <= MIN_SCALE}
-        >
-          <Minus size={14} />
-        </button>
-        <span>{Math.round(zoom * 100)}%</span>
-        <button
-          className="org-chart-control-btn"
-          onClick={handleZoomIn}
-          title="Zoom in"
-          disabled={zoom >= MAX_SCALE}
-        >
-          <Plus size={14} />
-        </button>
-        <button className="org-chart-reset-btn" onClick={handleReset}>
-          <RotateCcw size={14} />
-          Reset View
-        </button>
+        <div className="org-chart-search-wrapper" ref={searchRef}>
+          <div className="org-chart-search-input-wrapper">
+            <Search size={14} className="org-chart-search-icon" />
+            <input
+              type="text"
+              className="org-chart-search-input"
+              placeholder="Search employee..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setShowSearchDropdown(true);
+              }}
+              onFocus={() => { if (searchQuery.trim()) setShowSearchDropdown(true); }}
+            />
+            {(searchQuery || searchNodeId) && (
+              <button className="org-chart-search-clear" onClick={handleClearSearch}>
+                <X size={14} />
+              </button>
+            )}
+          </div>
+          {showSearchDropdown && searchResults.length > 0 && (
+            <div className="org-chart-search-dropdown">
+              {searchResults.map((person) => (
+                <button
+                  key={person.id}
+                  className="org-chart-search-item"
+                  onClick={() => handleSelectSearchResult(person.id)}
+                >
+                  <div className="org-chart-search-item-name">{person.name}</div>
+                  <div className="org-chart-search-item-role">{person.role}</div>
+                </button>
+              ))}
+            </div>
+          )}
+          {showSearchDropdown && searchQuery.trim() && searchResults.length === 0 && (
+            <div className="org-chart-search-dropdown">
+              <div className="org-chart-search-empty">No employees found</div>
+            </div>
+          )}
+        </div>
+        <div className="org-chart-zoom-controls">
+          <button
+            className="org-chart-control-btn"
+            onClick={handleZoomOut}
+            title="Zoom out"
+            disabled={zoom <= MIN_SCALE}
+          >
+            <Minus size={14} />
+          </button>
+          <span>{Math.round(zoom * 100)}%</span>
+          <button
+            className="org-chart-control-btn"
+            onClick={handleZoomIn}
+            title="Zoom in"
+            disabled={zoom >= MAX_SCALE}
+          >
+            <Plus size={14} />
+          </button>
+          <button className="org-chart-reset-btn" onClick={handleReset}>
+            <RotateCcw size={14} />
+            Reset View
+          </button>
+        </div>
       </div>
 
       <div
