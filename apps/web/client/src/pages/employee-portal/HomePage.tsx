@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Award,
   Cake,
@@ -14,7 +14,6 @@ import {
 } from 'lucide-react';
 import {
   anniversaries,
-  birthdays,
   dashboardStats,
   newsletters,
   nextSteps,
@@ -29,9 +28,58 @@ const statIcons: Record<string, React.ReactNode> = {
   users: <Users size={22} />,
 };
 
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+type BdayEmployee = {
+  id: number;
+  first_name: string;
+  last_name: string;
+  display_name: string;
+  birthdate: string | null;
+  status: string;
+  profile_photo: string;
+};
+
+function formatBirthdayLabel(emp: BdayEmployee): { name: string; date: string } {
+  const displayName = emp.display_name || emp.last_name;
+  if (!emp.birthdate) return { name: displayName, date: '' };
+  const d = new Date(emp.birthdate + 'T00:00:00');
+  const month = MONTH_NAMES[d.getMonth()];
+  const day = d.getDate();
+  return { name: displayName, date: `${month} ${day}` };
+}
+
 function HomePage() {
   const [activeTab, setActiveTab] = useState('policies');
+  const [employees, setEmployees] = useState<BdayEmployee[]>([]);
   const currentMonth = new Date().toLocaleString('en-US', { month: 'long' });
+  const currentMonthIdx = new Date().getMonth();
+
+  useEffect(() => {
+    fetch('/api/v1/hr/employees/')
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed');
+        return res.json();
+      })
+      .then((data) => {
+        if (Array.isArray(data)) setEmployees(data);
+      })
+      .catch(() => {});
+  }, []);
+
+  const birthdayCelebrants = useMemo(() => {
+    return employees
+      .filter((emp) => {
+        if (emp.status !== 'Active' || !emp.birthdate) return false;
+        const d = new Date(emp.birthdate + 'T00:00:00');
+        return d.getMonth() === currentMonthIdx;
+      })
+      .sort((a, b) => {
+        const da = new Date(a.birthdate! + 'T00:00:00').getDate();
+        const db = new Date(b.birthdate! + 'T00:00:00').getDate();
+        return da - db;
+      });
+  }, [employees, currentMonthIdx]);
 
   return (
     <>
@@ -134,12 +182,21 @@ function HomePage() {
                 <Cake />
                 <h3>{currentMonth} Birthday Celebrants</h3>
               </div>
-              {birthdays.map((b) => (
-                <div key={b.name} className="event-item">
-                  <div className="event-name">{b.name}</div>
-                  <div className="event-message">{b.message}</div>
+              {birthdayCelebrants.length === 0 ? (
+                <div className="event-item">
+                  <div className="event-message" style={{ color: 'var(--gray-400)' }}>No birthdays this month</div>
                 </div>
-              ))}
+              ) : (
+                birthdayCelebrants.map((emp) => {
+                  const label = formatBirthdayLabel(emp);
+                  return (
+                    <div key={emp.id} className="event-item">
+                      <div className="event-name">{label.name} ({label.date})</div>
+                      <div className="event-message">Happy Birthday, {label.name}! 🎂</div>
+                    </div>
+                  );
+                })
+              )}
             </div>
 
             <div className="announcement-section">
