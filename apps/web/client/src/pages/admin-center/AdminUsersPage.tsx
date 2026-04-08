@@ -806,11 +806,8 @@ function AdminUsersPage({ onNavigate }: AdminUsersPageProps) {
       if (!searchText) return true;
 
       const searchableText = [
-        user.employeeId, user.firstName, user.middleName, user.lastName, user.displayName,
-        user.email, user.phone, user.teamflectRole, user.supervisor,
-        user.department, user.jobTitle, user.country, user.team,
-        user.status, user.officeLocation,
-      ].join(' ').toLowerCase();
+        user.firstName, user.lastName, user.email, user.displayName,
+      ].filter(Boolean).join(' ').toLowerCase();
 
       return searchableText.includes(searchText);
     });
