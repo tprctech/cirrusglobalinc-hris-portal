@@ -227,7 +227,7 @@ function DatePickerField({ id, label, value, onChange }: { id: string; label: st
   );
 }
 
-type LookupResult = { id: number; employee_id: string; first_name: string; middle_name: string; last_name: string; email: string };
+type LookupResult = { id: number; employee_id: string; first_name: string; middle_name: string; last_name: string; display_name?: string; email: string };
 
 function EmployeeSearchField({ id, label, value, onChange }: { id: string; label: string; value: string; onChange: (val: string) => void }) {
   const [query, setQuery] = useState(value);
@@ -287,19 +287,25 @@ function EmployeeSearchField({ id, label, value, onChange }: { id: string; label
   );
 }
 
-function ReviewersPreview({ id, label, userEmail, allUsers }: { id: string; label: string; userEmail: string; allUsers: AdminUser[] }) {
+function extractSupervisorEmail(val: string): string {
+  if (!val) return '';
+  const match = val.match(/\(([^)]+@[^)]+)\)/);
+  if (match) return match[1].trim().toLowerCase();
+  return val.trim().toLowerCase();
+}
+
+function DirectReportsPreview({ id, userEmail, allUsers }: { id: string; userEmail: string; allUsers: AdminUser[] }) {
   const directReports = useMemo(() => {
     if (!userEmail) return [];
-    const emailLower = userEmail.toLowerCase();
+    const emailLower = userEmail.trim().toLowerCase();
     return allUsers.filter((u) => {
-      const sup = (u.supervisor || '').toLowerCase();
-      return sup === emailLower || sup.includes(`(${emailLower})`);
+      return extractSupervisorEmail(u.supervisor || '') === emailLower;
     });
   }, [userEmail, allUsers]);
 
   return (
     <div className="admin-form-field full-width">
-      <label htmlFor={id}>{label}</label>
+      <label htmlFor={id}>Direct Reports</label>
       {directReports.length === 0 ? (
         <div style={{ padding: '8px 0', color: 'var(--gray-400)', fontSize: 14 }}>No direct reports found</div>
       ) : (
@@ -311,6 +317,96 @@ function ReviewersPreview({ id, label, userEmail, allUsers }: { id: string; labe
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function ReviewersPicker({ id, value, onChange }: { id: string; value: string; onChange: (val: string) => void }) {
+  const selected = useMemo(() => value ? value.split(',').map((s) => s.trim()).filter(Boolean) : [], [value]);
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<LookupResult[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  function handleSearch(q: string) {
+    setQuery(q);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (q.trim().length < 1) {
+      setResults([]);
+      setShowDropdown(false);
+      return;
+    }
+    debounceRef.current = setTimeout(async () => {
+      const data = await searchEmployees(q.trim());
+      setResults(data);
+      setShowDropdown(true);
+    }, 300);
+  }
+
+  function addReviewer(emp: LookupResult) {
+    const email = emp.email?.trim().toLowerCase();
+    if (!email || selected.map((s) => s.toLowerCase()).includes(email)) return;
+    const updated = [...selected, email].join(', ');
+    onChange(updated);
+    setQuery('');
+    setResults([]);
+    setShowDropdown(false);
+  }
+
+  function removeReviewer(email: string) {
+    const emailLower = email.toLowerCase();
+    const updated = selected.filter((s) => s.toLowerCase() !== emailLower).join(', ');
+    onChange(updated);
+  }
+
+  function displayLabel(email: string) {
+    return email;
+  }
+
+  return (
+    <div className="admin-form-field full-width">
+      <label htmlFor={id}>Reviewers</label>
+      <div ref={containerRef} style={{ position: 'relative' }}>
+        <div className="experts-picker-tags">
+          {selected.map((email) => (
+            <span key={email} className="experts-picker-tag">
+              {displayLabel(email)}
+              <button type="button" onClick={() => removeReviewer(email)} className="experts-picker-tag-remove">
+                <X size={12} />
+              </button>
+            </span>
+          ))}
+        </div>
+        <input
+          id={id}
+          type="text"
+          value={query}
+          onChange={(e) => handleSearch(e.target.value)}
+          placeholder="Search employees to add as reviewers..."
+          autoComplete="off"
+        />
+        {showDropdown && results.length > 0 && (
+          <ul className="experts-picker-dropdown">
+            {results.filter((r) => r.email && !selected.includes(r.email)).map((r) => (
+              <li key={r.id} onClick={() => addReviewer(r)} className="experts-picker-option">
+                <span className="admin-search-name">{r.display_name || `${r.first_name} ${r.middle_name ? r.middle_name + ' ' : ''}${r.last_name}`}</span>
+                <span className="admin-search-email">{r.email}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }
@@ -596,7 +692,8 @@ function UserFormFields({
         <legend>Reporting & Reviews</legend>
         <div className="admin-edit-grid">
           <EmployeeSearchField id={`${prefix}-supervisor`} label="Supervisor" value={user.supervisor} onChange={(v) => onChange('supervisor', v)} />
-          <ReviewersPreview id={`${prefix}-reviewers`} label="Reviewers (Direct Reports)" userEmail={user.email} allUsers={allUsers || []} />
+          <DirectReportsPreview id={`${prefix}-directReports`} userEmail={user.email} allUsers={allUsers || []} />
+          <ReviewersPicker id={`${prefix}-reviewers`} value={user.reviewers} onChange={(v) => onChange('reviewers', v)} />
         </div>
       </fieldset>
 

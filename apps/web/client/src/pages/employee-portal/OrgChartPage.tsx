@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, ChevronUp, Download, Minus, Plus, RotateCcw } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { jsPDF } from 'jspdf';
@@ -13,7 +13,7 @@ import {
   type Viewport,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { currentUser } from '../../data/mock/homeMockData';
+import { useAuth } from '../../app/AuthContext';
 import './OrgChartPage.css';
 
 const MIN_SCALE = 0.45;
@@ -27,7 +27,15 @@ type OrgPerson = {
   role: string;
   avatarUrl?: string;
   isCeo?: boolean;
+  email: string;
 };
+
+function extractEmail(supervisorValue: string): string {
+  if (!supervisorValue) return '';
+  const match = supervisorValue.match(/\(([^)]+@[^)]+)\)/);
+  if (match) return match[1].trim().toLowerCase();
+  return supervisorValue.trim().toLowerCase();
+}
 
 const NODE_WIDTH = 238;
 const LAYOUT_BASE_X = 120;
@@ -87,64 +95,88 @@ function OrgNodeLabel({
   );
 }
 
-const orgPeople: OrgPerson[] = [
-  { id: 'ceo', name: 'Alex Morgan', role: 'Chief Executive Officer', isCeo: true },
-  { id: 'vp-hr', name: 'Michael Chen', role: 'VP of Human Resources' },
-  { id: 'vp-eng', name: 'Daniel Reeves', role: 'VP of Engineering' },
-  { id: 'vp-mkt', name: 'Amelia Stone', role: 'VP of Marketing' },
-  { id: 'mgr-hr', name: 'Sarah Johnson', role: 'HR Manager' },
-  { id: 'mgr-eng', name: 'David Lee', role: 'Engineering Manager' },
-  { id: 'mgr-mkt', name: 'Lisa Wang', role: 'Marketing Manager' },
-  { id: 'eng-1', name: 'Noah Patel', role: 'Senior Software Engineer' },
-  { id: 'eng-2', name: 'Sophia Kim', role: 'Software Engineer II' },
-  { id: 'eng-3', name: 'Ethan Brooks', role: 'QA Engineer' },
-  { id: 'eng-4', name: 'Olivia Grant', role: 'Platform Engineer' },
-  { id: 'eng-5', name: 'Liam Carter', role: 'DevOps Engineer' },
-  { id: 'hr-1', name: 'Grace Walker', role: 'HR Specialist' },
-  { id: 'hr-2', name: 'James Foster', role: 'Talent Acquisition Partner' },
-  { id: 'hr-3', name: 'Chloe Bennett', role: 'People Operations Analyst' },
-  { id: 'hr-4', name: 'Henry Cole', role: 'Learning & Development Coordinator' },
-  { id: 'mkt-1', name: 'Ava Turner', role: 'Content Strategist' },
-  { id: 'mkt-2', name: 'Mason Reed', role: 'Growth Marketing Specialist' },
-  { id: 'mkt-3', name: 'Isabella Perez', role: 'Social Media Manager' },
-  { id: 'mkt-4', name: 'Lucas Nguyen', role: 'SEO Specialist' },
-  { id: 'mkt-5', name: 'Ella Brooks', role: 'Field Marketing Associate' },
-  { id: 'lead-eng-1', name: 'Zoe Martin', role: 'Tech Lead' },
-  { id: 'lead-eng-2', name: 'Jack Morris', role: 'QA Lead' },
-  { id: 'dev-1', name: 'Mia Scott', role: 'Frontend Engineer' },
-  { id: 'dev-2', name: 'Benjamin Hall', role: 'Backend Engineer' },
-  { id: 'qa-1', name: 'Harper White', role: 'QA Analyst' },
-  { id: 'qa-2', name: 'Logan Price', role: 'Automation Engineer' },
-];
+type ApiEmployee = {
+  id: number;
+  employee_id: string;
+  first_name: string;
+  middle_name: string;
+  last_name: string;
+  display_name: string;
+  email: string;
+  job_title: string;
+  department: string;
+  supervisor: string;
+  profile_photo: string;
+  status: string;
+};
 
-const orgConnections = [
-  { id: 'e-ceo-vp-hr', source: 'ceo', target: 'vp-hr' },
-  { id: 'e-ceo-vp-eng', source: 'ceo', target: 'vp-eng' },
-  { id: 'e-ceo-vp-mkt', source: 'ceo', target: 'vp-mkt' },
-  { id: 'e-vp-hr-mgr-hr', source: 'vp-hr', target: 'mgr-hr' },
-  { id: 'e-vp-eng-mgr-eng', source: 'vp-eng', target: 'mgr-eng' },
-  { id: 'e-vp-mkt-mgr-mkt', source: 'vp-mkt', target: 'mgr-mkt' },
-  { id: 'e-mgr-eng-eng-1', source: 'mgr-eng', target: 'eng-1' },
-  { id: 'e-mgr-eng-eng-2', source: 'mgr-eng', target: 'eng-2' },
-  { id: 'e-mgr-eng-eng-3', source: 'mgr-eng', target: 'eng-3' },
-  { id: 'e-mgr-eng-eng-4', source: 'mgr-eng', target: 'eng-4' },
-  { id: 'e-mgr-eng-eng-5', source: 'mgr-eng', target: 'eng-5' },
-  { id: 'e-mgr-eng-lead-1', source: 'mgr-eng', target: 'lead-eng-1' },
-  { id: 'e-mgr-eng-lead-2', source: 'mgr-eng', target: 'lead-eng-2' },
-  { id: 'e-lead-eng-1-dev-1', source: 'lead-eng-1', target: 'dev-1' },
-  { id: 'e-lead-eng-1-dev-2', source: 'lead-eng-1', target: 'dev-2' },
-  { id: 'e-lead-eng-2-qa-1', source: 'lead-eng-2', target: 'qa-1' },
-  { id: 'e-lead-eng-2-qa-2', source: 'lead-eng-2', target: 'qa-2' },
-  { id: 'e-mgr-hr-hr-1', source: 'mgr-hr', target: 'hr-1' },
-  { id: 'e-mgr-hr-hr-2', source: 'mgr-hr', target: 'hr-2' },
-  { id: 'e-mgr-hr-hr-3', source: 'mgr-hr', target: 'hr-3' },
-  { id: 'e-mgr-hr-hr-4', source: 'mgr-hr', target: 'hr-4' },
-  { id: 'e-mgr-mkt-mkt-1', source: 'mgr-mkt', target: 'mkt-1' },
-  { id: 'e-mgr-mkt-mkt-2', source: 'mgr-mkt', target: 'mkt-2' },
-  { id: 'e-mgr-mkt-mkt-3', source: 'mgr-mkt', target: 'mkt-3' },
-  { id: 'e-mgr-mkt-mkt-4', source: 'mgr-mkt', target: 'mkt-4' },
-  { id: 'e-mgr-mkt-mkt-5', source: 'mgr-mkt', target: 'mkt-5' },
-] as const;
+function buildOrgData(employees: ApiEmployee[]) {
+  const activeEmployees = employees.filter((e) => e.status === 'Active');
+
+  const emailToEmp = new Map<string, ApiEmployee>();
+  for (const emp of activeEmployees) {
+    if (emp.email) {
+      emailToEmp.set(emp.email.toLowerCase(), emp);
+    }
+  }
+
+  const childrenByParent: Record<string, string[]> = {};
+  const hasParent = new Set<string>();
+
+  for (const emp of activeEmployees) {
+    const nodeId = String(emp.id);
+    if (emp.supervisor) {
+      const supEmail = extractEmail(emp.supervisor);
+      const supEmp = emailToEmp.get(supEmail);
+      if (supEmp) {
+        const parentId = String(supEmp.id);
+        if (!childrenByParent[parentId]) {
+          childrenByParent[parentId] = [];
+        }
+        childrenByParent[parentId].push(nodeId);
+        hasParent.add(nodeId);
+      }
+    }
+  }
+
+  const rootIds = activeEmployees
+    .filter((e) => !hasParent.has(String(e.id)) && childrenByParent[String(e.id)]?.length > 0)
+    .map((e) => String(e.id));
+
+  const orphans = activeEmployees
+    .filter((e) => !hasParent.has(String(e.id)) && !childrenByParent[String(e.id)]?.length)
+    .map((e) => String(e.id));
+
+  const people: OrgPerson[] = activeEmployees.map((emp) => {
+    const nodeId = String(emp.id);
+    const isRoot = rootIds.includes(nodeId);
+    return {
+      id: nodeId,
+      name: emp.display_name || `${emp.first_name} ${emp.last_name}`.trim(),
+      role: emp.job_title || emp.department || '',
+      avatarUrl: emp.profile_photo || undefined,
+      isCeo: isRoot,
+      email: emp.email || '',
+    };
+  });
+
+  const connections: { id: string; source: string; target: string }[] = [];
+  for (const [parentId, children] of Object.entries(childrenByParent)) {
+    for (const childId of children) {
+      connections.push({
+        id: `e-${parentId}-${childId}`,
+        source: parentId,
+        target: childId,
+      });
+    }
+  }
+
+  if (rootIds.length === 0 && orphans.length > 0) {
+    return { people, connections, childrenByParent };
+  }
+
+  return { people, connections, childrenByParent };
+}
 
 function collectHiddenDescendants(
   collapsedNodeIds: Set<string>,
@@ -245,17 +277,12 @@ function buildNodePositions(
   return positions;
 }
 
-function OrgChartCanvas() {
-  const childrenByParent = useMemo<Record<string, string[]>>(() => {
-    const map: Record<string, string[]> = {};
-    for (const connection of orgConnections) {
-      if (!map[connection.source]) {
-        map[connection.source] = [];
-      }
-      map[connection.source].push(connection.target);
-    }
-    return map;
-  }, []);
+function OrgChartCanvas({ employees }: { employees: ApiEmployee[] }) {
+  const { user } = useAuth();
+  const currentUserEmail = user?.employee?.email || user?.email || '';
+
+  const orgData = useMemo(() => buildOrgData(employees), [employees]);
+  const { people: orgPeople, connections: orgConnections, childrenByParent } = orgData;
 
   const parentByChild = useMemo<Record<string, string>>(() => {
     const map: Record<string, string> = {};
@@ -263,12 +290,13 @@ function OrgChartCanvas() {
       map[connection.target] = connection.source;
     }
     return map;
-  }, []);
+  }, [orgConnections]);
 
   const currentUserNodeId = useMemo(() => {
-    const normalizedName = currentUser.name.trim().toLowerCase();
-    return orgPeople.find((person) => person.name.trim().toLowerCase() === normalizedName)?.id ?? null;
-  }, []);
+    if (!currentUserEmail) return null;
+    const emailLower = currentUserEmail.toLowerCase();
+    return orgPeople.find((person) => person.email.toLowerCase() === emailLower)?.id ?? null;
+  }, [currentUserEmail, orgPeople]);
 
   const parentNodeIds = useMemo(() => new Set(Object.keys(childrenByParent)), [childrenByParent]);
   const ancestorPathNodeIds = useMemo(() => {
@@ -309,7 +337,6 @@ function OrgChartCanvas() {
       const isAncestor = ancestorPathNodeIds.has(parentNodeId);
       const isCurrentUser = currentUserNodeId === parentNodeId;
 
-      // Expand ancestors up to the current user path, but keep current user's own subtree collapsed by default.
       if (!isAncestor || isCurrentUser) {
         collapsed.add(parentNodeId);
       }
@@ -327,7 +354,7 @@ function OrgChartCanvas() {
 
   const nodePositionsById = useMemo(
     () => buildNodePositions(orgPeople, childrenByParent, collapsedNodeIds),
-    [childrenByParent, collapsedNodeIds],
+    [orgPeople, childrenByParent, collapsedNodeIds],
   );
 
   const hiddenNodeIds = useMemo(
@@ -345,14 +372,12 @@ function OrgChartCanvas() {
       return currentUserNodeId;
     }
 
-    // If current user is hidden, bubble the indicator to nearest visible & expanded ancestor.
     for (const nodeId of userPathToRoot.slice(1)) {
       if (!hiddenNodeIds.has(nodeId) && !collapsedNodeIds.has(nodeId)) {
         return nodeId;
       }
     }
 
-    // Fallback: closest visible ancestor even if collapsed.
     for (const nodeId of userPathToRoot.slice(1)) {
       if (!hiddenNodeIds.has(nodeId)) {
         return nodeId;
@@ -398,7 +423,7 @@ function OrgChartCanvas() {
         },
         draggable: false,
       })),
-    [collapsedNodeIds, currentFocusNodeId, handleToggleCollapse, hiddenNodeIds, nodePositionsById, parentNodeIds],
+    [orgPeople, collapsedNodeIds, currentFocusNodeId, handleToggleCollapse, hiddenNodeIds, nodePositionsById, parentNodeIds],
   );
 
   const edges = useMemo<Edge[]>(
@@ -411,7 +436,7 @@ function OrgChartCanvas() {
         style: { stroke: '#cbd5e1', strokeWidth: 2.2 },
         type: 'smoothstep',
       })),
-    [hiddenNodeIds],
+    [orgConnections, hiddenNodeIds],
   );
 
   const viewportConfig = useMemo<Viewport>(
@@ -482,6 +507,14 @@ function OrgChartCanvas() {
       setExporting(false);
     }
   }, [exporting]);
+
+  if (orgPeople.length === 0) {
+    return (
+      <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>
+        <p>No employee data available to display the organization chart.</p>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -556,15 +589,38 @@ function OrgChartCanvas() {
 }
 
 function OrgChartPage() {
+  const [employees, setEmployees] = useState<ApiEmployee[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/v1/hr/employees/')
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to load employees');
+        return res.json();
+      })
+      .then((data) => {
+        setEmployees(Array.isArray(data) ? data : []);
+        setLoading(false);
+      })
+      .catch(() => {
+        setEmployees([]);
+        setLoading(false);
+      });
+  }, []);
+
   return (
     <section className="org-chart-page">
       <header className="org-chart-header">
         <h1>Organization Chart</h1>
         <p>View team reporting lines and organizational structure.</p>
       </header>
-      <ReactFlowProvider>
-        <OrgChartCanvas />
-      </ReactFlowProvider>
+      {loading ? (
+        <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>Loading...</div>
+      ) : (
+        <ReactFlowProvider>
+          <OrgChartCanvas employees={employees} />
+        </ReactFlowProvider>
+      )}
     </section>
   );
 }
