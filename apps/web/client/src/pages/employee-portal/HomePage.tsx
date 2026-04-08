@@ -16,7 +16,6 @@ import {
   X,
 } from 'lucide-react';
 import {
-  anniversaries,
   dashboardStats,
   newsletters,
   nextSteps,
@@ -39,17 +38,36 @@ type BdayEmployee = {
   last_name: string;
   display_name: string;
   birthdate: string | null;
+  date_hired: string | null;
   status: string;
   profile_photo: string;
 };
 
+function getDisplayName(emp: BdayEmployee): string {
+  return emp.display_name || [emp.first_name, emp.last_name].filter(Boolean).join(' ') || emp.last_name;
+}
+
 function formatBirthdayLabel(emp: BdayEmployee): { name: string; date: string } {
-  const displayName = emp.display_name || [emp.first_name, emp.last_name].filter(Boolean).join(' ') || emp.last_name;
+  const displayName = getDisplayName(emp);
   if (!emp.birthdate) return { name: displayName, date: '' };
   const d = new Date(emp.birthdate + 'T00:00:00');
   const month = MONTH_NAMES[d.getMonth()];
   const day = d.getDate();
   return { name: displayName, date: `${month} ${day}` };
+}
+
+function formatAnniversaryLabel(emp: BdayEmployee): { name: string; date: string; years: number } {
+  const displayName = getDisplayName(emp);
+  if (!emp.date_hired) return { name: displayName, date: '', years: 0 };
+  const d = new Date(emp.date_hired + 'T00:00:00');
+  const month = MONTH_NAMES[d.getMonth()];
+  const day = d.getDate();
+  const now = new Date();
+  let years = now.getFullYear() - d.getFullYear();
+  if (now.getMonth() < d.getMonth() || (now.getMonth() === d.getMonth() && now.getDate() < d.getDate())) {
+    years--;
+  }
+  return { name: displayName, date: `${month} ${day}`, years };
 }
 
 function getFileExtension(filename: string): string {
@@ -134,6 +152,22 @@ function HomePage() {
       });
   }, [employees, currentMonthIdx]);
 
+  const anniversaryCelebrants = useMemo(() => {
+    return employees
+      .filter((emp) => {
+        if (emp.status !== 'Active' || !emp.date_hired) return false;
+        const d = new Date(emp.date_hired + 'T00:00:00');
+        if (d.getMonth() !== currentMonthIdx) return false;
+        const years = new Date().getFullYear() - d.getFullYear();
+        return years >= 1;
+      })
+      .sort((a, b) => {
+        const da = new Date(a.date_hired! + 'T00:00:00').getDate();
+        const db = new Date(b.date_hired! + 'T00:00:00').getDate();
+        return da - db;
+      });
+  }, [employees, currentMonthIdx]);
+
   return (
     <>
       <div className="card purpose-card">
@@ -205,14 +239,29 @@ function HomePage() {
           <div className="announcement-section">
             <div className="announcement-section-header">
               <Gift />
-              <h3>Work Anniversaries</h3>
+              <h3>{currentMonth} Work Anniversaries</h3>
             </div>
-            {anniversaries.map((a) => (
-              <div key={a.name} className="event-item">
-                <div className="event-name">{a.name}</div>
-                <div className="event-message">{a.message}</div>
+            {anniversaryCelebrants.length === 0 ? (
+              <div className="bday-empty">No work anniversaries this month</div>
+            ) : (
+              <div className="bday-grid">
+                {anniversaryCelebrants.map((emp) => {
+                  const label = formatAnniversaryLabel(emp);
+                  const today = new Date();
+                  const hd = emp.date_hired ? new Date(emp.date_hired + 'T00:00:00') : null;
+                  const isToday = hd && hd.getMonth() === today.getMonth() && hd.getDate() === today.getDate();
+                  return (
+                    <div key={emp.id} className={`bday-chip${isToday ? ' bday-chip-today' : ''}`}>
+                      <span className="bday-chip-icon">{isToday ? '⭐' : '🎉'}</span>
+                      <div className="bday-chip-info">
+                        <span className="bday-chip-name">{label.name}</span>
+                        <span className="bday-chip-date">{label.date} &middot; {label.years} {label.years === 1 ? 'year' : 'years'}</span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            ))}
+            )}
           </div>
 
           <div className="announcement-section">
