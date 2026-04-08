@@ -691,7 +691,7 @@ function UserFormFields({
       <fieldset className="admin-form-section">
         <legend>Reporting & Reviews</legend>
         <div className="admin-edit-grid">
-          <EmployeeSearchField id={`${prefix}-supervisor`} label="Supervisor" value={user.supervisor} onChange={(v) => onChange('supervisor', v)} />
+          <EmployeeSearchField id={`${prefix}-supervisor`} label="Supervisor/Manager" value={user.supervisor} onChange={(v) => onChange('supervisor', v)} />
           <DirectReportsPreview id={`${prefix}-directReports`} userEmail={user.email} allUsers={allUsers || []} />
           <ReviewersPicker id={`${prefix}-reviewers`} value={user.reviewers} onChange={(v) => onChange('reviewers', v)} />
         </div>
