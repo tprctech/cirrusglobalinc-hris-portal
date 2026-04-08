@@ -442,19 +442,13 @@ function OrgChartCanvas({ employees }: { employees: ApiEmployee[] }) {
     }
 
     for (const nodeId of userPathToRoot.slice(1)) {
-      if (!hiddenNodeIds.has(nodeId) && !collapsedNodeIds.has(nodeId)) {
-        return nodeId;
-      }
-    }
-
-    for (const nodeId of userPathToRoot.slice(1)) {
       if (!hiddenNodeIds.has(nodeId)) {
         return nodeId;
       }
     }
 
     return null;
-  }, [collapsedNodeIds, currentUserNodeId, hiddenNodeIds, userPathToRoot]);
+  }, [currentUserNodeId, hiddenNodeIds, userPathToRoot]);
 
   const handleToggleCollapse = useCallback((nodeId: string) => {
     setCollapsedNodeIds((previous) => {
