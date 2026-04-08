@@ -182,11 +182,6 @@ function ProfilePage() {
 
   return (
     <section className="profile-page-view">
-      <header className="profile-view-title">
-        <h1>My Profile</h1>
-        <p>View and manage your personal information</p>
-      </header>
-
       <article className="profile-hero-card">
         <div className="profile-hero-main">
           {profilePhoto ? (
