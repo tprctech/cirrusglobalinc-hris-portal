@@ -809,17 +809,70 @@
   color: var(--charcoal);
 }
 
+.bday-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.bday-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 6px 8px;
+  border-radius: 20px;
+  background: rgba(0, 166, 227, 0.06);
+  border: 1px solid rgba(0, 166, 227, 0.12);
+  min-width: 0;
+}
+
+.bday-chip-today {
+  background: linear-gradient(135deg, rgba(0, 166, 227, 0.12) 0%, rgba(0, 166, 227, 0.04) 100%);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px rgba(0, 166, 227, 0.1);
+}
+
+.bday-chip-icon {
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.bday-chip-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.bday-chip-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--charcoal);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bday-chip-today .bday-chip-name {
+  color: var(--primary);
+}
+
+.bday-chip-date {
+  font-size: 11px;
+  color: var(--gray-400);
+  line-height: 1.2;
+}
+
+.bday-empty {
+  font-size: 13px;
+  color: var(--gray-400);
+  padding: 8px 0;
+}
+
 .event-item {
   padding: 14px 0;
   border-bottom: 1px solid var(--gray-100);
-}
-
-.event-item-today {
-  background: linear-gradient(90deg, rgba(0, 166, 227, 0.08) 0%, rgba(0, 166, 227, 0.02) 100%);
-  border-left: 3px solid var(--primary);
-  padding-left: 12px;
-  margin: 0 -4px;
-  border-radius: 6px;
 }
 
 .event-item:last-child {
