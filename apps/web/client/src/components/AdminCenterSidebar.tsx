@@ -33,6 +33,8 @@ type AdminMenu = (
   | 'configRecognitions'
 );
 
+const LIBRARY_MENUS: AdminMenu[] = ['libraryRole', 'libraryDepartment', 'libraryCompetency', 'companyResources'];
+
 type AdminCenterSidebarProps = {
   activeMenu: AdminMenu;
   onNavigate: (path: string) => void;
@@ -40,7 +42,7 @@ type AdminCenterSidebarProps = {
 
 function AdminCenterSidebar({ activeMenu, onNavigate }: AdminCenterSidebarProps) {
   const [libraryExpanded, setLibraryExpanded] = useState(
-    activeMenu === 'libraryRole' || activeMenu === 'libraryDepartment' || activeMenu === 'libraryCompetency',
+    LIBRARY_MENUS.includes(activeMenu),
   );
   const [configExpanded, setConfigExpanded] = useState(
     activeMenu === 'configOrgChart'
@@ -52,7 +54,7 @@ function AdminCenterSidebar({ activeMenu, onNavigate }: AdminCenterSidebarProps)
     || activeMenu === 'configRecognitions',
   );
 
-  const isLibraryMenuActive = activeMenu === 'libraryRole' || activeMenu === 'libraryDepartment' || activeMenu === 'libraryCompetency';
+  const isLibraryMenuActive = LIBRARY_MENUS.includes(activeMenu);
   const isConfigMenuActive = (
     activeMenu === 'configOrgChart'
     || activeMenu === 'configKpi'
@@ -90,13 +92,6 @@ function AdminCenterSidebar({ activeMenu, onNavigate }: AdminCenterSidebarProps)
         <span>L&amp;D</span>
       </button>
       <button
-        className={`admin-center-side-link ${activeMenu === 'companyResources' ? 'active' : ''}`}
-        onClick={(event) => handleNavigate(ROUTES.adminCompanyResources, event)}
-      >
-        <FileText size={16} />
-        <span>Company Resources</span>
-      </button>
-      <button
         className={`admin-center-side-link ${isLibraryMenuActive ? 'active' : ''}`}
         onClick={() => setLibraryExpanded((previous) => !previous)}
       >
@@ -129,6 +124,13 @@ function AdminCenterSidebar({ activeMenu, onNavigate }: AdminCenterSidebarProps)
           >
             <Users size={14} />
             <span>Role</span>
+          </button>
+          <button
+            className={`admin-center-sub-link ${activeMenu === 'companyResources' ? 'active' : ''}`}
+            onClick={(event) => handleNavigate(ROUTES.adminCompanyResources, event)}
+          >
+            <FileText size={14} />
+            <span>Company Resources</span>
           </button>
         </div>
       )}
