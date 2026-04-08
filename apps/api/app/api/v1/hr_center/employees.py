@@ -4,6 +4,7 @@ import re
 from datetime import date, datetime
 from typing import Optional
 
+import bcrypt
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -13,6 +14,40 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Employee, UserAccount
 from app.db.session import get_db
+
+
+def _hash_password(password: str) -> str:
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+
+def _default_password() -> str:
+    return f"cirrus{datetime.utcnow().year}"
+
+
+def _ensure_user_account(db: Session, employee: Employee) -> None:
+    if not employee.email:
+        return
+    existing = db.query(UserAccount).filter(
+        UserAccount.employee_id == employee.id,
+        UserAccount.is_deleted == False,
+    ).first()
+    if existing:
+        return
+    email_taken = db.query(UserAccount).filter(
+        UserAccount.email == employee.email,
+        UserAccount.is_deleted == False,
+    ).first()
+    if email_taken:
+        return
+    role = normalize_role(employee.teamflect_role)
+    acct = UserAccount(
+        email=employee.email,
+        password_hash=_hash_password(_default_password()),
+        employee_id=employee.id,
+        portal_role=role,
+    )
+    db.add(acct)
+    db.flush()
 
 router = APIRouter()
 
@@ -181,10 +216,12 @@ def create_employee(payload: EmployeeCreate, db: Session = Depends(get_db)):
     row = Employee(**data)
     db.add(row)
     try:
-        db.commit()
+        db.flush()
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=409, detail="Employee with this employee_id already exists")
+    _ensure_user_account(db, row)
+    db.commit()
     db.refresh(row)
     return row
 
@@ -199,6 +236,7 @@ def update_employee(employee_id: int, payload: EmployeeUpdate, db: Session = Dep
         updates["teamflect_role"] = normalize_role(updates["teamflect_role"])
     for key, value in updates.items():
         setattr(row, key, value)
+    _ensure_user_account(db, row)
     db.commit()
     db.refresh(row)
     return row
