@@ -201,6 +201,16 @@ function collectHiddenDescendants(
   return hiddenNodeIds;
 }
 
+const MAX_ROW_WIDTH = 4;
+
+function chunkArray<T>(arr: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) {
+    chunks.push(arr.slice(i, i + size));
+  }
+  return chunks;
+}
+
 function buildNodePositions(
   people: OrgPerson[],
   childrenByParent: Record<string, string[]>,
@@ -209,13 +219,11 @@ function buildNodePositions(
   const allIds = people.map((person) => person.id);
   const childIds = new Set(Object.values(childrenByParent).flat());
   const rootIds = allIds.filter((id) => !childIds.has(id));
-  const spanCache = new Map<string, number>();
   const positions: Record<string, { x: number; y: number }> = {};
 
+  const spanCache = new Map<string, number>();
   const getSpan = (nodeId: string): number => {
-    if (spanCache.has(nodeId)) {
-      return spanCache.get(nodeId) ?? 1;
-    }
+    if (spanCache.has(nodeId)) return spanCache.get(nodeId)!;
 
     if (collapsedNodeIds.has(nodeId)) {
       spanCache.set(nodeId, 1);
@@ -228,53 +236,87 @@ function buildNodePositions(
       return 1;
     }
 
-    const rows = [children];
-    const rowSpans = rows.map((row) => row.reduce((sum, childId) => sum + getSpan(childId), 0));
-    const ownGridSpan = children.length;
-    const span = Math.max(ownGridSpan, ...rowSpans);
+    const rows = chunkArray(children, MAX_ROW_WIDTH);
+    let maxRowSpan = 0;
+    for (const row of rows) {
+      const rowSpan = row.reduce((sum, cid) => sum + getSpan(cid), 0);
+      if (rowSpan > maxRowSpan) maxRowSpan = rowSpan;
+    }
+    const span = Math.max(1, maxRowSpan);
     spanCache.set(nodeId, span);
     return span;
   };
 
-  const placeNode = (nodeId: string, leftSpan: number, y: number, minChildrenY?: number) => {
+  const heightCache = new Map<string, number>();
+  const getSubtreeHeight = (nodeId: string): number => {
+    if (heightCache.has(nodeId)) return heightCache.get(nodeId)!;
+
+    if (collapsedNodeIds.has(nodeId)) {
+      heightCache.set(nodeId, 0);
+      return 0;
+    }
+
+    const children = childrenByParent[nodeId] ?? [];
+    if (!children.length) {
+      heightCache.set(nodeId, 0);
+      return 0;
+    }
+
+    const rows = chunkArray(children, MAX_ROW_WIDTH);
+    let totalHeight = 0;
+
+    for (const row of rows) {
+      let maxChildSubtreeHeight = 0;
+      for (const cid of row) {
+        const ch = getSubtreeHeight(cid);
+        if (ch > maxChildSubtreeHeight) maxChildSubtreeHeight = ch;
+      }
+      totalHeight += LAYOUT_LEVEL_GAP + maxChildSubtreeHeight;
+    }
+
+    heightCache.set(nodeId, totalHeight);
+    return totalHeight;
+  };
+
+  const placeNode = (nodeId: string, leftSpan: number, y: number) => {
     const span = getSpan(nodeId);
-    const centerSpan = leftSpan + (span / 2);
+    const centerSpan = leftSpan + span / 2;
 
     positions[nodeId] = {
-      x: LAYOUT_BASE_X + (centerSpan * LAYOUT_HORIZONTAL_UNIT) - (NODE_WIDTH / 2),
+      x: LAYOUT_BASE_X + centerSpan * LAYOUT_HORIZONTAL_UNIT - NODE_WIDTH / 2,
       y,
     };
 
     const children = childrenByParent[nodeId] ?? [];
-    if (!children.length || collapsedNodeIds.has(nodeId)) {
-      return;
-    }
+    if (!children.length || collapsedNodeIds.has(nodeId)) return;
 
-    const rows = [children];
-    const childrenBlockStartY = Math.max(y + LAYOUT_LEVEL_GAP, minChildrenY ?? y + LAYOUT_LEVEL_GAP);
-    const descendantsStartY = childrenBlockStartY + (rows.length * LAYOUT_LEVEL_GAP);
+    const rows = chunkArray(children, MAX_ROW_WIDTH);
+    let currentY = y + LAYOUT_LEVEL_GAP;
 
-    rows.forEach((row, rowIndex) => {
-      const rowSpan = row.reduce((sum, childId) => sum + getSpan(childId), 0);
-      let childLeft = leftSpan + ((span - rowSpan) / 2);
-      const childY = childrenBlockStartY + (rowIndex * LAYOUT_LEVEL_GAP);
-      const rowDescendantsMinY = descendantsStartY + (rowIndex * LAYOUT_LEVEL_GAP);
+    for (const row of rows) {
+      const rowSpan = row.reduce((sum, cid) => sum + getSpan(cid), 0);
+      let childLeft = leftSpan + (span - rowSpan) / 2;
 
-      for (const childId of row) {
-        placeNode(childId, childLeft, childY, rowDescendantsMinY);
-        childLeft += getSpan(childId);
+      let maxChildSubtreeHeight = 0;
+      for (const cid of row) {
+        const ch = getSubtreeHeight(cid);
+        if (ch > maxChildSubtreeHeight) maxChildSubtreeHeight = ch;
       }
-    });
+
+      for (const cid of row) {
+        placeNode(cid, childLeft, currentY);
+        childLeft += getSpan(cid);
+      }
+
+      currentY += LAYOUT_LEVEL_GAP + maxChildSubtreeHeight;
+    }
   };
 
   let currentLeft = 0;
-  rootIds.forEach((rootId, index) => {
+  for (const rootId of rootIds) {
     placeNode(rootId, currentLeft, LAYOUT_BASE_Y);
-    currentLeft += getSpan(rootId);
-    if (index < rootIds.length - 1) {
-      currentLeft += 1;
-    }
-  });
+    currentLeft += getSpan(rootId) + 1;
+  }
 
   return positions;
 }
