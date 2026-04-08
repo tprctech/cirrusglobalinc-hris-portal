@@ -22,6 +22,7 @@ import {
   valuesCards,
 } from '../../data/mock/homeMockData';
 import { listResources, type CompanyResource } from '../../api/companyResources';
+import PdfViewer from '../../components/PdfViewer';
 
 const statIcons: Record<string, React.ReactNode> = {
   'clipboard-list': <ClipboardList size={22} />,
@@ -385,22 +386,16 @@ function HomePage() {
               </div>
             </div>
             <div className="resource-preview-body">
-              {previewLoading ? (
+              {getFileExtension(previewResource.file_name) === 'pdf' ? (
+                <PdfViewer url={`/api/v1/hr/company-resources/${previewResource.id}/download`} />
+              ) : previewLoading ? (
                 <div className="resource-preview-loading">Loading preview...</div>
               ) : previewBlobUrl ? (
-                isImageFile(previewResource.file_name) ? (
-                  <img
-                    src={previewBlobUrl}
-                    alt={previewResource.title}
-                    className="resource-preview-image"
-                  />
-                ) : (
-                  <iframe
-                    src={previewBlobUrl}
-                    title={previewResource.title}
-                    className="resource-preview-iframe"
-                  />
-                )
+                <img
+                  src={previewBlobUrl}
+                  alt={previewResource.title}
+                  className="resource-preview-image"
+                />
               ) : (
                 <div className="resource-preview-loading">Unable to load preview</div>
               )}
