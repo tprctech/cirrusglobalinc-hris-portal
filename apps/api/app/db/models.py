@@ -27,6 +27,7 @@ class UserAccount(Base):
     employee_id = Column(Integer, ForeignKey("employees.id", ondelete="CASCADE"), nullable=True)
     portal_role = Column(String(50), nullable=False, default="Employee")
     is_active = Column(Boolean, nullable=False, default=True)
+    is_deleted = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -66,6 +67,7 @@ class Employee(Base):
     country = Column(String(100), nullable=True, default="")
     office_location = Column(String(200), nullable=True, default="")
     profile_photo = Column(Text, nullable=True, default="")
+    is_deleted = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -78,6 +80,7 @@ class Department(Base):
     description = Column(Text, nullable=True, default="")
     created_by = Column(String(200), nullable=True, default="")
     status = Column(String(20), nullable=False, default="Active")
+    is_deleted = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -94,6 +97,7 @@ class Role(Base):
     department_id = Column(Integer, ForeignKey("departments.id", ondelete="SET NULL"), nullable=True)
     created_by = Column(String(200), nullable=True, default="")
     status = Column(String(20), nullable=False, default="Active")
+    is_deleted = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -113,6 +117,7 @@ class Competency(Base):
     competency_experts = Column(String(300), nullable=True, default="")
     created_by = Column(String(200), nullable=True, default="")
     status = Column(String(20), nullable=False, default="Active")
+    is_deleted = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -141,6 +146,7 @@ class ReviewTemplate(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     title = Column(String(300), nullable=False)
     description = Column(Text, nullable=True, default="")
+    is_deleted = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -179,6 +185,7 @@ class ReviewQuestionSet(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     title = Column(String(300), nullable=False)
     description = Column(Text, nullable=True, default="")
+    is_deleted = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -217,6 +224,7 @@ class SurveyTemplate(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     title = Column(String(300), nullable=False)
     description = Column(Text, nullable=True, default="")
+    is_deleted = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -255,6 +263,7 @@ class SurveyQuestionSet(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     title = Column(String(300), nullable=False)
     description = Column(Text, nullable=True, default="")
+    is_deleted = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -297,6 +306,7 @@ class RecognitionBadge(Base):
     is_official = Column(Boolean, nullable=False, default=False)
     point = Column(Integer, nullable=False, default=0)
     is_active = Column(Boolean, nullable=False, default=True)
+    is_deleted = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -310,6 +320,7 @@ class Reward(Base):
     reward_category = Column(String(100), nullable=True, default="")
     required_point = Column(Integer, nullable=False, default=0)
     is_active = Column(Boolean, nullable=False, default=True)
+    is_deleted = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -324,5 +335,6 @@ class RewardRedeem(Base):
     reward_points = Column(Integer, nullable=False, default=0)
     redeem_date = Column(Date, nullable=True)
     status = Column(String(30), nullable=False, default="Pending")
+    is_deleted = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

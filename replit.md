@@ -101,6 +101,16 @@ survey_templates, survey_template_sections, survey_template_questions,
 survey_question_sets, survey_question_set_sections, survey_question_set_questions,
 recognition_badges, rewards, reward_redeems
 
+## Soft Delete
+
+All main entity tables use **soft delete** — records are never physically removed from the database. Instead, an `is_deleted` boolean column (default `FALSE`) is set to `TRUE` when a record is "deleted."
+
+Tables with `is_deleted`: `user_accounts`, `employees`, `departments`, `roles`, `competencies`, `recognition_badges`, `rewards`, `reward_redeems`, `review_templates`, `review_question_sets`, `survey_templates`, `survey_question_sets`
+
+Child tables (sections, questions, learning materials) do not have `is_deleted` — they remain in the DB when their parent is soft-deleted.
+
+All list/get/update/delete endpoints filter by `is_deleted = FALSE`. Auth login and token checks also exclude soft-deleted users.
+
 ## Development Notes
 
 - Frontend proxy is configured (`allowedHosts: true`) for Replit's preview iframe; Vite proxies `/api` → `localhost:8000`

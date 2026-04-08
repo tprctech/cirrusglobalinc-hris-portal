@@ -104,12 +104,12 @@ class RedeemOut(BaseModel):
 
 @router.get("/badges", response_model=list[BadgeOut])
 def list_badges(db: Session = Depends(get_db)):
-    return db.query(RecognitionBadge).order_by(RecognitionBadge.id).all()
+    return db.query(RecognitionBadge).filter(RecognitionBadge.is_deleted == False).order_by(RecognitionBadge.id).all()
 
 
 @router.get("/badges/{badge_id}", response_model=BadgeOut)
 def get_badge(badge_id: int, db: Session = Depends(get_db)):
-    row = db.query(RecognitionBadge).filter(RecognitionBadge.id == badge_id).first()
+    row = db.query(RecognitionBadge).filter(RecognitionBadge.id == badge_id, RecognitionBadge.is_deleted == False).first()
     if not row:
         raise HTTPException(status_code=404, detail="Badge not found")
     return row
@@ -126,7 +126,7 @@ def create_badge(payload: BadgeCreate, db: Session = Depends(get_db)):
 
 @router.put("/badges/{badge_id}", response_model=BadgeOut)
 def update_badge(badge_id: int, payload: BadgeUpdate, db: Session = Depends(get_db)):
-    row = db.query(RecognitionBadge).filter(RecognitionBadge.id == badge_id).first()
+    row = db.query(RecognitionBadge).filter(RecognitionBadge.id == badge_id, RecognitionBadge.is_deleted == False).first()
     if not row:
         raise HTTPException(status_code=404, detail="Badge not found")
     for k, v in payload.model_dump(exclude_unset=True).items():
@@ -138,21 +138,21 @@ def update_badge(badge_id: int, payload: BadgeUpdate, db: Session = Depends(get_
 
 @router.delete("/badges/{badge_id}", status_code=204)
 def delete_badge(badge_id: int, db: Session = Depends(get_db)):
-    row = db.query(RecognitionBadge).filter(RecognitionBadge.id == badge_id).first()
+    row = db.query(RecognitionBadge).filter(RecognitionBadge.id == badge_id, RecognitionBadge.is_deleted == False).first()
     if not row:
         raise HTTPException(status_code=404, detail="Badge not found")
-    db.delete(row)
+    row.is_deleted = True
     db.commit()
 
 
 @router.get("/rewards", response_model=list[RewardOut])
 def list_rewards(db: Session = Depends(get_db)):
-    return db.query(Reward).order_by(Reward.id).all()
+    return db.query(Reward).filter(Reward.is_deleted == False).order_by(Reward.id).all()
 
 
 @router.get("/rewards/{reward_id}", response_model=RewardOut)
 def get_reward(reward_id: int, db: Session = Depends(get_db)):
-    row = db.query(Reward).filter(Reward.id == reward_id).first()
+    row = db.query(Reward).filter(Reward.id == reward_id, Reward.is_deleted == False).first()
     if not row:
         raise HTTPException(status_code=404, detail="Reward not found")
     return row
@@ -169,7 +169,7 @@ def create_reward(payload: RewardCreate, db: Session = Depends(get_db)):
 
 @router.put("/rewards/{reward_id}", response_model=RewardOut)
 def update_reward(reward_id: int, payload: RewardUpdate, db: Session = Depends(get_db)):
-    row = db.query(Reward).filter(Reward.id == reward_id).first()
+    row = db.query(Reward).filter(Reward.id == reward_id, Reward.is_deleted == False).first()
     if not row:
         raise HTTPException(status_code=404, detail="Reward not found")
     for k, v in payload.model_dump(exclude_unset=True).items():
@@ -181,16 +181,16 @@ def update_reward(reward_id: int, payload: RewardUpdate, db: Session = Depends(g
 
 @router.delete("/rewards/{reward_id}", status_code=204)
 def delete_reward(reward_id: int, db: Session = Depends(get_db)):
-    row = db.query(Reward).filter(Reward.id == reward_id).first()
+    row = db.query(Reward).filter(Reward.id == reward_id, Reward.is_deleted == False).first()
     if not row:
         raise HTTPException(status_code=404, detail="Reward not found")
-    db.delete(row)
+    row.is_deleted = True
     db.commit()
 
 
 @router.get("/redeems", response_model=list[RedeemOut])
 def list_redeems(status_filter: Optional[str] = None, db: Session = Depends(get_db)):
-    q = db.query(RewardRedeem)
+    q = db.query(RewardRedeem).filter(RewardRedeem.is_deleted == False)
     if status_filter:
         q = q.filter(RewardRedeem.status == status_filter)
     return q.order_by(RewardRedeem.id.desc()).all()
@@ -207,7 +207,7 @@ def create_redeem(payload: RedeemCreate, db: Session = Depends(get_db)):
 
 @router.put("/redeems/{redeem_id}", response_model=RedeemOut)
 def update_redeem(redeem_id: int, payload: RedeemUpdate, db: Session = Depends(get_db)):
-    row = db.query(RewardRedeem).filter(RewardRedeem.id == redeem_id).first()
+    row = db.query(RewardRedeem).filter(RewardRedeem.id == redeem_id, RewardRedeem.is_deleted == False).first()
     if not row:
         raise HTTPException(status_code=404, detail="Redeem not found")
     if payload.status is not None:
@@ -219,8 +219,8 @@ def update_redeem(redeem_id: int, payload: RedeemUpdate, db: Session = Depends(g
 
 @router.delete("/redeems/{redeem_id}", status_code=204)
 def delete_redeem(redeem_id: int, db: Session = Depends(get_db)):
-    row = db.query(RewardRedeem).filter(RewardRedeem.id == redeem_id).first()
+    row = db.query(RewardRedeem).filter(RewardRedeem.id == redeem_id, RewardRedeem.is_deleted == False).first()
     if not row:
         raise HTTPException(status_code=404, detail="Redeem not found")
-    db.delete(row)
+    row.is_deleted = True
     db.commit()

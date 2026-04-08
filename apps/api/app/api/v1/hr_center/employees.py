@@ -132,17 +132,18 @@ def _row_to_dict(row: Employee) -> dict:
 
 @router.get("/", response_model=list[EmployeeOut])
 def list_employees(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    rows = db.query(Employee).offset(skip).limit(limit).all()
+    rows = db.query(Employee).filter(Employee.is_deleted == False).offset(skip).limit(limit).all()
     return rows
 
 
 @router.get("/search/lookup")
 def search_employees(q: str = "", db: Session = Depends(get_db)):
+    base = db.query(Employee).filter(Employee.is_deleted == False)
     if not q or len(q) < 1:
-        rows = db.query(Employee).limit(20).all()
+        rows = base.limit(20).all()
     else:
         term = f"%{q}%"
-        rows = db.query(Employee).filter(
+        rows = base.filter(
             (Employee.first_name.ilike(term)) |
             (Employee.last_name.ilike(term)) |
             (Employee.display_name.ilike(term)) |
@@ -164,7 +165,7 @@ def search_employees(q: str = "", db: Session = Depends(get_db)):
 
 @router.get("/{employee_id}", response_model=EmployeeOut)
 def get_employee(employee_id: int, db: Session = Depends(get_db)):
-    row = db.query(Employee).filter(Employee.id == employee_id).first()
+    row = db.query(Employee).filter(Employee.id == employee_id, Employee.is_deleted == False).first()
     if not row:
         raise HTTPException(status_code=404, detail="Employee not found")
     return row
@@ -187,7 +188,7 @@ def create_employee(payload: EmployeeCreate, db: Session = Depends(get_db)):
 
 @router.put("/{employee_id}", response_model=EmployeeOut)
 def update_employee(employee_id: int, payload: EmployeeUpdate, db: Session = Depends(get_db)):
-    row = db.query(Employee).filter(Employee.id == employee_id).first()
+    row = db.query(Employee).filter(Employee.id == employee_id, Employee.is_deleted == False).first()
     if not row:
         raise HTTPException(status_code=404, detail="Employee not found")
     updates = payload.model_dump(exclude_unset=True)
@@ -202,22 +203,22 @@ def update_employee(employee_id: int, payload: EmployeeUpdate, db: Session = Dep
 
 @router.delete("/{employee_id}", status_code=204)
 def delete_employee(employee_id: int, db: Session = Depends(get_db)):
-    row = db.query(Employee).filter(Employee.id == employee_id).first()
+    row = db.query(Employee).filter(Employee.id == employee_id, Employee.is_deleted == False).first()
     if not row:
         raise HTTPException(status_code=404, detail="Employee not found")
-    acct_count = db.query(UserAccount).filter(UserAccount.employee_id == employee_id).count()
+    acct_count = db.query(UserAccount).filter(UserAccount.employee_id == employee_id, UserAccount.is_deleted == False).count()
     if acct_count > 0:
         raise HTTPException(
             status_code=409,
             detail="Cannot delete this employee because they have a linked user account. Remove the user account first.",
         )
-    db.delete(row)
+    row.is_deleted = True
     db.commit()
 
 
 @router.post("/{employee_id}/photo", response_model=EmployeeOut)
 def upload_photo(employee_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
-    row = db.query(Employee).filter(Employee.id == employee_id).first()
+    row = db.query(Employee).filter(Employee.id == employee_id, Employee.is_deleted == False).first()
     if not row:
         raise HTTPException(status_code=404, detail="Employee not found")
     if file.content_type not in ("image/jpeg", "image/png", "image/webp"):

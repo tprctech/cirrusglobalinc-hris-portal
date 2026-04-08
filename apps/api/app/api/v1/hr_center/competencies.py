@@ -82,12 +82,12 @@ VALID_STATUSES = {"active": "Active", "inactive": "Inactive"}
 
 @router.get("/", response_model=list[CompetencyOut])
 def list_competencies(db: Session = Depends(get_db)):
-    return db.query(Competency).order_by(Competency.competency_code).all()
+    return db.query(Competency).filter(Competency.is_deleted == False).order_by(Competency.competency_code).all()
 
 
 @router.get("/{competency_id}", response_model=CompetencyOut)
 def get_competency(competency_id: int, db: Session = Depends(get_db)):
-    row = db.query(Competency).filter(Competency.id == competency_id).first()
+    row = db.query(Competency).filter(Competency.id == competency_id, Competency.is_deleted == False).first()
     if not row:
         raise HTTPException(status_code=404, detail="Competency not found")
     return row
@@ -112,7 +112,7 @@ def create_competency(payload: CompetencyCreate, db: Session = Depends(get_db)):
 
 @router.put("/{competency_id}", response_model=CompetencyOut)
 def update_competency(competency_id: int, payload: CompetencyUpdate, db: Session = Depends(get_db)):
-    row = db.query(Competency).filter(Competency.id == competency_id).first()
+    row = db.query(Competency).filter(Competency.id == competency_id, Competency.is_deleted == False).first()
     if not row:
         raise HTTPException(status_code=404, detail="Competency not found")
     updates = payload.model_dump(exclude_unset=True, exclude={"learning_materials"})
@@ -134,16 +134,20 @@ def update_competency(competency_id: int, payload: CompetencyUpdate, db: Session
 
 @router.delete("/{competency_id}", status_code=204)
 def delete_competency(competency_id: int, db: Session = Depends(get_db)):
-    row = db.query(Competency).filter(Competency.id == competency_id).first()
+    row = db.query(Competency).filter(Competency.id == competency_id, Competency.is_deleted == False).first()
     if not row:
         raise HTTPException(status_code=404, detail="Competency not found")
-    role_count = db.scalar(
-        role_competencies.select().where(role_competencies.c.competency_id == competency_id).with_only_columns(func.count())
-    )
+    from app.db.models import Role
+    role_count = db.query(func.count()).select_from(role_competencies).join(
+        Role, Role.id == role_competencies.c.role_id
+    ).filter(
+        role_competencies.c.competency_id == competency_id,
+        Role.is_deleted == False,
+    ).scalar()
     if role_count and role_count > 0:
         raise HTTPException(
             status_code=409,
             detail=f"Cannot delete this competency because it is currently assigned to {role_count} role(s).",
         )
-    db.delete(row)
+    row.is_deleted = True
     db.commit()

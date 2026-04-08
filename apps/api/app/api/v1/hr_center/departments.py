@@ -53,13 +53,13 @@ def _to_out(row: Department) -> dict:
 
 @router.get("/", response_model=list[DepartmentOut])
 def list_departments(db: Session = Depends(get_db)):
-    rows = db.query(Department).order_by(Department.name).all()
+    rows = db.query(Department).filter(Department.is_deleted == False).order_by(Department.name).all()
     return [_to_out(r) for r in rows]
 
 
 @router.get("/{department_id}", response_model=DepartmentOut)
 def get_department(department_id: int, db: Session = Depends(get_db)):
-    row = db.query(Department).filter(Department.id == department_id).first()
+    row = db.query(Department).filter(Department.id == department_id, Department.is_deleted == False).first()
     if not row:
         raise HTTPException(status_code=404, detail="Department not found")
     return _to_out(row)
@@ -88,7 +88,7 @@ def create_department(payload: DepartmentCreate, db: Session = Depends(get_db)):
 
 @router.put("/{department_id}", response_model=DepartmentOut)
 def update_department(department_id: int, payload: DepartmentUpdate, db: Session = Depends(get_db)):
-    row = db.query(Department).filter(Department.id == department_id).first()
+    row = db.query(Department).filter(Department.id == department_id, Department.is_deleted == False).first()
     if not row:
         raise HTTPException(status_code=404, detail="Department not found")
 
@@ -113,14 +113,14 @@ def update_department(department_id: int, payload: DepartmentUpdate, db: Session
 
 @router.delete("/{department_id}", status_code=204)
 def delete_department(department_id: int, db: Session = Depends(get_db)):
-    row = db.query(Department).filter(Department.id == department_id).first()
+    row = db.query(Department).filter(Department.id == department_id, Department.is_deleted == False).first()
     if not row:
         raise HTTPException(status_code=404, detail="Department not found")
-    role_count = db.query(Role).filter(Role.department_id == department_id).count()
+    role_count = db.query(Role).filter(Role.department_id == department_id, Role.is_deleted == False).count()
     if role_count > 0:
         raise HTTPException(
             status_code=409,
             detail=f"Cannot delete this department because it is currently assigned to {role_count} role(s).",
         )
-    db.delete(row)
+    row.is_deleted = True
     db.commit()

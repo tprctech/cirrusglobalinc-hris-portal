@@ -72,13 +72,13 @@ def _to_out(row: Role) -> dict:
 
 @router.get("/", response_model=list[RoleOut])
 def list_roles(db: Session = Depends(get_db)):
-    rows = db.query(Role).all()
+    rows = db.query(Role).filter(Role.is_deleted == False).all()
     return [_to_out(r) for r in rows]
 
 
 @router.get("/{role_id}", response_model=RoleOut)
 def get_role(role_id: int, db: Session = Depends(get_db)):
-    row = db.query(Role).filter(Role.id == role_id).first()
+    row = db.query(Role).filter(Role.id == role_id, Role.is_deleted == False).first()
     if not row:
         raise HTTPException(status_code=404, detail="Role not found")
     return _to_out(row)
@@ -87,14 +87,14 @@ def get_role(role_id: int, db: Session = Depends(get_db)):
 @router.post("/", response_model=RoleOut, status_code=201)
 def create_role(payload: RoleCreate, db: Session = Depends(get_db)):
     if payload.department_id:
-        dept = db.query(Department).filter(Department.id == payload.department_id).first()
+        dept = db.query(Department).filter(Department.id == payload.department_id, Department.is_deleted == False).first()
         if not dept:
             raise HTTPException(status_code=400, detail="Department not found")
     data = payload.model_dump(exclude={"competency_ids"})
     data["status"] = VALID_STATUSES.get((data.get("status") or "Active").strip().lower(), "Active")
     row = Role(**data)
     if payload.competency_ids:
-        comps = db.query(Competency).filter(Competency.id.in_(payload.competency_ids)).all()
+        comps = db.query(Competency).filter(Competency.id.in_(payload.competency_ids), Competency.is_deleted == False).all()
         row.competencies = comps
     db.add(row)
     try:
@@ -108,7 +108,7 @@ def create_role(payload: RoleCreate, db: Session = Depends(get_db)):
 
 @router.put("/{role_id}", response_model=RoleOut)
 def update_role(role_id: int, payload: RoleUpdate, db: Session = Depends(get_db)):
-    row = db.query(Role).filter(Role.id == role_id).first()
+    row = db.query(Role).filter(Role.id == role_id, Role.is_deleted == False).first()
     if not row:
         raise HTTPException(status_code=404, detail="Role not found")
     updates = payload.model_dump(exclude_unset=True, exclude={"competency_ids"})
@@ -120,7 +120,7 @@ def update_role(role_id: int, payload: RoleUpdate, db: Session = Depends(get_db)
     for k, v in updates.items():
         setattr(row, k, v)
     if payload.competency_ids is not None:
-        comps = db.query(Competency).filter(Competency.id.in_(payload.competency_ids)).all()
+        comps = db.query(Competency).filter(Competency.id.in_(payload.competency_ids), Competency.is_deleted == False).all()
         row.competencies = comps
     db.commit()
     db.refresh(row)
@@ -129,14 +129,14 @@ def update_role(role_id: int, payload: RoleUpdate, db: Session = Depends(get_db)
 
 @router.delete("/{role_id}", status_code=204)
 def delete_role(role_id: int, db: Session = Depends(get_db)):
-    row = db.query(Role).filter(Role.id == role_id).first()
+    row = db.query(Role).filter(Role.id == role_id, Role.is_deleted == False).first()
     if not row:
         raise HTTPException(status_code=404, detail="Role not found")
-    emp_count = db.query(Employee).filter(Employee.job_title == row.role_job_title).count()
+    emp_count = db.query(Employee).filter(Employee.job_title == row.role_job_title, Employee.is_deleted == False).count()
     if emp_count > 0:
         raise HTTPException(
             status_code=409,
             detail=f"Cannot delete this role because it is currently assigned to {emp_count} employee(s).",
         )
-    db.delete(row)
+    row.is_deleted = True
     db.commit()

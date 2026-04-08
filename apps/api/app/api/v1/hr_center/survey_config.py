@@ -126,12 +126,12 @@ def _build_qs_sections(sections_data: list[SectionIn]) -> list[SurveyQuestionSet
 
 @router.get("/templates", response_model=list[TemplateOut])
 def list_survey_templates(db: Session = Depends(get_db)):
-    return db.query(SurveyTemplate).order_by(SurveyTemplate.id).all()
+    return db.query(SurveyTemplate).filter(SurveyTemplate.is_deleted == False).order_by(SurveyTemplate.id).all()
 
 
 @router.get("/templates/{template_id}", response_model=TemplateOut)
 def get_survey_template(template_id: int, db: Session = Depends(get_db)):
-    row = db.query(SurveyTemplate).filter(SurveyTemplate.id == template_id).first()
+    row = db.query(SurveyTemplate).filter(SurveyTemplate.id == template_id, SurveyTemplate.is_deleted == False).first()
     if not row:
         raise HTTPException(status_code=404, detail="Survey template not found")
     return row
@@ -149,7 +149,7 @@ def create_survey_template(payload: TemplateCreate, db: Session = Depends(get_db
 
 @router.put("/templates/{template_id}", response_model=TemplateOut)
 def update_survey_template(template_id: int, payload: TemplateUpdate, db: Session = Depends(get_db)):
-    row = db.query(SurveyTemplate).filter(SurveyTemplate.id == template_id).first()
+    row = db.query(SurveyTemplate).filter(SurveyTemplate.id == template_id, SurveyTemplate.is_deleted == False).first()
     if not row:
         raise HTTPException(status_code=404, detail="Survey template not found")
     if payload.title is not None:
@@ -166,21 +166,21 @@ def update_survey_template(template_id: int, payload: TemplateUpdate, db: Sessio
 
 @router.delete("/templates/{template_id}", status_code=204)
 def delete_survey_template(template_id: int, db: Session = Depends(get_db)):
-    row = db.query(SurveyTemplate).filter(SurveyTemplate.id == template_id).first()
+    row = db.query(SurveyTemplate).filter(SurveyTemplate.id == template_id, SurveyTemplate.is_deleted == False).first()
     if not row:
         raise HTTPException(status_code=404, detail="Survey template not found")
-    db.delete(row)
+    row.is_deleted = True
     db.commit()
 
 
 @router.get("/question-sets", response_model=list[QuestionSetOut])
 def list_survey_question_sets(db: Session = Depends(get_db)):
-    return db.query(SurveyQuestionSet).order_by(SurveyQuestionSet.id).all()
+    return db.query(SurveyQuestionSet).filter(SurveyQuestionSet.is_deleted == False).order_by(SurveyQuestionSet.id).all()
 
 
 @router.get("/question-sets/{qs_id}", response_model=QuestionSetOut)
 def get_survey_question_set(qs_id: int, db: Session = Depends(get_db)):
-    row = db.query(SurveyQuestionSet).filter(SurveyQuestionSet.id == qs_id).first()
+    row = db.query(SurveyQuestionSet).filter(SurveyQuestionSet.id == qs_id, SurveyQuestionSet.is_deleted == False).first()
     if not row:
         raise HTTPException(status_code=404, detail="Survey question set not found")
     return row
@@ -198,7 +198,7 @@ def create_survey_question_set(payload: QuestionSetCreate, db: Session = Depends
 
 @router.put("/question-sets/{qs_id}", response_model=QuestionSetOut)
 def update_survey_question_set(qs_id: int, payload: QuestionSetUpdate, db: Session = Depends(get_db)):
-    row = db.query(SurveyQuestionSet).filter(SurveyQuestionSet.id == qs_id).first()
+    row = db.query(SurveyQuestionSet).filter(SurveyQuestionSet.id == qs_id, SurveyQuestionSet.is_deleted == False).first()
     if not row:
         raise HTTPException(status_code=404, detail="Survey question set not found")
     if payload.title is not None:
@@ -215,8 +215,8 @@ def update_survey_question_set(qs_id: int, payload: QuestionSetUpdate, db: Sessi
 
 @router.delete("/question-sets/{qs_id}", status_code=204)
 def delete_survey_question_set(qs_id: int, db: Session = Depends(get_db)):
-    row = db.query(SurveyQuestionSet).filter(SurveyQuestionSet.id == qs_id).first()
+    row = db.query(SurveyQuestionSet).filter(SurveyQuestionSet.id == qs_id, SurveyQuestionSet.is_deleted == False).first()
     if not row:
         raise HTTPException(status_code=404, detail="Survey question set not found")
-    db.delete(row)
+    row.is_deleted = True
     db.commit()

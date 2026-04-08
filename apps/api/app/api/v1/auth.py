@@ -120,7 +120,7 @@ def serialize_employee(emp: Employee) -> dict:
 
 @router.post("/login")
 def login(payload: LoginRequest, db: Session = Depends(get_db)):
-    user = db.query(UserAccount).filter(UserAccount.email == payload.email).first()
+    user = db.query(UserAccount).filter(UserAccount.email == payload.email, UserAccount.is_deleted == False).first()
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid email or password")
     if not user.is_active:
@@ -149,7 +149,7 @@ def get_me(db: Session = Depends(get_db), authorization: str = Header("")):
         raise HTTPException(status_code=401, detail="Missing or invalid authorization header")
     token = authorization[7:]
     data = decode_token(token)
-    user = db.query(UserAccount).filter(UserAccount.id == int(data["sub"])).first()
+    user = db.query(UserAccount).filter(UserAccount.id == int(data["sub"]), UserAccount.is_deleted == False).first()
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
 
@@ -171,17 +171,17 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db), authorizat
         token = authorization[7:]
         try:
             caller_data = decode_token(token)
-            caller = db.query(UserAccount).filter(UserAccount.id == int(caller_data["sub"])).first()
+            caller = db.query(UserAccount).filter(UserAccount.id == int(caller_data["sub"]), UserAccount.is_deleted == False).first()
             if not caller or caller.portal_role not in ("Admin", "HR"):
                 raise HTTPException(status_code=403, detail="Only Admin or HR users can register new accounts")
         except HTTPException:
             raise
     else:
-        existing_count = db.query(UserAccount).count()
+        existing_count = db.query(UserAccount).filter(UserAccount.is_deleted == False).count()
         if existing_count > 0:
             raise HTTPException(status_code=403, detail="Registration requires admin authentication")
 
-    existing = db.query(UserAccount).filter(UserAccount.email == payload.email).first()
+    existing = db.query(UserAccount).filter(UserAccount.email == payload.email, UserAccount.is_deleted == False).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
 
@@ -189,7 +189,7 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db), authorizat
     role = VALID_ROLES.get(payload.portal_role.strip().lower(), "Employee")
 
     if payload.employee_id:
-        emp = db.query(Employee).filter(Employee.id == payload.employee_id).first()
+        emp = db.query(Employee).filter(Employee.id == payload.employee_id, Employee.is_deleted == False).first()
         if not emp:
             raise HTTPException(status_code=400, detail="Employee not found")
 
@@ -214,11 +214,11 @@ def reset_password(employee_id: int, db: Session = Depends(get_db), authorizatio
         raise HTTPException(status_code=401, detail="Authentication required")
     token = authorization[7:]
     caller_data = decode_token(token)
-    caller = db.query(UserAccount).filter(UserAccount.id == int(caller_data["sub"])).first()
+    caller = db.query(UserAccount).filter(UserAccount.id == int(caller_data["sub"]), UserAccount.is_deleted == False).first()
     if not caller or caller.portal_role not in ("Admin", "HR"):
         raise HTTPException(status_code=403, detail="Only Admin or HR users can reset passwords")
 
-    user = db.query(UserAccount).filter(UserAccount.employee_id == employee_id).first()
+    user = db.query(UserAccount).filter(UserAccount.employee_id == employee_id, UserAccount.is_deleted == False).first()
     if not user:
         raise HTTPException(status_code=404, detail="No user account found for this employee")
 
@@ -236,7 +236,7 @@ def change_password(payload: ChangePasswordRequest, db: Session = Depends(get_db
         raise HTTPException(status_code=401, detail="Authentication required")
     token = authorization[7:]
     data = decode_token(token)
-    user = db.query(UserAccount).filter(UserAccount.id == int(data["sub"])).first()
+    user = db.query(UserAccount).filter(UserAccount.id == int(data["sub"]), UserAccount.is_deleted == False).first()
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
 
