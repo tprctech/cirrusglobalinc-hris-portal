@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Download, FileText, Pencil, Plus, Trash2, ToggleLeft, ToggleRight, Upload, X } from 'lucide-react';
+import { Download, FileText, Pencil, Plus, Trash2, Upload, X } from 'lucide-react';
 import AdminCenterSidebar from '../../components/AdminCenterSidebar';
 import AdminTablePagination from '../../components/AdminTablePagination';
 import ConfirmationDialog from '../../components/ConfirmationDialog';
@@ -153,13 +153,6 @@ function AdminCompanyResourcesPage({ onNavigate }: AdminCompanyResourcesPageProp
     setSubmitting(false);
   }
 
-  async function handleToggleActive(r: CompanyResource) {
-    try {
-      await updateResource(r.id, { is_active: !r.is_active });
-      fetchResources();
-    } catch { /* ignore */ }
-  }
-
   async function handleDelete() {
     if (!pendingDelete) return;
     try {
@@ -253,19 +246,9 @@ function AdminCompanyResourcesPage({ onNavigate }: AdminCompanyResourcesPageProp
                           <td style={{ fontSize: 13, color: 'var(--gray-500)' }}>{r.uploaded_by || '-'}</td>
                           <td style={{ fontSize: 13, color: 'var(--gray-500)' }}>{formatDate(r.created_at)}</td>
                           <td>
-                            <button
-                              className="admin-icon-btn"
-                              onClick={() => handleToggleActive(r)}
-                              title={r.is_active ? 'Active - click to deactivate' : 'Inactive - click to activate'}
-                              style={{
-                                display: 'inline-flex', alignItems: 'center', gap: 4,
-                                background: 'none', border: 'none', cursor: 'pointer', fontSize: 13,
-                                color: r.is_active ? 'var(--primary)' : 'var(--gray-400)',
-                              }}
-                            >
-                              {r.is_active ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}
-                              <span>{r.is_active ? 'Active' : 'Inactive'}</span>
-                            </button>
+                            <span className={`admin-status-badge ${r.is_active ? 'active' : 'inactive'}`}>
+                              {r.is_active ? 'Active' : 'Inactive'}
+                            </span>
                           </td>
                           <td>
                             <div className="admin-actions-cell">
