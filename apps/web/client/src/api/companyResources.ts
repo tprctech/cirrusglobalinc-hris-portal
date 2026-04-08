@@ -1,4 +1,4 @@
-const API_BASE = '/api/v1/hr/company-resources';
+const API_BASE = '/api/v1/hr/company-resources/';
 
 export type CompanyResource = {
   id: number;
@@ -21,7 +21,7 @@ export async function listResources(category?: string): Promise<CompanyResource[
 }
 
 export async function getResource(id: number): Promise<CompanyResource> {
-  const res = await fetch(`${API_BASE}/${id}`);
+  const res = await fetch(`${API_BASE}${id}`);
   if (!res.ok) throw new Error('Failed to fetch resource');
   return res.json();
 }
@@ -61,7 +61,7 @@ export async function updateResource(
   if (data.is_active !== undefined) formData.append('is_active', String(data.is_active));
   if (data.uploaded_by !== undefined) formData.append('uploaded_by', data.uploaded_by);
   if (data.file) formData.append('file', data.file);
-  const res = await fetch(`${API_BASE}/${id}`, { method: 'PUT', body: formData });
+  const res = await fetch(`${API_BASE}${id}`, { method: 'PUT', body: formData });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.detail || 'Failed to update resource');
@@ -70,10 +70,10 @@ export async function updateResource(
 }
 
 export async function deleteResource(id: number): Promise<void> {
-  const res = await fetch(`${API_BASE}/${id}`, { method: 'DELETE' });
+  const res = await fetch(`${API_BASE}${id}`, { method: 'DELETE' });
   if (!res.ok) throw new Error('Failed to delete resource');
 }
 
 export function downloadResource(id: number): void {
-  window.open(`${API_BASE}/${id}/download`, '_blank');
+  window.open(`${API_BASE}${id}/download`, '_blank');
 }
