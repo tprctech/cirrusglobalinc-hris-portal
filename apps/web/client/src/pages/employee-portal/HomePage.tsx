@@ -41,7 +41,7 @@ type BdayEmployee = {
 };
 
 function formatBirthdayLabel(emp: BdayEmployee): { name: string; date: string } {
-  const displayName = emp.display_name || emp.last_name;
+  const displayName = emp.display_name || [emp.first_name, emp.last_name].filter(Boolean).join(' ') || emp.last_name;
   if (!emp.birthdate) return { name: displayName, date: '' };
   const d = new Date(emp.birthdate + 'T00:00:00');
   const month = MONTH_NAMES[d.getMonth()];
