@@ -31,9 +31,12 @@ type AdminMenu = (
   | 'configSurveys'
   | 'configFeedback'
   | 'configRecognitions'
+  | 'reportingReviews'
+  | 'reportingSurveys'
 );
 
 const LIBRARY_MENUS: AdminMenu[] = ['libraryRole', 'libraryDepartment', 'libraryCompetency', 'companyResources'];
+const REPORTING_MENUS: AdminMenu[] = ['reportingReviews', 'reportingSurveys'];
 
 type AdminCenterSidebarProps = {
   activeMenu: AdminMenu;
@@ -53,6 +56,9 @@ function AdminCenterSidebar({ activeMenu, onNavigate }: AdminCenterSidebarProps)
     || activeMenu === 'configFeedback'
     || activeMenu === 'configRecognitions',
   );
+  const [reportingExpanded, setReportingExpanded] = useState(
+    REPORTING_MENUS.includes(activeMenu),
+  );
 
   const isLibraryMenuActive = LIBRARY_MENUS.includes(activeMenu);
   const isConfigMenuActive = (
@@ -64,6 +70,7 @@ function AdminCenterSidebar({ activeMenu, onNavigate }: AdminCenterSidebarProps)
     || activeMenu === 'configFeedback'
     || activeMenu === 'configRecognitions'
   );
+  const isReportingMenuActive = REPORTING_MENUS.includes(activeMenu);
 
   function handleNavigate(path: string, event: ReactMouseEvent<HTMLButtonElement>) {
     if (event.ctrlKey || event.metaKey || event.button === 1) {
@@ -196,6 +203,36 @@ function AdminCenterSidebar({ activeMenu, onNavigate }: AdminCenterSidebarProps)
           >
             <Award size={14} />
             <span>Recognitions</span>
+          </button>
+        </div>
+      )}
+
+      <button
+        className={`admin-center-side-link ${isReportingMenuActive ? 'active' : ''}`}
+        onClick={() => setReportingExpanded((previous) => !previous)}
+      >
+        <BarChart2 size={16} />
+        <span>Reporting</span>
+        <span className="admin-center-accordion-chevron">
+          {reportingExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        </span>
+      </button>
+
+      {reportingExpanded && (
+        <div className="admin-center-submenu">
+          <button
+            className={`admin-center-sub-link ${activeMenu === 'reportingReviews' ? 'active' : ''}`}
+            onClick={(event) => handleNavigate(ROUTES.adminReportingReviews, event)}
+          >
+            <ClipboardList size={14} />
+            <span>Reviews</span>
+          </button>
+          <button
+            className={`admin-center-sub-link ${activeMenu === 'reportingSurveys' ? 'active' : ''}`}
+            onClick={(event) => handleNavigate(ROUTES.adminReportingSurveys, event)}
+          >
+            <BarChart2 size={14} />
+            <span>Surveys</span>
           </button>
         </div>
       )}

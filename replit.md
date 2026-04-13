@@ -127,6 +127,15 @@ Child tables (sections, questions, learning materials) do not have `is_deleted` 
 
 All list/get/update/delete endpoints filter by `is_deleted = FALSE`. Auth login and token checks also exclude soft-deleted users.
 
+### Reporting (HR Center)
+
+- **Review Reporting** (`/admin/reporting/reviews`): Lists all review cycles as clickable cards; drill-down view shows Google Forms-style response aggregation per question
+- **Survey Reporting** (`/admin/reporting/surveys`): Lists all survey campaigns; same drill-down reporting view
+- **Summary view**: Per-question aggregation — rating bars with average for Rating/5-Star Rating questions, percentage bars for Single Choice/Multiple Choice, scrollable text list for Long Answer
+- **Individual view**: Paginated per-respondent view showing all answers
+- **Sidebar**: "Reporting" accordion added to HR Center sidebar with Reviews and Surveys sub-links
+- **Files**: `apps/web/client/src/pages/admin-center/reporting/AdminReportingReviewsPage.tsx`, `AdminReportingSurveysPage.tsx`, `AdminReporting.css`
+
 ## Development Notes
 
 - Frontend proxy is configured (`allowedHosts: true`) for Replit's preview iframe; Vite proxies `/api` → `localhost:8000`
