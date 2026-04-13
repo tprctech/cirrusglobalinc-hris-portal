@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -47,11 +48,12 @@ type BuilderFieldConfig = {
   dataField: string;
   value: string;
   onChange: (value: string) => void;
-  type?: 'text' | 'date' | 'select';
+  type?: 'text' | 'date' | 'select' | 'user-search';
   options?: BuilderFieldOption[];
   helperText?: string;
   disabled?: boolean;
   disabledTooltip?: string;
+  placeholder?: string;
 };
 
 export type BuilderExistingSectionOption = {
@@ -903,6 +905,113 @@ function TemplateBuilderModal({
 
 export default TemplateBuilderModal;
 
+type EmployeeResult = {
+  id: number;
+  employee_id: string;
+  first_name: string;
+  middle_name: string;
+  last_name: string;
+  display_name: string;
+  email: string;
+};
+
+function UserSearchField({ field }: { field: BuilderFieldConfig }) {
+  const [query, setQuery] = useState(field.value);
+  const [results, setResults] = useState<EmployeeResult[]>([]);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  const doSearch = useCallback((term: string) => {
+    setLoading(true);
+    fetch(`/api/v1/hr/employees/search/lookup?q=${encodeURIComponent(term)}`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data: EmployeeResult[]) => {
+        setResults(data);
+        setOpen(true);
+      })
+      .catch(() => setResults([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  function handleInputChange(value: string) {
+    setQuery(value);
+    field.onChange(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => doSearch(value), 250);
+  }
+
+  function handleSelect(emp: EmployeeResult) {
+    const email = emp.email;
+    setQuery(email);
+    field.onChange(email);
+    setOpen(false);
+  }
+
+  function handleFocus() {
+    if (results.length > 0) {
+      setOpen(true);
+    } else {
+      doSearch(query);
+    }
+  }
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    setQuery(field.value);
+  }, [field.value]);
+
+  const displayName = (emp: EmployeeResult) => {
+    const name = emp.display_name || `${emp.first_name} ${emp.last_name}`.trim();
+    return name;
+  };
+
+  return (
+    <div className="user-search-field" ref={wrapperRef}>
+      <input
+        type="text"
+        id={field.id}
+        value={query}
+        onChange={(e) => handleInputChange(e.target.value)}
+        onFocus={handleFocus}
+        placeholder={field.placeholder || 'Search by name or email...'}
+        autoComplete="off"
+        disabled={field.disabled}
+      />
+      {open && (
+        <div className="user-search-dropdown">
+          {loading && <div className="user-search-loading">Searching...</div>}
+          {!loading && results.length === 0 && (
+            <div className="user-search-empty">No employees found</div>
+          )}
+          {!loading &&
+            results.map((emp) => (
+              <button
+                key={emp.id}
+                className="user-search-option"
+                type="button"
+                onClick={() => handleSelect(emp)}
+              >
+                <span className="user-search-option-name">{displayName(emp)}</span>
+                <span className="user-search-option-email">{emp.email}</span>
+              </button>
+            ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 
   function renderBuilderField(field: BuilderFieldConfig) {
     const inputType = field.type === 'date' ? 'date' : 'text';
@@ -910,7 +1019,9 @@ export default TemplateBuilderModal;
     return (
       <div className="builder-block" key={field.id}>
         <label htmlFor={field.id}>{field.label}</label>
-        {field.type === 'select' ? (
+        {field.type === 'user-search' ? (
+          <UserSearchField field={field} />
+        ) : field.type === 'select' ? (
           <select
             id={field.id}
             value={field.value}

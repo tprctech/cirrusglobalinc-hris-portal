@@ -445,7 +445,8 @@ function ReviewsPage() {
           dataField: 'reviewee',
           value: reviewee,
           onChange: setReviewee,
-          type: 'text',
+          type: 'user-search',
+          placeholder: 'Search by name or email...',
         }}
         afterSubjectFields={[
           {
