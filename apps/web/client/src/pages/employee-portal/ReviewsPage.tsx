@@ -204,11 +204,7 @@ function ReviewsPage() {
     [questionSets],
   );
 
-  const mockReviews: Review[] = (activeTab === 'my'
-    ? reviewsMockData.tabs.myReviews
-    : reviewsMockData.tabs.teamReviews) as Review[];
-
-  const cycleReviews: Review[] = cycles.map((c) => ({
+  const allReviews: Review[] = cycles.map((c) => ({
     id: String(c.id),
     title: c.title,
     employee: c.reviewee_email,
@@ -218,8 +214,6 @@ function ReviewsPage() {
     dueDate: formatDisplayDate(c.due_date),
     status: (c.status === 'Completed' ? 'Completed' : c.status === 'In Progress' ? 'In Progress' : 'Pending') as ReviewStatus,
   }));
-
-  const allReviews = [...cycleReviews, ...mockReviews];
 
   function openCreateEvaluationModal() {
     setEvaluationId(nextEvaluationId());
@@ -413,7 +407,6 @@ function ReviewsPage() {
             <button
               className="review-employee-btn"
               onClick={() => openResponseForm(review.id)}
-              disabled={Number.isNaN(Number(review.id))}
             >
               <CircleDot size={15} />
               {review.status === 'Completed' ? 'View Response' : 'Review Employee'}

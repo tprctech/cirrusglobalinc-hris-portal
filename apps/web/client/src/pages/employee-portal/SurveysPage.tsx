@@ -193,20 +193,17 @@ function SurveysPage() {
     [questionSets],
   );
 
-  const activeSurveys: ActiveSurvey[] = [
-    ...(surveysMockData.tabs.activeSurveys as ActiveSurvey[]),
-    ...campaigns
-      .filter((c) => c.status === 'Active')
-      .map((c) => ({
-        id: String(c.id),
-        title: c.title,
-        audience: c.scope,
-        dueDate: toUsDate(c.due_date),
-        estimatedTime: '~5 min',
-        questionCount: 0,
-        status: 'Active' as const,
-      })),
-  ];
+  const activeSurveys: ActiveSurvey[] = campaigns
+    .filter((c) => c.status === 'Active')
+    .map((c) => ({
+      id: String(c.id),
+      title: c.title,
+      audience: c.scope,
+      dueDate: toUsDate(c.due_date),
+      estimatedTime: '~5 min',
+      questionCount: 0,
+      status: 'Active' as const,
+    }));
 
   const managedSurveys: ManagedSurvey[] = campaigns.map((c) => ({
     id: String(c.id),
@@ -398,7 +395,6 @@ function SurveysPage() {
               <button
                 className="survey-action-btn"
                 onClick={() => openResponseForm(survey.id)}
-                disabled={Number.isNaN(Number(survey.id))}
               >
                 <CircleDot size={15} />
                 Answer Survey
