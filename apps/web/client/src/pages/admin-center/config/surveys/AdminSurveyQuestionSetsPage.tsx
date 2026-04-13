@@ -71,7 +71,7 @@ function cloneSection(section: BuilderSection): BuilderSection {
 }
 
 function AdminSurveyQuestionSetsPage({ onNavigate }: AdminSurveyQuestionSetsPageProps) {
-  const { questionSets, reload } = useSurveyCatalog();
+  const { questionSets, loading, reload } = useSurveyCatalog();
   const [currentPage, setCurrentPage] = useState(1);
   const [showBuilder, setShowBuilder] = useState(false);
   const [editingQuestionSetId, setEditingQuestionSetId] = useState<string | null>(null);
@@ -177,7 +177,13 @@ function AdminSurveyQuestionSetsPage({ onNavigate }: AdminSurveyQuestionSetsPage
                   </tr>
                 </thead>
                 <tbody>
-                  {pagedRows.map((row) => (
+                  {loading && (
+                    <tr><td colSpan={3} className="admin-empty-state">Loading...</td></tr>
+                  )}
+                  {!loading && totalRows === 0 && (
+                    <tr><td colSpan={3} className="admin-empty-state">No survey question sets found.</td></tr>
+                  )}
+                  {!loading && pagedRows.map((row) => (
                     <tr key={row.id}>
                       <td>{row.title}</td>
                       <td>{row.description}</td>

@@ -73,7 +73,7 @@ function cloneSections(sections: BuilderSection[]): BuilderSection[] {
 }
 
 function AdminSurveyTemplatesPage({ onNavigate }: AdminSurveyTemplatesPageProps) {
-  const { templates, questionSets, reload } = useSurveyCatalog();
+  const { templates, questionSets, loading, reload } = useSurveyCatalog();
   const [currentPage, setCurrentPage] = useState(1);
   const [showBuilder, setShowBuilder] = useState(false);
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
@@ -188,7 +188,13 @@ function AdminSurveyTemplatesPage({ onNavigate }: AdminSurveyTemplatesPageProps)
                   </tr>
                 </thead>
                 <tbody>
-                  {pagedRows.map((row) => (
+                  {loading && (
+                    <tr><td colSpan={3} className="admin-empty-state">Loading...</td></tr>
+                  )}
+                  {!loading && totalRows === 0 && (
+                    <tr><td colSpan={3} className="admin-empty-state">No survey templates found.</td></tr>
+                  )}
+                  {!loading && pagedRows.map((row) => (
                     <tr key={row.id}>
                       <td>{row.title}</td>
                       <td>{row.description}</td>
