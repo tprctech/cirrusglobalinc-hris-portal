@@ -1,5 +1,4 @@
-import { useSyncExternalStore } from 'react';
-import { surveysMockData } from './mock/menuMockData';
+import { useCallback, useEffect, useState } from 'react';
 import type { BuilderQuestionType, BuilderSection } from '../components/TemplateBuilderModal';
 
 export type SurveyTemplateRecord = {
@@ -16,179 +15,195 @@ export type SurveyQuestionSetRecord = {
   section: BuilderSection;
 };
 
-type SurveyCatalogSnapshot = {
-  templates: SurveyTemplateRecord[];
-  questionSets: SurveyQuestionSetRecord[];
+type ApiQuestion = {
+  id: number;
+  prompt: string;
+  question_type: string;
+  options: string;
+  required: boolean;
+  sort_order: number;
 };
 
-let idCounter = 1;
+type ApiSection = {
+  id: number;
+  label: string;
+  sort_order: number;
+  questions: ApiQuestion[];
+};
 
-function nextId(prefix: string) {
-  idCounter += 1;
-  return `${prefix}-${idCounter}`;
+type ApiTemplate = {
+  id: number;
+  title: string;
+  description: string;
+  sections: ApiSection[];
+};
+
+type ApiQuestionSet = {
+  id: number;
+  title: string;
+  description: string;
+  sections: ApiSection[];
+};
+
+const BASE = '/api/v1/hr/surveys';
+
+function apiSectionToBuilder(s: ApiSection): BuilderSection {
+  return {
+    id: `section-${s.id}`,
+    label: s.label,
+    questions: s.questions
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map((q) => ({
+        id: `question-${q.id}`,
+        prompt: q.prompt,
+        type: q.question_type as BuilderQuestionType,
+        options: q.options ? q.options.split('\n').filter(Boolean) : [],
+        required: q.required,
+      })),
+  };
 }
 
-function cloneSection(section: BuilderSection): BuilderSection {
+function builderSectionToApi(s: BuilderSection, idx: number) {
   return {
-    id: section.id,
-    label: section.label,
-    isReadOnly: section.isReadOnly ?? false,
-    readOnlyReason: section.readOnlyReason,
-    sourceTitle: section.sourceTitle,
-    sourceDescription: section.sourceDescription,
-    questions: section.questions.map((question) => ({
-      id: question.id,
-      prompt: question.prompt,
-      type: question.type as BuilderQuestionType,
-      options: [...question.options],
-      required: question.required ?? false,
+    label: s.label,
+    sort_order: idx,
+    questions: s.questions.map((q, qi) => ({
+      prompt: q.prompt,
+      question_type: q.type,
+      options: q.options.join('\n'),
+      required: q.required ?? false,
+      sort_order: qi,
     })),
   };
 }
 
-function cloneSections(sections: BuilderSection[]): BuilderSection[] {
-  return sections.map(cloneSection);
-}
-
-const defaultSections = surveysMockData.surveyTemplate.sections.map((section) => cloneSection({
-  id: section.id,
-  label: section.label,
-  questions: section.questions.map((question) => ({
-    id: question.id,
-    prompt: question.prompt,
-    type: question.type as BuilderQuestionType,
-    options: [...question.options],
-    required: false,
-  })),
-}));
-
-let templates: SurveyTemplateRecord[] = [
-  {
-    id: 'survey-template-1',
-    title: 'Employee Engagement Pulse',
-    description: 'Short pulse survey for monthly engagement.',
-    sections: cloneSections(defaultSections),
-  },
-  {
-    id: 'survey-template-2',
-    title: 'Onboarding Feedback',
-    description: 'Template for collecting new hire onboarding feedback.',
-    sections: cloneSections(defaultSections.slice(0, 1)),
-  },
-];
-
-let questionSets: SurveyQuestionSetRecord[] = [
-  {
-    id: 'survey-question-set-1',
-    title: 'Engagement Core Questions',
-    description: 'Reusable section for engagement check-ins.',
-    section: cloneSection(defaultSections[0]),
-  },
-  {
-    id: 'survey-question-set-2',
-    title: 'Workplace Satisfaction Set',
-    description: 'Reusable section for workplace satisfaction.',
-    section: cloneSection(defaultSections[1] ?? defaultSections[0]),
-  },
-];
-
-const listeners = new Set<() => void>();
-
-function subscribe(listener: () => void) {
-  listeners.add(listener);
-  return () => listeners.delete(listener);
-}
-
-function buildSnapshot(): SurveyCatalogSnapshot {
+function apiTemplateToRecord(t: ApiTemplate): SurveyTemplateRecord {
   return {
-    templates: templates.map((template) => ({
-      ...template,
-      sections: cloneSections(template.sections),
-    })),
-    questionSets: questionSets.map((questionSet) => ({
-      ...questionSet,
-      section: cloneSection(questionSet.section),
-    })),
+    id: String(t.id),
+    title: t.title,
+    description: t.description || '',
+    sections: t.sections
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map(apiSectionToBuilder),
   };
 }
 
-let snapshot: SurveyCatalogSnapshot = buildSnapshot();
-
-function emitChange() {
-  snapshot = buildSnapshot();
-  for (const listener of listeners) {
-    listener();
-  }
+function apiQsToRecord(qs: ApiQuestionSet): SurveyQuestionSetRecord {
+  const sorted = qs.sections.sort((a, b) => a.sort_order - b.sort_order);
+  return {
+    id: String(qs.id),
+    title: qs.title,
+    description: qs.description || '',
+    section: sorted.length > 0 ? apiSectionToBuilder(sorted[0]) : {
+      id: 'section-new',
+      label: 'New Section',
+      questions: [],
+    },
+  };
 }
 
-function getSnapshot() {
-  return snapshot;
+export async function fetchSurveyTemplates(): Promise<SurveyTemplateRecord[]> {
+  const res = await fetch(`${BASE}/templates`);
+  if (!res.ok) throw new Error('Failed to fetch survey templates');
+  const data: ApiTemplate[] = await res.json();
+  return data.map(apiTemplateToRecord);
 }
 
-export function addSurveyTemplate(input: Omit<SurveyTemplateRecord, 'id'>) {
-  templates = [
-    {
-      id: nextId('survey-template'),
+export async function fetchSurveyQuestionSets(): Promise<SurveyQuestionSetRecord[]> {
+  const res = await fetch(`${BASE}/question-sets`);
+  if (!res.ok) throw new Error('Failed to fetch survey question sets');
+  const data: ApiQuestionSet[] = await res.json();
+  return data.map(apiQsToRecord);
+}
+
+export async function addSurveyTemplate(input: Omit<SurveyTemplateRecord, 'id'>): Promise<SurveyTemplateRecord> {
+  const res = await fetch(`${BASE}/templates`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
       title: input.title,
       description: input.description,
-      sections: cloneSections(input.sections),
-    },
-    ...templates,
-  ];
-  emitChange();
+      sections: input.sections.map(builderSectionToApi),
+    }),
+  });
+  if (!res.ok) throw new Error('Failed to create survey template');
+  return apiTemplateToRecord(await res.json());
 }
 
-export function updateSurveyTemplate(templateId: string, input: Omit<SurveyTemplateRecord, 'id'>) {
-  templates = templates.map((template) => (
-    template.id === templateId
-      ? {
-        id: template.id,
-        title: input.title,
-        description: input.description,
-        sections: cloneSections(input.sections),
-      }
-      : template
-  ));
-  emitChange();
-}
-
-export function deleteSurveyTemplate(templateId: string) {
-  templates = templates.filter((template) => template.id !== templateId);
-  emitChange();
-}
-
-export function addSurveyQuestionSet(input: Omit<SurveyQuestionSetRecord, 'id'>) {
-  questionSets = [
-    {
-      id: nextId('survey-question-set'),
+export async function updateSurveyTemplate(templateId: string, input: Omit<SurveyTemplateRecord, 'id'>): Promise<SurveyTemplateRecord> {
+  const res = await fetch(`${BASE}/templates/${templateId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
       title: input.title,
       description: input.description,
-      section: cloneSection(input.section),
-    },
-    ...questionSets,
-  ];
-  emitChange();
+      sections: input.sections.map(builderSectionToApi),
+    }),
+  });
+  if (!res.ok) throw new Error('Failed to update survey template');
+  return apiTemplateToRecord(await res.json());
 }
 
-export function updateSurveyQuestionSet(questionSetId: string, input: Omit<SurveyQuestionSetRecord, 'id'>) {
-  questionSets = questionSets.map((questionSet) => (
-    questionSet.id === questionSetId
-      ? {
-        id: questionSet.id,
-        title: input.title,
-        description: input.description,
-        section: cloneSection(input.section),
-      }
-      : questionSet
-  ));
-  emitChange();
+export async function deleteSurveyTemplate(templateId: string): Promise<void> {
+  const res = await fetch(`${BASE}/templates/${templateId}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Failed to delete survey template');
 }
 
-export function deleteSurveyQuestionSet(questionSetId: string) {
-  questionSets = questionSets.filter((questionSet) => questionSet.id !== questionSetId);
-  emitChange();
+export async function addSurveyQuestionSet(input: Omit<SurveyQuestionSetRecord, 'id'>): Promise<SurveyQuestionSetRecord> {
+  const res = await fetch(`${BASE}/question-sets`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      title: input.title,
+      description: input.description,
+      sections: [builderSectionToApi(input.section, 0)],
+    }),
+  });
+  if (!res.ok) throw new Error('Failed to create survey question set');
+  return apiQsToRecord(await res.json());
+}
+
+export async function updateSurveyQuestionSet(qsId: string, input: Omit<SurveyQuestionSetRecord, 'id'>): Promise<SurveyQuestionSetRecord> {
+  const res = await fetch(`${BASE}/question-sets/${qsId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      title: input.title,
+      description: input.description,
+      sections: [builderSectionToApi(input.section, 0)],
+    }),
+  });
+  if (!res.ok) throw new Error('Failed to update survey question set');
+  return apiQsToRecord(await res.json());
+}
+
+export async function deleteSurveyQuestionSet(qsId: string): Promise<void> {
+  const res = await fetch(`${BASE}/question-sets/${qsId}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Failed to delete survey question set');
 }
 
 export function useSurveyCatalog() {
-  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+  const [templates, setTemplates] = useState<SurveyTemplateRecord[]>([]);
+  const [questionSets, setQuestionSets] = useState<SurveyQuestionSetRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const reload = useCallback(async () => {
+    try {
+      const [tpls, qsets] = await Promise.all([
+        fetchSurveyTemplates(),
+        fetchSurveyQuestionSets(),
+      ]);
+      setTemplates(tpls);
+      setQuestionSets(qsets);
+    } catch {
+      setTemplates([]);
+      setQuestionSets([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { reload(); }, [reload]);
+
+  return { templates, questionSets, loading, reload };
 }

@@ -71,11 +71,12 @@ function cloneSection(section: BuilderSection): BuilderSection {
 }
 
 function AdminReviewQuestionSetsPage({ onNavigate }: AdminReviewQuestionSetsPageProps) {
-  const { questionSets } = useReviewCatalog();
+  const { questionSets, reload } = useReviewCatalog();
   const [currentPage, setCurrentPage] = useState(1);
   const [showBuilder, setShowBuilder] = useState(false);
   const [editingQuestionSetId, setEditingQuestionSetId] = useState<string | null>(null);
   const [pendingDeleteQuestionSetId, setPendingDeleteQuestionSetId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [formState, setFormState] = useState<QuestionSetFormState>({
     id: nextFormId(),
     title: 'New Question Set',
@@ -122,22 +123,28 @@ function AdminReviewQuestionSetsPage({ onNavigate }: AdminReviewQuestionSetsPage
     setShowBuilder(true);
   }
 
-  function handleSaveQuestionSet() {
-    const section = cloneSection(formState.sections[0] ?? createDefaultSection());
-    const payload = {
-      title: formState.title,
-      description: formState.description,
-      section,
-    };
-
-    if (editingQuestionSetId) {
-      updateReviewQuestionSet(editingQuestionSetId, payload);
-    } else {
-      addReviewQuestionSet(payload);
+  async function handleSaveQuestionSet() {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const section = cloneSection(formState.sections[0] ?? createDefaultSection());
+      const payload = {
+        title: formState.title,
+        description: formState.description,
+        section,
+      };
+      if (editingQuestionSetId) {
+        await updateReviewQuestionSet(editingQuestionSetId, payload);
+      } else {
+        await addReviewQuestionSet(payload);
+      }
+      setShowBuilder(false);
+      await reload();
+    } catch (err) {
+      console.error('Failed to save review question set', err);
+    } finally {
+      setSaving(false);
     }
-
-    console.log('admin_review_question_set_payload', payload);
-    setShowBuilder(false);
   }
 
   return (
@@ -256,9 +263,10 @@ function AdminReviewQuestionSetsPage({ onNavigate }: AdminReviewQuestionSetsPage
         message="Are you sure you want to delete this review question set?"
         confirmLabel="Delete"
         onCancel={() => setPendingDeleteQuestionSetId(null)}
-        onConfirm={() => {
+        onConfirm={async () => {
           if (pendingDeleteQuestionSetId) {
-            deleteReviewQuestionSet(pendingDeleteQuestionSetId);
+            await deleteReviewQuestionSet(pendingDeleteQuestionSetId);
+            await reload();
           }
           setPendingDeleteQuestionSetId(null);
         }}

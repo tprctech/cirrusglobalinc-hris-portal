@@ -1,5 +1,4 @@
-import { useSyncExternalStore } from 'react';
-import { reviewsMockData } from './mock/menuMockData';
+import { useCallback, useEffect, useState } from 'react';
 import type { BuilderQuestionType, BuilderSection } from '../components/TemplateBuilderModal';
 
 export type ReviewTemplateRecord = {
@@ -16,179 +15,195 @@ export type ReviewQuestionSetRecord = {
   section: BuilderSection;
 };
 
-type ReviewCatalogSnapshot = {
-  templates: ReviewTemplateRecord[];
-  questionSets: ReviewQuestionSetRecord[];
+type ApiQuestion = {
+  id: number;
+  prompt: string;
+  question_type: string;
+  options: string;
+  required: boolean;
+  sort_order: number;
 };
 
-let idCounter = 1;
+type ApiSection = {
+  id: number;
+  label: string;
+  sort_order: number;
+  questions: ApiQuestion[];
+};
 
-function nextId(prefix: string) {
-  idCounter += 1;
-  return `${prefix}-${idCounter}`;
+type ApiTemplate = {
+  id: number;
+  title: string;
+  description: string;
+  sections: ApiSection[];
+};
+
+type ApiQuestionSet = {
+  id: number;
+  title: string;
+  description: string;
+  sections: ApiSection[];
+};
+
+const BASE = '/api/v1/hr/reviews';
+
+function apiSectionToBuilder(s: ApiSection): BuilderSection {
+  return {
+    id: `section-${s.id}`,
+    label: s.label,
+    questions: s.questions
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map((q) => ({
+        id: `question-${q.id}`,
+        prompt: q.prompt,
+        type: q.question_type as BuilderQuestionType,
+        options: q.options ? q.options.split('\n').filter(Boolean) : [],
+        required: q.required,
+      })),
+  };
 }
 
-function cloneSection(section: BuilderSection): BuilderSection {
+function builderSectionToApi(s: BuilderSection, idx: number) {
   return {
-    id: section.id,
-    label: section.label,
-    isReadOnly: section.isReadOnly ?? false,
-    readOnlyReason: section.readOnlyReason,
-    sourceTitle: section.sourceTitle,
-    sourceDescription: section.sourceDescription,
-    questions: section.questions.map((question) => ({
-      id: question.id,
-      prompt: question.prompt,
-      type: question.type as BuilderQuestionType,
-      options: [...question.options],
-      required: question.required ?? false,
+    label: s.label,
+    sort_order: idx,
+    questions: s.questions.map((q, qi) => ({
+      prompt: q.prompt,
+      question_type: q.type,
+      options: q.options.join('\n'),
+      required: q.required ?? false,
+      sort_order: qi,
     })),
   };
 }
 
-function cloneSections(sections: BuilderSection[]): BuilderSection[] {
-  return sections.map(cloneSection);
-}
-
-const defaultSections = reviewsMockData.evaluationTemplate.sections.map((section) => cloneSection({
-  id: section.id,
-  label: section.label,
-  questions: section.questions.map((question) => ({
-    id: question.id,
-    prompt: question.prompt,
-    type: question.type as BuilderQuestionType,
-    options: [...question.options],
-    required: false,
-  })),
-}));
-
-let templates: ReviewTemplateRecord[] = [
-  {
-    id: 'review-template-1',
-    title: 'Quarterly Performance',
-    description: 'Quarterly employee performance review.',
-    sections: cloneSections(defaultSections),
-  },
-  {
-    id: 'review-template-2',
-    title: 'Probation Review',
-    description: 'First 90-day probation assessment template.',
-    sections: cloneSections(defaultSections.slice(0, 1)),
-  },
-];
-
-let questionSets: ReviewQuestionSetRecord[] = [
-  {
-    id: 'review-question-set-1',
-    title: 'Manager Evaluation',
-    description: 'Question set for manager-to-employee reviews.',
-    section: cloneSection(defaultSections[0]),
-  },
-  {
-    id: 'review-question-set-2',
-    title: 'Peer Feedback Set',
-    description: 'Question set for peer feedback cycles.',
-    section: cloneSection(defaultSections[1] ?? defaultSections[0]),
-  },
-];
-
-const listeners = new Set<() => void>();
-
-function subscribe(listener: () => void) {
-  listeners.add(listener);
-  return () => listeners.delete(listener);
-}
-
-function buildSnapshot(): ReviewCatalogSnapshot {
+function apiTemplateToRecord(t: ApiTemplate): ReviewTemplateRecord {
   return {
-    templates: templates.map((template) => ({
-      ...template,
-      sections: cloneSections(template.sections),
-    })),
-    questionSets: questionSets.map((questionSet) => ({
-      ...questionSet,
-      section: cloneSection(questionSet.section),
-    })),
+    id: String(t.id),
+    title: t.title,
+    description: t.description || '',
+    sections: t.sections
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map(apiSectionToBuilder),
   };
 }
 
-let snapshot: ReviewCatalogSnapshot = buildSnapshot();
-
-function emitChange() {
-  snapshot = buildSnapshot();
-  for (const listener of listeners) {
-    listener();
-  }
+function apiQsToRecord(qs: ApiQuestionSet): ReviewQuestionSetRecord {
+  const sorted = qs.sections.sort((a, b) => a.sort_order - b.sort_order);
+  return {
+    id: String(qs.id),
+    title: qs.title,
+    description: qs.description || '',
+    section: sorted.length > 0 ? apiSectionToBuilder(sorted[0]) : {
+      id: 'section-new',
+      label: 'New Section',
+      questions: [],
+    },
+  };
 }
 
-function getSnapshot() {
-  return snapshot;
+export async function fetchReviewTemplates(): Promise<ReviewTemplateRecord[]> {
+  const res = await fetch(`${BASE}/templates`);
+  if (!res.ok) throw new Error('Failed to fetch review templates');
+  const data: ApiTemplate[] = await res.json();
+  return data.map(apiTemplateToRecord);
 }
 
-export function addReviewTemplate(input: Omit<ReviewTemplateRecord, 'id'>) {
-  templates = [
-    {
-      id: nextId('review-template'),
+export async function fetchReviewQuestionSets(): Promise<ReviewQuestionSetRecord[]> {
+  const res = await fetch(`${BASE}/question-sets`);
+  if (!res.ok) throw new Error('Failed to fetch review question sets');
+  const data: ApiQuestionSet[] = await res.json();
+  return data.map(apiQsToRecord);
+}
+
+export async function addReviewTemplate(input: Omit<ReviewTemplateRecord, 'id'>): Promise<ReviewTemplateRecord> {
+  const res = await fetch(`${BASE}/templates`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
       title: input.title,
       description: input.description,
-      sections: cloneSections(input.sections),
-    },
-    ...templates,
-  ];
-  emitChange();
+      sections: input.sections.map(builderSectionToApi),
+    }),
+  });
+  if (!res.ok) throw new Error('Failed to create review template');
+  return apiTemplateToRecord(await res.json());
 }
 
-export function updateReviewTemplate(templateId: string, input: Omit<ReviewTemplateRecord, 'id'>) {
-  templates = templates.map((template) => (
-    template.id === templateId
-      ? {
-        id: template.id,
-        title: input.title,
-        description: input.description,
-        sections: cloneSections(input.sections),
-      }
-      : template
-  ));
-  emitChange();
-}
-
-export function deleteReviewTemplate(templateId: string) {
-  templates = templates.filter((template) => template.id !== templateId);
-  emitChange();
-}
-
-export function addReviewQuestionSet(input: Omit<ReviewQuestionSetRecord, 'id'>) {
-  questionSets = [
-    {
-      id: nextId('review-question-set'),
+export async function updateReviewTemplate(templateId: string, input: Omit<ReviewTemplateRecord, 'id'>): Promise<ReviewTemplateRecord> {
+  const res = await fetch(`${BASE}/templates/${templateId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
       title: input.title,
       description: input.description,
-      section: cloneSection(input.section),
-    },
-    ...questionSets,
-  ];
-  emitChange();
+      sections: input.sections.map(builderSectionToApi),
+    }),
+  });
+  if (!res.ok) throw new Error('Failed to update review template');
+  return apiTemplateToRecord(await res.json());
 }
 
-export function updateReviewQuestionSet(questionSetId: string, input: Omit<ReviewQuestionSetRecord, 'id'>) {
-  questionSets = questionSets.map((questionSet) => (
-    questionSet.id === questionSetId
-      ? {
-        id: questionSet.id,
-        title: input.title,
-        description: input.description,
-        section: cloneSection(input.section),
-      }
-      : questionSet
-  ));
-  emitChange();
+export async function deleteReviewTemplate(templateId: string): Promise<void> {
+  const res = await fetch(`${BASE}/templates/${templateId}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Failed to delete review template');
 }
 
-export function deleteReviewQuestionSet(questionSetId: string) {
-  questionSets = questionSets.filter((questionSet) => questionSet.id !== questionSetId);
-  emitChange();
+export async function addReviewQuestionSet(input: Omit<ReviewQuestionSetRecord, 'id'>): Promise<ReviewQuestionSetRecord> {
+  const res = await fetch(`${BASE}/question-sets`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      title: input.title,
+      description: input.description,
+      sections: [builderSectionToApi(input.section, 0)],
+    }),
+  });
+  if (!res.ok) throw new Error('Failed to create review question set');
+  return apiQsToRecord(await res.json());
+}
+
+export async function updateReviewQuestionSet(qsId: string, input: Omit<ReviewQuestionSetRecord, 'id'>): Promise<ReviewQuestionSetRecord> {
+  const res = await fetch(`${BASE}/question-sets/${qsId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      title: input.title,
+      description: input.description,
+      sections: [builderSectionToApi(input.section, 0)],
+    }),
+  });
+  if (!res.ok) throw new Error('Failed to update review question set');
+  return apiQsToRecord(await res.json());
+}
+
+export async function deleteReviewQuestionSet(qsId: string): Promise<void> {
+  const res = await fetch(`${BASE}/question-sets/${qsId}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Failed to delete review question set');
 }
 
 export function useReviewCatalog() {
-  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+  const [templates, setTemplates] = useState<ReviewTemplateRecord[]>([]);
+  const [questionSets, setQuestionSets] = useState<ReviewQuestionSetRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const reload = useCallback(async () => {
+    try {
+      const [tpls, qsets] = await Promise.all([
+        fetchReviewTemplates(),
+        fetchReviewQuestionSets(),
+      ]);
+      setTemplates(tpls);
+      setQuestionSets(qsets);
+    } catch {
+      setTemplates([]);
+      setQuestionSets([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { reload(); }, [reload]);
+
+  return { templates, questionSets, loading, reload };
 }

@@ -71,11 +71,12 @@ function cloneSection(section: BuilderSection): BuilderSection {
 }
 
 function AdminSurveyQuestionSetsPage({ onNavigate }: AdminSurveyQuestionSetsPageProps) {
-  const { questionSets } = useSurveyCatalog();
+  const { questionSets, reload } = useSurveyCatalog();
   const [currentPage, setCurrentPage] = useState(1);
   const [showBuilder, setShowBuilder] = useState(false);
   const [editingQuestionSetId, setEditingQuestionSetId] = useState<string | null>(null);
   const [pendingDeleteQuestionSetId, setPendingDeleteQuestionSetId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [formState, setFormState] = useState<QuestionSetFormState>({
     id: nextFormId(),
     title: 'New Question Set',
@@ -122,22 +123,28 @@ function AdminSurveyQuestionSetsPage({ onNavigate }: AdminSurveyQuestionSetsPage
     setShowBuilder(true);
   }
 
-  function handleSaveQuestionSet() {
-    const section = cloneSection(formState.sections[0] ?? createDefaultSection());
-    const payload = {
-      title: formState.title,
-      description: formState.description,
-      section,
-    };
-
-    if (editingQuestionSetId) {
-      updateSurveyQuestionSet(editingQuestionSetId, payload);
-    } else {
-      addSurveyQuestionSet(payload);
+  async function handleSaveQuestionSet() {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const section = cloneSection(formState.sections[0] ?? createDefaultSection());
+      const payload = {
+        title: formState.title,
+        description: formState.description,
+        section,
+      };
+      if (editingQuestionSetId) {
+        await updateSurveyQuestionSet(editingQuestionSetId, payload);
+      } else {
+        await addSurveyQuestionSet(payload);
+      }
+      setShowBuilder(false);
+      await reload();
+    } catch (err) {
+      console.error('Failed to save survey question set', err);
+    } finally {
+      setSaving(false);
     }
-
-    console.log('admin_survey_question_set_payload', payload);
-    setShowBuilder(false);
   }
 
   return (
@@ -256,9 +263,10 @@ function AdminSurveyQuestionSetsPage({ onNavigate }: AdminSurveyQuestionSetsPage
         message="Are you sure you want to delete this survey question set?"
         confirmLabel="Delete"
         onCancel={() => setPendingDeleteQuestionSetId(null)}
-        onConfirm={() => {
+        onConfirm={async () => {
           if (pendingDeleteQuestionSetId) {
-            deleteSurveyQuestionSet(pendingDeleteQuestionSetId);
+            await deleteSurveyQuestionSet(pendingDeleteQuestionSetId);
+            await reload();
           }
           setPendingDeleteQuestionSetId(null);
         }}

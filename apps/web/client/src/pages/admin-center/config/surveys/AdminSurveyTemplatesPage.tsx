@@ -72,11 +72,12 @@ function cloneSections(sections: BuilderSection[]): BuilderSection[] {
 }
 
 function AdminSurveyTemplatesPage({ onNavigate }: AdminSurveyTemplatesPageProps) {
-  const { templates, questionSets } = useSurveyCatalog();
+  const { templates, questionSets, reload } = useSurveyCatalog();
   const [currentPage, setCurrentPage] = useState(1);
   const [showBuilder, setShowBuilder] = useState(false);
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
   const [pendingDeleteTemplateId, setPendingDeleteTemplateId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [formState, setFormState] = useState<TemplateFormState>({
     id: nextFormId(),
     title: 'New Survey Template',
@@ -133,21 +134,27 @@ function AdminSurveyTemplatesPage({ onNavigate }: AdminSurveyTemplatesPageProps)
     setShowBuilder(true);
   }
 
-  function handleSaveTemplate() {
-    const payload = {
-      title: formState.title,
-      description: formState.description,
-      sections: cloneSections(formState.sections),
-    };
-
-    if (editingTemplateId) {
-      updateSurveyTemplate(editingTemplateId, payload);
-    } else {
-      addSurveyTemplate(payload);
+  async function handleSaveTemplate() {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const payload = {
+        title: formState.title,
+        description: formState.description,
+        sections: cloneSections(formState.sections),
+      };
+      if (editingTemplateId) {
+        await updateSurveyTemplate(editingTemplateId, payload);
+      } else {
+        await addSurveyTemplate(payload);
+      }
+      setShowBuilder(false);
+      await reload();
+    } catch (err) {
+      console.error('Failed to save survey template', err);
+    } finally {
+      setSaving(false);
     }
-
-    console.log('admin_survey_template_payload', payload);
-    setShowBuilder(false);
   }
 
   return (
@@ -259,9 +266,10 @@ function AdminSurveyTemplatesPage({ onNavigate }: AdminSurveyTemplatesPageProps)
         message="Are you sure you want to delete this survey template?"
         confirmLabel="Delete"
         onCancel={() => setPendingDeleteTemplateId(null)}
-        onConfirm={() => {
+        onConfirm={async () => {
           if (pendingDeleteTemplateId) {
-            deleteSurveyTemplate(pendingDeleteTemplateId);
+            await deleteSurveyTemplate(pendingDeleteTemplateId);
+            await reload();
           }
           setPendingDeleteTemplateId(null);
         }}

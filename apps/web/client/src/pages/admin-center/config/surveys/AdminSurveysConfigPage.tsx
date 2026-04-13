@@ -107,7 +107,7 @@ function cloneSection(section: BuilderSection): BuilderSection {
 }
 
 function AdminSurveysConfigPage({ onNavigate }: AdminSurveysConfigPageProps) {
-  const { templates, questionSets } = useSurveyCatalog();
+  const { templates, questionSets, loading, reload } = useSurveyCatalog();
 
   const navigate = onNavigate ?? ((path: string) => {
     if (window.location.pathname !== path) {
@@ -120,6 +120,7 @@ function AdminSurveysConfigPage({ onNavigate }: AdminSurveysConfigPageProps) {
   const [showTplBuilder, setShowTplBuilder] = useState(false);
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
   const [pendingDeleteTemplateId, setPendingDeleteTemplateId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [tplFormState, setTplFormState] = useState<TemplateFormState>({
     id: nextTemplateFormId(),
     title: 'New Survey Template',
@@ -182,18 +183,27 @@ function AdminSurveysConfigPage({ onNavigate }: AdminSurveysConfigPageProps) {
     setShowTplBuilder(true);
   }
 
-  function handleSaveTemplate() {
-    const payload = {
-      title: tplFormState.title,
-      description: tplFormState.description,
-      sections: cloneSections(tplFormState.sections),
-    };
-    if (editingTemplateId) {
-      updateSurveyTemplate(editingTemplateId, payload);
-    } else {
-      addSurveyTemplate(payload);
+  async function handleSaveTemplate() {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const payload = {
+        title: tplFormState.title,
+        description: tplFormState.description,
+        sections: cloneSections(tplFormState.sections),
+      };
+      if (editingTemplateId) {
+        await updateSurveyTemplate(editingTemplateId, payload);
+      } else {
+        await addSurveyTemplate(payload);
+      }
+      setShowTplBuilder(false);
+      await reload();
+    } catch (err) {
+      console.error('Failed to save survey template', err);
+    } finally {
+      setSaving(false);
     }
-    setShowTplBuilder(false);
   }
 
   function openCreateQs() {
@@ -220,15 +230,37 @@ function AdminSurveysConfigPage({ onNavigate }: AdminSurveysConfigPageProps) {
     setShowQsBuilder(true);
   }
 
-  function handleSaveQs() {
-    const section = cloneSection(qsFormState.sections[0] ?? createDefaultQsSection());
-    const payload = { title: qsFormState.title, description: qsFormState.description, section };
-    if (editingQsId) {
-      updateSurveyQuestionSet(editingQsId, payload);
-    } else {
-      addSurveyQuestionSet(payload);
+  async function handleSaveQs() {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const section = cloneSection(qsFormState.sections[0] ?? createDefaultQsSection());
+      const payload = { title: qsFormState.title, description: qsFormState.description, section };
+      if (editingQsId) {
+        await updateSurveyQuestionSet(editingQsId, payload);
+      } else {
+        await addSurveyQuestionSet(payload);
+      }
+      setShowQsBuilder(false);
+      await reload();
+    } catch (err) {
+      console.error('Failed to save survey question set', err);
+    } finally {
+      setSaving(false);
     }
-    setShowQsBuilder(false);
+  }
+
+  if (loading) {
+    return (
+      <section className="admin-center-page">
+        <div className="admin-center-shell">
+          <AdminCenterSidebar activeMenu="configSurveys" onNavigate={navigate} />
+          <div className="admin-center-content">
+            <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>Loading...</div>
+          </div>
+        </div>
+      </section>
+    );
   }
 
   return (
@@ -259,6 +291,9 @@ function AdminSurveysConfigPage({ onNavigate }: AdminSurveysConfigPageProps) {
                   </tr>
                 </thead>
                 <tbody>
+                  {tplPagedRows.length === 0 && (
+                    <tr><td colSpan={3} className="admin-empty-state">No survey templates yet.</td></tr>
+                  )}
                   {tplPagedRows.map((row) => (
                     <tr key={row.id}>
                       <td>{row.title}</td>
@@ -296,6 +331,9 @@ function AdminSurveysConfigPage({ onNavigate }: AdminSurveysConfigPageProps) {
                   </tr>
                 </thead>
                 <tbody>
+                  {qsPagedRows.length === 0 && (
+                    <tr><td colSpan={3} className="admin-empty-state">No question sets yet.</td></tr>
+                  )}
                   {qsPagedRows.map((row) => (
                     <tr key={row.id}>
                       <td>{row.title}</td>
@@ -352,7 +390,7 @@ function AdminSurveysConfigPage({ onNavigate }: AdminSurveysConfigPageProps) {
           setTplFormState((previous) => ({ ...previous, sections: nextSections }));
         }}
         existingSectionOptions={existingSectionOptions}
-        saveButtonLabel={editingTemplateId ? 'Save Template Changes' : 'Save Template'}
+        saveButtonLabel={saving ? 'Saving...' : (editingTemplateId ? 'Save Template Changes' : 'Save Template')}
         onSave={handleSaveTemplate}
         onClose={() => setShowTplBuilder(false)}
       />
@@ -362,8 +400,11 @@ function AdminSurveysConfigPage({ onNavigate }: AdminSurveysConfigPageProps) {
         message="Are you sure you want to delete this survey template?"
         confirmLabel="Delete"
         onCancel={() => setPendingDeleteTemplateId(null)}
-        onConfirm={() => {
-          if (pendingDeleteTemplateId) deleteSurveyTemplate(pendingDeleteTemplateId);
+        onConfirm={async () => {
+          if (pendingDeleteTemplateId) {
+            await deleteSurveyTemplate(pendingDeleteTemplateId);
+            await reload();
+          }
           setPendingDeleteTemplateId(null);
         }}
       />
@@ -406,7 +447,7 @@ function AdminSurveysConfigPage({ onNavigate }: AdminSurveysConfigPageProps) {
           }));
         }}
         allowMultipleSections={false}
-        saveButtonLabel={editingQsId ? 'Save Question Set Changes' : 'Save Question Set'}
+        saveButtonLabel={saving ? 'Saving...' : (editingQsId ? 'Save Question Set Changes' : 'Save Question Set')}
         onSave={handleSaveQs}
         onClose={() => setShowQsBuilder(false)}
       />
@@ -416,8 +457,11 @@ function AdminSurveysConfigPage({ onNavigate }: AdminSurveysConfigPageProps) {
         message="Are you sure you want to delete this survey question set?"
         confirmLabel="Delete"
         onCancel={() => setPendingDeleteQsId(null)}
-        onConfirm={() => {
-          if (pendingDeleteQsId) deleteSurveyQuestionSet(pendingDeleteQsId);
+        onConfirm={async () => {
+          if (pendingDeleteQsId) {
+            await deleteSurveyQuestionSet(pendingDeleteQsId);
+            await reload();
+          }
           setPendingDeleteQsId(null);
         }}
       />

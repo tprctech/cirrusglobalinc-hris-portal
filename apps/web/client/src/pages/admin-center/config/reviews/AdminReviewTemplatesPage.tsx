@@ -72,11 +72,12 @@ function cloneSections(sections: BuilderSection[]): BuilderSection[] {
 }
 
 function AdminReviewTemplatesPage({ onNavigate }: AdminReviewTemplatesPageProps) {
-  const { templates, questionSets } = useReviewCatalog();
+  const { templates, questionSets, reload } = useReviewCatalog();
   const [currentPage, setCurrentPage] = useState(1);
   const [showBuilder, setShowBuilder] = useState(false);
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
   const [pendingDeleteTemplateId, setPendingDeleteTemplateId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [formState, setFormState] = useState<TemplateFormState>({
     id: nextFormId(),
     title: 'New Review Template',
@@ -133,21 +134,27 @@ function AdminReviewTemplatesPage({ onNavigate }: AdminReviewTemplatesPageProps)
     setShowBuilder(true);
   }
 
-  function handleSaveTemplate() {
-    const payload = {
-      title: formState.title,
-      description: formState.description,
-      sections: cloneSections(formState.sections),
-    };
-
-    if (editingTemplateId) {
-      updateReviewTemplate(editingTemplateId, payload);
-    } else {
-      addReviewTemplate(payload);
+  async function handleSaveTemplate() {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const payload = {
+        title: formState.title,
+        description: formState.description,
+        sections: cloneSections(formState.sections),
+      };
+      if (editingTemplateId) {
+        await updateReviewTemplate(editingTemplateId, payload);
+      } else {
+        await addReviewTemplate(payload);
+      }
+      setShowBuilder(false);
+      await reload();
+    } catch (err) {
+      console.error('Failed to save review template', err);
+    } finally {
+      setSaving(false);
     }
-
-    console.log('admin_review_template_payload', payload);
-    setShowBuilder(false);
   }
 
   return (
@@ -259,9 +266,10 @@ function AdminReviewTemplatesPage({ onNavigate }: AdminReviewTemplatesPageProps)
         message="Are you sure you want to delete this review template?"
         confirmLabel="Delete"
         onCancel={() => setPendingDeleteTemplateId(null)}
-        onConfirm={() => {
+        onConfirm={async () => {
           if (pendingDeleteTemplateId) {
-            deleteReviewTemplate(pendingDeleteTemplateId);
+            await deleteReviewTemplate(pendingDeleteTemplateId);
+            await reload();
           }
           setPendingDeleteTemplateId(null);
         }}
