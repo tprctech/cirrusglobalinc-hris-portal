@@ -10,6 +10,7 @@ type ReceivedFeedback = {
   title: string;
   from: string;
   fromEmail: string;
+  fromPhoto: string;
   date: string;
   description: string;
 };
@@ -19,9 +20,18 @@ type GivenFeedback = {
   title: string;
   to: string;
   toEmail: string;
+  toPhoto: string;
   date: string;
   description: string;
 };
+
+function getInitials(name: string) {
+  return name
+    .split(' ')
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase();
+}
 
 type UserOption = {
   id: number;
@@ -267,7 +277,14 @@ function FeedbackPage() {
                 {item.date}
               </span>
             </div>
-            <p>From: <strong>{item.from}</strong></p>
+            <div className="feedback-person-row">
+              {item.fromPhoto ? (
+                <img src={item.fromPhoto} alt={item.from} className="feedback-person-avatar-img" />
+              ) : (
+                <span className="feedback-person-avatar">{getInitials(item.from)}</span>
+              )}
+              <span>From: <strong>{item.from}</strong></span>
+            </div>
             <p>{item.description}</p>
           </article>
         ))}
@@ -284,7 +301,14 @@ function FeedbackPage() {
                 {item.date}
               </span>
             </div>
-            <p>To: <strong>{item.to}</strong></p>
+            <div className="feedback-person-row">
+              {item.toPhoto ? (
+                <img src={item.toPhoto} alt={item.to} className="feedback-person-avatar-img" />
+              ) : (
+                <span className="feedback-person-avatar">{getInitials(item.to)}</span>
+              )}
+              <span>To: <strong>{item.to}</strong></span>
+            </div>
             <p>{item.description}</p>
           </article>
         ))}
