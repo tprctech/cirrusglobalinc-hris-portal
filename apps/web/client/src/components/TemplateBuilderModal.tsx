@@ -625,8 +625,8 @@ function TemplateBuilderModal({
               <button
                 className="section-delete-btn"
                 onClick={() => removeSection(section.id)}
-                disabled={sections.length <= 1 || !allowMultipleSections}
-                title="Remove Section"
+                disabled={sections.length <= 1 || !allowMultipleSections || section.isReadOnly}
+                title={section.isReadOnly ? section.readOnlyReason : 'Remove Section'}
               >
                 <Trash2 size={14} />
               </button>
