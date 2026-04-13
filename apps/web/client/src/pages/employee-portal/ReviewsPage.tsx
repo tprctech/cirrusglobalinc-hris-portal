@@ -1,16 +1,58 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CircleDot, Clock3, FileText, Plus, Star } from 'lucide-react';
 import TemplateBuilderModal, {
   type BuilderExistingSectionOption,
   type BuilderQuestionType,
   type BuilderSection,
 } from '../../components/TemplateBuilderModal';
+import FormResponseModal, {
+  type AnswerValue,
+  type FormResponseData,
+  type ResponseSection,
+} from '../../components/FormResponseModal';
 import { useReviewCatalog } from '../../data/reviewCatalogStore';
+import { useAuth } from '../../app/AuthContext';
 import { reviewsMockData } from '../../data/mock/menuMockData';
 import './ReviewsPage.css';
 
+const API_BASE = '/api/v1';
+
 type ReviewTab = 'my' | 'team';
 type ReviewStatus = 'Pending' | 'In Progress' | 'Completed';
+
+type ReviewCycle = {
+  id: number;
+  template_id: number | null;
+  title: string;
+  reviewee_email: string;
+  reviewer_email: string;
+  due_date: string | null;
+  status: string;
+  created_at: string | null;
+};
+
+type CycleDetail = {
+  id: number;
+  template_id: number | null;
+  title: string;
+  reviewee_email: string;
+  reviewer_email: string;
+  due_date: string | null;
+  status: string;
+  sections: Array<{
+    id: number;
+    label: string;
+    sort_order: number;
+    questions: Array<{
+      id: number;
+      prompt: string;
+      question_type: string;
+      options: string;
+      required: boolean;
+      sort_order: number;
+    }>;
+  }>;
+};
 
 type Review = {
   id: string;
@@ -58,22 +100,18 @@ const statusClassMap: Record<ReviewStatus, string> = {
 };
 
 function toIsoDate(value: string): string {
-  if (!value) {
-    return '';
-  }
-
-  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    return value;
-  }
-
+  if (!value) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
   const [month, day, year] = value.split('/');
-  if (!month || !day || !year) {
-    return '';
-  }
+  if (!month || !day || !year) return '';
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+}
 
-  const normalizedMonth = month.padStart(2, '0');
-  const normalizedDay = day.padStart(2, '0');
-  return `${year}-${normalizedMonth}-${normalizedDay}`;
+function formatDisplayDate(iso: string | null): string {
+  if (!iso) return 'TBD';
+  const [year, month, day] = iso.split('-');
+  if (!year || !month || !day) return iso;
+  return `${Number(month)}/${Number(day)}/${year}`;
 }
 
 function cloneSections(): BuilderSection[] {
@@ -121,6 +159,7 @@ function cloneTemplateSectionsAsLocked(
 }
 
 function ReviewsPage() {
+  const { user } = useAuth();
   const { templates, questionSets } = useReviewCatalog();
   const [activeTab, setActiveTab] = useState<ReviewTab>('my');
   const [showBuilder, setShowBuilder] = useState(false);
@@ -131,106 +170,191 @@ function ReviewsPage() {
   const [formTitle, setFormTitle] = useState(reviewsMockData.evaluationTemplate.title);
   const [sections, setSections] = useState<BuilderSection[]>(cloneSections());
 
+  const [cycles, setCycles] = useState<ReviewCycle[]>([]);
+  const [showResponseForm, setShowResponseForm] = useState(false);
+  const [activeCycleDetail, setActiveCycleDetail] = useState<CycleDetail | null>(null);
+  const [existingAnswers, setExistingAnswers] = useState<AnswerValue[]>([]);
+  const [responseSaving, setResponseSaving] = useState(false);
+  const [creatingCycle, setCreatingCycle] = useState(false);
+
+  const loadCycles = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/review-cycles`);
+      if (res.ok) setCycles(await res.json());
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => { loadCycles(); }, [loadCycles]);
+
   useEffect(() => {
     if (!templates.length) {
       setSelectedTemplateId('');
       return;
     }
-
-    setSelectedTemplateId((previous) => {
-      if (templates.some((template) => template.id === previous)) {
-        return previous;
-      }
-      return templates[0].id;
-    });
+    setSelectedTemplateId((prev) => templates.some((t) => t.id === prev) ? prev : templates[0].id);
   }, [templates]);
 
   const existingSectionOptions = useMemo<BuilderExistingSectionOption[]>(
-    () => questionSets.map((questionSet) => ({
-      id: questionSet.id,
-      label: questionSet.title,
-      description: questionSet.description,
-      section: cloneTemplateSections([questionSet.section])[0],
+    () => questionSets.map((qs) => ({
+      id: qs.id,
+      label: qs.title,
+      description: qs.description,
+      section: cloneTemplateSections([qs.section])[0],
     })),
     [questionSets],
   );
 
-  const reviews: Review[] = (activeTab === 'my'
+  const mockReviews: Review[] = (activeTab === 'my'
     ? reviewsMockData.tabs.myReviews
     : reviewsMockData.tabs.teamReviews) as Review[];
+
+  const cycleReviews: Review[] = cycles.map((c) => ({
+    id: String(c.id),
+    title: c.title,
+    employee: c.reviewee_email,
+    department: '',
+    manager: c.reviewer_email || '',
+    teammates: [],
+    dueDate: formatDisplayDate(c.due_date),
+    status: (c.status === 'Completed' ? 'Completed' : c.status === 'In Progress' ? 'In Progress' : 'Pending') as ReviewStatus,
+  }));
+
+  const allReviews = [...cycleReviews, ...mockReviews];
 
   function openCreateEvaluationModal() {
     setEvaluationId(nextEvaluationId());
     setReviewee(reviewsMockData.evaluationTemplate.reviewee);
     setDueDate(toIsoDate(reviewsMockData.tabs.myReviews[0]?.dueDate ?? ''));
-
     if (templates.length) {
-      const firstTemplate = templates[0];
-      setSelectedTemplateId(firstTemplate.id);
-      setFormTitle(firstTemplate.title);
-      setSections(cloneTemplateSectionsAsLocked(
-        firstTemplate.sections,
-        firstTemplate.title,
-        firstTemplate.description,
-      ));
+      const first = templates[0];
+      setSelectedTemplateId(first.id);
+      setFormTitle(first.title);
+      setSections(cloneTemplateSectionsAsLocked(first.sections, first.title, first.description));
     } else {
       setSelectedTemplateId('');
       setFormTitle(reviewsMockData.evaluationTemplate.title);
       setSections(cloneSections());
     }
-
     setShowBuilder(true);
   }
 
   function handleTemplateSelection(templateId: string) {
     setSelectedTemplateId(templateId);
-
     if (!templateId) {
       setFormTitle(reviewsMockData.evaluationTemplate.title);
       setSections(cloneSections());
       return;
     }
+    const tmpl = templates.find((t) => t.id === templateId);
+    if (!tmpl) return;
+    setFormTitle(tmpl.title);
+    setSections(cloneTemplateSectionsAsLocked(tmpl.sections, tmpl.title, tmpl.description));
+  }
 
-    const selectedTemplate = templates.find((template) => template.id === templateId);
-    if (!selectedTemplate) {
-      return;
+  async function handleSaveTemplate() {
+    if (creatingCycle) return;
+    setCreatingCycle(true);
+    try {
+      const templateDbId = selectedTemplateId ? Number(selectedTemplateId) : null;
+      const res = await fetch(`${API_BASE}/review-cycles`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          template_id: templateDbId,
+          title: formTitle,
+          reviewee_email: reviewee,
+          reviewer_email: user?.email ?? '',
+          due_date: dueDate || null,
+        }),
+      });
+      if (res.ok) {
+        setShowBuilder(false);
+        await loadCycles();
+      }
+    } catch (err) {
+      console.error('Failed to create review cycle', err);
+    } finally {
+      setCreatingCycle(false);
     }
-
-    setFormTitle(selectedTemplate.title);
-    setSections(cloneTemplateSectionsAsLocked(
-      selectedTemplate.sections,
-      selectedTemplate.title,
-      selectedTemplate.description,
-    ));
   }
 
-  function buildEvaluationPayload(): EvaluationFormPayload {
-    return {
-      evaluationId,
-      templateId: selectedTemplateId || null,
-      reviewee,
-      dueDate,
-      title: formTitle,
-      sections: sections.map((section, sectionIndex) => ({
-        id: section.id,
-        order: sectionIndex + 1,
-        label: section.label,
-        questions: section.questions.map((question, questionIndex) => ({
-          id: question.id,
-          order: questionIndex + 1,
-          prompt: question.prompt,
-          type: question.type,
-          options: [...question.options],
-          required: question.required,
-        })),
+  async function openResponseForm(reviewId: string) {
+    const cycleId = Number(reviewId);
+    if (Number.isNaN(cycleId)) return;
+    try {
+      const res = await fetch(`${API_BASE}/review-cycles/${cycleId}`);
+      if (!res.ok) return;
+      const detail: CycleDetail = await res.json();
+      setActiveCycleDetail(detail);
+
+      const respRes = await fetch(`${API_BASE}/review-cycles/${cycleId}/responses`);
+      if (respRes.ok) {
+        const responses = await respRes.json();
+        const myResponse = responses.find((r: any) => r.respondent_email === (user?.email ?? ''));
+        if (myResponse) {
+          setExistingAnswers(
+            myResponse.answers.map((a: any) => ({
+              questionId: a.question_id,
+              sectionId: a.section_id,
+              answerText: a.answer_text ?? '',
+              rating: a.rating ?? null,
+              selectedOptions: a.selected_options ? a.selected_options.split('\n').filter(Boolean) : [],
+            })),
+          );
+        } else {
+          setExistingAnswers([]);
+        }
+      }
+      setShowResponseForm(true);
+    } catch (err) {
+      console.error('Failed to load review cycle', err);
+    }
+  }
+
+  function buildResponseSections(): ResponseSection[] {
+    if (!activeCycleDetail) return [];
+    return activeCycleDetail.sections.map((sec) => ({
+      sectionId: sec.id,
+      label: sec.label,
+      questions: sec.questions.map((q) => ({
+        questionId: q.id,
+        sectionId: sec.id,
+        prompt: q.prompt,
+        type: q.question_type as any,
+        options: q.options ? q.options.split('\n').filter(Boolean) : [],
+        required: q.required,
       })),
-    };
+    }));
   }
 
-  function handleSaveTemplate() {
-    const payload = buildEvaluationPayload();
-    // Placeholder until backend API is connected.
-    console.log('evaluation_template_payload', payload);
+  async function handleSaveResponse(data: FormResponseData) {
+    if (!activeCycleDetail || responseSaving) return;
+    setResponseSaving(true);
+    try {
+      const res = await fetch(`${API_BASE}/review-cycles/${activeCycleDetail.id}/responses`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          respondent_email: user?.email ?? '',
+          status: data.status,
+          answers: data.answers.map((a) => ({
+            question_id: a.questionId,
+            section_id: a.sectionId,
+            answer_text: a.answerText,
+            rating: a.rating,
+            selected_options: a.selectedOptions.join('\n'),
+          })),
+        }),
+      });
+      if (res.ok) {
+        setShowResponseForm(false);
+        await loadCycles();
+      }
+    } catch (err) {
+      console.error('Failed to save review response', err);
+    } finally {
+      setResponseSaving(false);
+    }
   }
 
   return (
@@ -266,7 +390,7 @@ function ReviewsPage() {
       </div>
 
       <div className="reviews-list">
-        {reviews.map((review) => (
+        {allReviews.map((review) => (
           <article className="review-card" key={review.id}>
             <div className="review-card-header">
               <div className="review-title-row">
@@ -281,14 +405,18 @@ function ReviewsPage() {
             </div>
 
             <p>Employee: <strong>{review.employee}</strong></p>
-            <p>Department: <strong>{review.department}</strong></p>
-            <p>Manager: <strong>{review.manager}</strong></p>
-            <p>Teammates: <strong>{review.teammates.join(', ')}</strong></p>
+            {review.department && <p>Department: <strong>{review.department}</strong></p>}
+            {review.manager && <p>Manager: <strong>{review.manager}</strong></p>}
+            {review.teammates.length > 0 && <p>Teammates: <strong>{review.teammates.join(', ')}</strong></p>}
             <p>Due Date: <strong>{review.dueDate}</strong></p>
 
-            <button className="review-employee-btn">
+            <button
+              className="review-employee-btn"
+              onClick={() => openResponseForm(review.id)}
+              disabled={Number.isNaN(Number(review.id))}
+            >
               <CircleDot size={15} />
-              Review Employee
+              {review.status === 'Completed' ? 'View Response' : 'Review Employee'}
             </button>
           </article>
         ))}
@@ -309,14 +437,10 @@ function ReviewsPage() {
             value: selectedTemplateId,
             onChange: handleTemplateSelection,
             type: 'select',
-            helperText: templates.find((template) => template.id === selectedTemplateId)?.description,
+            helperText: templates.find((t) => t.id === selectedTemplateId)?.description,
             options: [
               { label: 'None (Start from scratch)', value: '' },
-              ...templates.map((template) => ({
-                label: template.title,
-                value: template.id,
-                description: template.description,
-              })),
+              ...templates.map((t) => ({ label: t.title, value: t.id, description: t.description })),
             ],
           },
         ]}
@@ -358,9 +482,27 @@ function ReviewsPage() {
         sections={sections}
         setSections={setSections}
         existingSectionOptions={existingSectionOptions}
-        saveButtonLabel="Save Evaluation"
+        saveButtonLabel={creatingCycle ? 'Saving...' : 'Save Evaluation'}
         onSave={handleSaveTemplate}
         onClose={() => setShowBuilder(false)}
+      />
+
+      <FormResponseModal
+        isOpen={showResponseForm}
+        title={activeCycleDetail?.title ?? 'Review'}
+        description="Complete the evaluation by answering each question below."
+        meta={[
+          { label: 'Reviewee', value: activeCycleDetail?.reviewee_email ?? '' },
+          { label: 'Due Date', value: formatDisplayDate(activeCycleDetail?.due_date ?? null) },
+          { label: 'Status', value: activeCycleDetail?.status ?? '' },
+        ]}
+        sections={buildResponseSections()}
+        existingAnswers={existingAnswers}
+        readOnly={activeCycleDetail?.status === 'Completed'}
+        saving={responseSaving}
+        onSaveDraft={(data) => handleSaveResponse(data)}
+        onSubmit={(data) => handleSaveResponse(data)}
+        onClose={() => setShowResponseForm(false)}
       />
     </section>
   );

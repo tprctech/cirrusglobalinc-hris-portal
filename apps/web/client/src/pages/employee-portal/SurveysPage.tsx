@@ -1,18 +1,59 @@
-import { useEffect, useMemo, useState } from 'react';
-import { BarChart3, CalendarDays, CircleDot, Pencil, Plus, Trash2 } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { BarChart3, CalendarDays, CircleDot, Plus } from 'lucide-react';
 import TemplateBuilderModal, {
   type BuilderExistingSectionOption,
   type BuilderQuestionType,
   type BuilderSection,
 } from '../../components/TemplateBuilderModal';
+import FormResponseModal, {
+  type AnswerValue,
+  type FormResponseData,
+  type ResponseSection,
+} from '../../components/FormResponseModal';
 import ConfirmationDialog from '../../components/ConfirmationDialog';
 import { surveysMockData } from '../../data/mock/menuMockData';
 import { useSurveyCatalog } from '../../data/surveyCatalogStore';
+import { useAuth } from '../../app/AuthContext';
 import './SurveysPage.css';
+
+const API_BASE = '/api/v1';
 
 type SurveyTab = 'active' | 'my';
 type SurveyStatus = 'Draft' | 'Active' | 'Inactive' | 'Completed';
 type SurveyScope = 'All Employees' | 'My Department';
+
+type Campaign = {
+  id: number;
+  template_id: number | null;
+  title: string;
+  scope: string;
+  due_date: string | null;
+  status: string;
+  created_by_email: string;
+  created_at: string | null;
+};
+
+type CampaignDetail = {
+  id: number;
+  template_id: number | null;
+  title: string;
+  scope: string;
+  due_date: string | null;
+  status: string;
+  sections: Array<{
+    id: number;
+    label: string;
+    sort_order: number;
+    questions: Array<{
+      id: number;
+      prompt: string;
+      question_type: string;
+      options: string;
+      required: boolean;
+      sort_order: number;
+    }>;
+  }>;
+};
 
 type ActiveSurvey = {
   id: string;
@@ -34,26 +75,6 @@ type ManagedSurvey = {
   status: SurveyStatus;
   responseCount: number;
   questionCount: number;
-};
-
-type SurveyTemplatePayload = {
-  templateId: string | null;
-  scope: SurveyScope;
-  dueDate: string;
-  title: string;
-  sections: Array<{
-    id: string;
-    order: number;
-    label: string;
-    questions: Array<{
-      id: string;
-      order: number;
-      prompt: string;
-      type: BuilderQuestionType;
-      options: string[];
-      required: boolean;
-    }>;
-  }>;
 };
 
 const statusClassMap: Record<SurveyStatus, string> = {
@@ -107,252 +128,231 @@ function cloneTemplateSectionsAsLocked(
   }));
 }
 
-function buildSectionsFromTemplate(template: SurveyTemplatePayload): BuilderSection[] {
-  return template.sections.map((section) => ({
-    id: section.id,
-    label: section.label,
-    questions: section.questions.map((question) => ({
-      id: question.id,
-      prompt: question.prompt,
-      type: question.type,
-      options: [...question.options],
-      required: question.required ?? false,
-    })),
-  }));
-}
-
-function formatDateForDisplay(date: Date): string {
-  return date.toLocaleDateString('en-US');
+function formatDateForDisplay(d: Date): string {
+  return d.toLocaleDateString('en-US');
 }
 
 function toIsoDate(value: string): string {
-  if (!value) {
-    return '';
-  }
-
-  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    return value;
-  }
-
+  if (!value) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
   const [month, day, year] = value.split('/');
-  if (!month || !day || !year) {
-    return '';
-  }
-
-  const normalizedMonth = month.padStart(2, '0');
-  const normalizedDay = day.padStart(2, '0');
-  return `${year}-${normalizedMonth}-${normalizedDay}`;
+  if (!month || !day || !year) return '';
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
 }
 
-function toUsDate(value: string): string {
-  if (!value) {
-    return 'TBD';
-  }
-
+function toUsDate(value: string | null): string {
+  if (!value) return 'TBD';
   const [year, month, day] = value.split('-');
-  if (!year || !month || !day) {
-    return value;
-  }
-
+  if (!year || !month || !day) return value;
   return `${Number(month)}/${Number(day)}/${year}`;
 }
 
-function getAudienceFromScope(scope: SurveyScope): string {
-  return scope;
-}
-
-function getScopeFromAudience(audience: string): SurveyScope {
-  return audience === 'All Employees' ? 'All Employees' : 'My Department';
-}
-
 function SurveysPage() {
+  const { user } = useAuth();
   const { templates, questionSets } = useSurveyCatalog();
   const [activeTab, setActiveTab] = useState<SurveyTab>('active');
   const [showBuilder, setShowBuilder] = useState(false);
-  const [editingSurveyId, setEditingSurveyId] = useState<string | null>(null);
-  const [managedSurveys, setManagedSurveys] = useState<ManagedSurvey[]>(
-    surveysMockData.tabs.mySurveys as ManagedSurvey[],
-  );
-  const [surveyTemplatesById, setSurveyTemplatesById] = useState<Record<string, SurveyTemplatePayload>>({});
-  const [templateId, setTemplateId] = useState(`survey-template-${Date.now()}`);
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const [scope, setScope] = useState<SurveyScope>(surveysMockData.surveyTemplate.scope as SurveyScope);
   const [dueDate, setDueDate] = useState(toIsoDate(surveysMockData.tabs.mySurveys[0]?.dueDate ?? ''));
   const [formTitle, setFormTitle] = useState(surveysMockData.surveyTemplate.title);
   const [sections, setSections] = useState<BuilderSection[]>(cloneSections());
-  const [pendingDeleteSurvey, setPendingDeleteSurvey] = useState<ManagedSurvey | null>(null);
+  const [creatingSurvey, setCreatingSurvey] = useState(false);
 
-  const activeSurveys = surveysMockData.tabs.activeSurveys as ActiveSurvey[];
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [showResponseForm, setShowResponseForm] = useState(false);
+  const [activeCampaignDetail, setActiveCampaignDetail] = useState<CampaignDetail | null>(null);
+  const [existingAnswers, setExistingAnswers] = useState<AnswerValue[]>([]);
+  const [responseSaving, setResponseSaving] = useState(false);
+  const [pendingDeleteCampaign, setPendingDeleteCampaign] = useState<Campaign | null>(null);
+
+  const loadCampaigns = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/survey-campaigns`);
+      if (res.ok) setCampaigns(await res.json());
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => { loadCampaigns(); }, [loadCampaigns]);
 
   useEffect(() => {
     if (!templates.length) {
       setSelectedTemplateId('');
       return;
     }
-
-    setSelectedTemplateId((previous) => {
-      if (templates.some((template) => template.id === previous)) {
-        return previous;
-      }
-      return templates[0].id;
-    });
+    setSelectedTemplateId((prev) => templates.some((t) => t.id === prev) ? prev : templates[0].id);
   }, [templates]);
 
   const existingSectionOptions = useMemo<BuilderExistingSectionOption[]>(
-    () => questionSets.map((questionSet) => ({
-      id: questionSet.id,
-      label: questionSet.title,
-      description: questionSet.description,
-      section: cloneTemplateSections([questionSet.section])[0],
+    () => questionSets.map((qs) => ({
+      id: qs.id,
+      label: qs.title,
+      description: qs.description,
+      section: cloneTemplateSections([qs.section])[0],
     })),
     [questionSets],
   );
 
-  function handleViewResponses(survey: ManagedSurvey) {
-    console.log('survey_responses_requested', {
-      surveyId: survey.id,
-      status: survey.status,
-      responseCount: survey.responseCount,
-    });
-  }
+  const activeSurveys: ActiveSurvey[] = [
+    ...(surveysMockData.tabs.activeSurveys as ActiveSurvey[]),
+    ...campaigns
+      .filter((c) => c.status === 'Active')
+      .map((c) => ({
+        id: String(c.id),
+        title: c.title,
+        audience: c.scope,
+        dueDate: toUsDate(c.due_date),
+        estimatedTime: '~5 min',
+        questionCount: 0,
+        status: 'Active' as const,
+      })),
+  ];
+
+  const managedSurveys: ManagedSurvey[] = campaigns.map((c) => ({
+    id: String(c.id),
+    title: c.title,
+    audience: c.scope,
+    department: c.scope === 'All Employees' ? 'All Departments' : 'My Department',
+    createdDate: c.created_at ? new Date(c.created_at).toLocaleDateString('en-US') : '',
+    dueDate: toUsDate(c.due_date),
+    status: c.status as SurveyStatus,
+    responseCount: 0,
+    questionCount: 0,
+  }));
 
   function handleTemplateSelection(nextTemplateId: string) {
     setSelectedTemplateId(nextTemplateId);
-
     if (!nextTemplateId) {
       setFormTitle(surveysMockData.surveyTemplate.title);
       setSections(cloneSections());
       return;
     }
-
-    const selectedTemplate = templates.find((template) => template.id === nextTemplateId);
-    if (!selectedTemplate) {
-      return;
-    }
-
-    setFormTitle(selectedTemplate.title);
-    setSections(cloneTemplateSectionsAsLocked(
-      selectedTemplate.sections,
-      selectedTemplate.title,
-      selectedTemplate.description,
-    ));
+    const tmpl = templates.find((t) => t.id === nextTemplateId);
+    if (!tmpl) return;
+    setFormTitle(tmpl.title);
+    setSections(cloneTemplateSectionsAsLocked(tmpl.sections, tmpl.title, tmpl.description));
   }
 
   function openCreateSurveyModal() {
-    setEditingSurveyId(null);
-    setTemplateId(`survey-template-${Date.now()}`);
     setScope(surveysMockData.surveyTemplate.scope as SurveyScope);
     setDueDate(toIsoDate(surveysMockData.tabs.mySurveys[0]?.dueDate ?? ''));
-
     if (templates.length) {
-      const firstTemplate = templates[0];
-      setSelectedTemplateId(firstTemplate.id);
-      setFormTitle(firstTemplate.title);
-      setSections(cloneTemplateSectionsAsLocked(
-        firstTemplate.sections,
-        firstTemplate.title,
-        firstTemplate.description,
-      ));
+      const first = templates[0];
+      setSelectedTemplateId(first.id);
+      setFormTitle(first.title);
+      setSections(cloneTemplateSectionsAsLocked(first.sections, first.title, first.description));
     } else {
       setSelectedTemplateId('');
       setFormTitle(surveysMockData.surveyTemplate.title);
       setSections(cloneSections());
     }
-
     setShowBuilder(true);
   }
 
-  function openEditSurveyModal(survey: ManagedSurvey) {
-    const existingTemplate = surveyTemplatesById[survey.id];
-    const nextTemplateId = existingTemplate?.templateId ?? '';
-    const nextScope = existingTemplate?.scope ?? getScopeFromAudience(survey.audience);
-    const nextDueDate = existingTemplate?.dueDate ?? toIsoDate(survey.dueDate);
-    const nextTitle = existingTemplate?.title ?? survey.title;
-    const matchedTemplate = nextTemplateId
-      ? templates.find((template) => template.id === nextTemplateId)
-      : null;
-    const nextSections = matchedTemplate
-      ? cloneTemplateSectionsAsLocked(
-        matchedTemplate.sections,
-        matchedTemplate.title,
-        matchedTemplate.description,
-      )
-      : (existingTemplate ? buildSectionsFromTemplate(existingTemplate) : cloneSections());
-
-    setEditingSurveyId(survey.id);
-    setTemplateId(existingTemplate?.templateId ?? `survey-template-${survey.id}`);
-    setSelectedTemplateId(nextTemplateId || '');
-    setScope(nextScope);
-    setDueDate(nextDueDate);
-    setFormTitle(nextTitle);
-    setSections(nextSections);
-    setShowBuilder(true);
-  }
-
-  function handleDeleteSurvey(surveyId: string) {
-    setManagedSurveys((previous) => previous.filter((survey) => survey.id !== surveyId));
-    setSurveyTemplatesById((previous) => {
-      const next = { ...previous };
-      delete next[surveyId];
-      return next;
-    });
-  }
-
-  function buildSurveyTemplatePayload(): SurveyTemplatePayload {
-    return {
-      templateId: selectedTemplateId || null,
-      scope,
-      dueDate,
-      title: formTitle,
-      sections: sections.map((section, sectionIndex) => ({
-        id: section.id,
-        order: sectionIndex + 1,
-        label: section.label,
-        questions: section.questions.map((question, questionIndex) => ({
-          id: question.id,
-          order: questionIndex + 1,
-          prompt: question.prompt,
-          type: question.type,
-          options: [...question.options],
-          required: question.required,
-        })),
-      })),
-    };
-  }
-
-  function handleSaveSurvey() {
-    const payload = buildSurveyTemplatePayload();
-    const audience = getAudienceFromScope(scope);
-
-    if (editingSurveyId) {
-      setSurveyTemplatesById((previous) => ({ ...previous, [editingSurveyId]: payload }));
-      setManagedSurveys((previous) => previous.map((survey) => (
-        survey.id === editingSurveyId
-          ? { ...survey, title: formTitle, audience, dueDate: toUsDate(dueDate) }
-          : survey
-      )));
-    } else {
-      const surveyId = `my-${Date.now()}`;
-      const totalQuestions = sections.reduce((sum, s) => sum + s.questions.length, 0);
-      setSurveyTemplatesById((previous) => ({ ...previous, [surveyId]: payload }));
-      setManagedSurveys((previous) => [
-        {
-          id: surveyId,
+  async function handleSaveSurvey() {
+    if (creatingSurvey) return;
+    setCreatingSurvey(true);
+    try {
+      const templateDbId = selectedTemplateId ? Number(selectedTemplateId) : null;
+      const res = await fetch(`${API_BASE}/survey-campaigns`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          template_id: templateDbId,
           title: formTitle,
-          audience,
-          department: scope === 'All Employees' ? 'All Departments' : 'My Department',
-          createdDate: formatDateForDisplay(new Date()),
-          dueDate: toUsDate(dueDate),
-          status: 'Draft',
-          responseCount: 0,
-          questionCount: totalQuestions,
-        },
-        ...previous,
-      ]);
+          scope,
+          due_date: dueDate || null,
+          created_by_email: user?.email ?? '',
+        }),
+      });
+      if (res.ok) {
+        setShowBuilder(false);
+        await loadCampaigns();
+      }
+    } catch (err) {
+      console.error('Failed to create survey campaign', err);
+    } finally {
+      setCreatingSurvey(false);
     }
+  }
 
-    console.log('survey_template_payload', payload);
-    setShowBuilder(false);
+  async function openResponseForm(surveyId: string) {
+    const campaignId = Number(surveyId);
+    if (Number.isNaN(campaignId)) return;
+    try {
+      const res = await fetch(`${API_BASE}/survey-campaigns/${campaignId}`);
+      if (!res.ok) return;
+      const detail: CampaignDetail = await res.json();
+      setActiveCampaignDetail(detail);
+
+      const respRes = await fetch(`${API_BASE}/survey-campaigns/${campaignId}/responses`);
+      if (respRes.ok) {
+        const responses = await respRes.json();
+        const myResponse = responses.find((r: any) => r.respondent_email === (user?.email ?? ''));
+        if (myResponse) {
+          setExistingAnswers(
+            myResponse.answers.map((a: any) => ({
+              questionId: a.question_id,
+              sectionId: a.section_id,
+              answerText: a.answer_text ?? '',
+              rating: a.rating ?? null,
+              selectedOptions: a.selected_options ? a.selected_options.split('\n').filter(Boolean) : [],
+            })),
+          );
+        } else {
+          setExistingAnswers([]);
+        }
+      }
+      setShowResponseForm(true);
+    } catch (err) {
+      console.error('Failed to load survey campaign', err);
+    }
+  }
+
+  function buildResponseSections(): ResponseSection[] {
+    if (!activeCampaignDetail) return [];
+    return activeCampaignDetail.sections.map((sec) => ({
+      sectionId: sec.id,
+      label: sec.label,
+      questions: sec.questions.map((q) => ({
+        questionId: q.id,
+        sectionId: sec.id,
+        prompt: q.prompt,
+        type: q.question_type as any,
+        options: q.options ? q.options.split('\n').filter(Boolean) : [],
+        required: q.required,
+      })),
+    }));
+  }
+
+  async function handleSaveResponse(data: FormResponseData) {
+    if (!activeCampaignDetail || responseSaving) return;
+    setResponseSaving(true);
+    try {
+      const res = await fetch(`${API_BASE}/survey-campaigns/${activeCampaignDetail.id}/responses`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          respondent_email: user?.email ?? '',
+          status: data.status,
+          answers: data.answers.map((a) => ({
+            question_id: a.questionId,
+            section_id: a.sectionId,
+            answer_text: a.answerText,
+            rating: a.rating,
+            selected_options: a.selectedOptions.join('\n'),
+          })),
+        }),
+      });
+      if (res.ok) {
+        setShowResponseForm(false);
+        await loadCampaigns();
+      }
+    } catch (err) {
+      console.error('Failed to save survey response', err);
+    } finally {
+      setResponseSaving(false);
+    }
   }
 
   return (
@@ -394,9 +394,12 @@ function SurveysPage() {
               <p>Audience: <strong>{survey.audience}</strong></p>
               <p>Due Date: <strong>{survey.dueDate}</strong></p>
               <p>Estimated Time: <strong>{survey.estimatedTime}</strong></p>
-              <p>Questions: <strong>{survey.questionCount}</strong></p>
 
-              <button className="survey-action-btn">
+              <button
+                className="survey-action-btn"
+                onClick={() => openResponseForm(survey.id)}
+                disabled={Number.isNaN(Number(survey.id))}
+              >
                 <CircleDot size={15} />
                 Answer Survey
               </button>
@@ -421,7 +424,6 @@ function SurveysPage() {
                   <th>Department</th>
                   <th>Created On</th>
                   <th>Due Date</th>
-                  <th>No. of Questions</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -437,10 +439,9 @@ function SurveysPage() {
                       </span>
                     </td>
                     <td>{survey.dueDate}</td>
-                    <td>{survey.questionCount}</td>
                     <td>
-                      <button className="survey-action-btn small" onClick={() => handleViewResponses(survey)}>
-                        View Response
+                      <button className="survey-action-btn small" onClick={() => openResponseForm(survey.id)}>
+                        View Responses
                       </button>
                     </td>
                   </tr>
@@ -453,9 +454,9 @@ function SurveysPage() {
 
       <TemplateBuilderModal
         isOpen={showBuilder}
-        templateId={templateId}
+        templateId={`survey-template-${Date.now()}`}
         templateEntity="survey-template"
-        modalTitle={editingSurveyId ? 'Edit Survey' : 'Create Survey'}
+        modalTitle="Create Survey"
         modalDescription="Define sections, question types, and prompts for this survey."
         metaFields={[
           {
@@ -466,14 +467,10 @@ function SurveysPage() {
             value: selectedTemplateId,
             onChange: handleTemplateSelection,
             type: 'select',
-            helperText: templates.find((template) => template.id === selectedTemplateId)?.description,
+            helperText: templates.find((t) => t.id === selectedTemplateId)?.description,
             options: [
               { label: 'None (Start from scratch)', value: '' },
-              ...templates.map((template) => ({
-                label: template.title,
-                value: template.id,
-                description: template.description,
-              })),
+              ...templates.map((t) => ({ label: t.title, value: t.id, description: t.description })),
             ],
           },
         ]}
@@ -519,22 +516,35 @@ function SurveysPage() {
         sections={sections}
         setSections={setSections}
         existingSectionOptions={existingSectionOptions}
-        saveButtonLabel={editingSurveyId ? 'Save Survey Changes' : 'Save Survey Template'}
+        saveButtonLabel={creatingSurvey ? 'Saving...' : 'Save Survey'}
         onSave={handleSaveSurvey}
         onClose={() => setShowBuilder(false)}
       />
+
+      <FormResponseModal
+        isOpen={showResponseForm}
+        title={activeCampaignDetail?.title ?? 'Survey'}
+        description="Please answer each question below."
+        meta={[
+          { label: 'Scope', value: activeCampaignDetail?.scope ?? '' },
+          { label: 'Due Date', value: toUsDate(activeCampaignDetail?.due_date ?? null) },
+          { label: 'Status', value: activeCampaignDetail?.status ?? '' },
+        ]}
+        sections={buildResponseSections()}
+        existingAnswers={existingAnswers}
+        saving={responseSaving}
+        onSaveDraft={(data) => handleSaveResponse(data)}
+        onSubmit={(data) => handleSaveResponse(data)}
+        onClose={() => setShowResponseForm(false)}
+      />
+
       <ConfirmationDialog
-        isOpen={Boolean(pendingDeleteSurvey)}
+        isOpen={Boolean(pendingDeleteCampaign)}
         title="Delete Survey"
-        message={`Are you sure you want to delete "${pendingDeleteSurvey?.title ?? ''}"?`}
+        message={`Are you sure you want to delete "${pendingDeleteCampaign?.title ?? ''}"?`}
         confirmLabel="Delete"
-        onCancel={() => setPendingDeleteSurvey(null)}
-        onConfirm={() => {
-          if (pendingDeleteSurvey) {
-            handleDeleteSurvey(pendingDeleteSurvey.id);
-          }
-          setPendingDeleteSurvey(null);
-        }}
+        onCancel={() => setPendingDeleteCampaign(null)}
+        onConfirm={() => setPendingDeleteCampaign(null)}
       />
     </section>
   );

@@ -94,13 +94,27 @@ Two workflows are configured:
 - `/api/v1/hr/employees/{id}/attachments` - Employee attachments (upload, list, download, delete)
 - `/api/v1/hr/company-resources/*` - Company resources (file upload/download, category: Policies/Employee Handbook, is_active toggle)
 
-## Database Tables (24 total)
+### Review & Survey Response System
+
+- **Review Cycles** (`review_cycles`): Assigns a review template to a reviewee; tracks status (Pending/In Progress/Completed)
+- **Review Responses** (`review_responses`): One per respondent per cycle; status Draft or Submitted
+- **Review Response Answers** (`review_response_answers`): Maps to template question via `question_id` + `section_id`; stores `answer_text`, `rating` (for stars), `selected_options` (newline-separated for multi-choice)
+- **Survey Campaigns** (`survey_campaigns`): Creates a live survey from a template; tracks scope and status
+- **Survey Responses** (`survey_responses`): One per respondent per campaign
+- **Survey Response Answers** (`survey_response_answers`): Same answer schema as review answers
+- **FormResponseModal**: Renders questions as answerable fields (textarea for Long Answer, radio for Single Choice, checkboxes for Multiple Choice, star picker for 5-Star Rating)
+- **API flow**: Create cycle/campaign → GET detail (loads template sections/questions) → POST responses with answers array
+- **Upsert pattern**: Saving a response for the same respondent replaces previous answers (draft overwrite)
+
+## Database Tables (30 total)
 
 user_accounts, employees, departments, roles, role_competencies, competencies, competency_learning_materials, employee_attachments, company_resources,
 review_templates, review_template_sections, review_template_questions,
 review_question_sets, review_question_set_sections, review_question_set_questions,
+review_cycles, review_responses, review_response_answers,
 survey_templates, survey_template_sections, survey_template_questions,
 survey_question_sets, survey_question_set_sections, survey_question_set_questions,
+survey_campaigns, survey_responses, survey_response_answers,
 recognition_badges, rewards, reward_redeems
 
 ## Soft Delete

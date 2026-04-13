@@ -369,3 +369,103 @@ class RewardRedeem(Base):
     is_deleted = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class ReviewCycle(Base):
+    __tablename__ = "review_cycles"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    template_id = Column(Integer, ForeignKey("review_templates.id", ondelete="SET NULL"), nullable=True)
+    title = Column(String(300), nullable=False)
+    reviewee_email = Column(String(200), nullable=False)
+    reviewer_email = Column(String(200), nullable=False, default="")
+    due_date = Column(Date, nullable=True)
+    status = Column(String(30), nullable=False, default="Pending")
+    is_deleted = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    template = relationship("ReviewTemplate")
+    responses = relationship("ReviewResponse", back_populates="cycle", cascade="all, delete-orphan")
+
+
+class ReviewResponse(Base):
+    __tablename__ = "review_responses"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    cycle_id = Column(Integer, ForeignKey("review_cycles.id", ondelete="CASCADE"), nullable=False)
+    respondent_email = Column(String(200), nullable=False)
+    status = Column(String(30), nullable=False, default="Draft")
+    submitted_at = Column(DateTime, nullable=True)
+    is_deleted = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    cycle = relationship("ReviewCycle", back_populates="responses")
+    answers = relationship("ReviewResponseAnswer", back_populates="response", cascade="all, delete-orphan")
+
+
+class ReviewResponseAnswer(Base):
+    __tablename__ = "review_response_answers"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    response_id = Column(Integer, ForeignKey("review_responses.id", ondelete="CASCADE"), nullable=False)
+    question_id = Column(Integer, nullable=False)
+    section_id = Column(Integer, nullable=False)
+    answer_text = Column(Text, nullable=True, default="")
+    rating = Column(Integer, nullable=True)
+    selected_options = Column(Text, nullable=True, default="")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    response = relationship("ReviewResponse", back_populates="answers")
+
+
+class SurveyCampaign(Base):
+    __tablename__ = "survey_campaigns"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    template_id = Column(Integer, ForeignKey("survey_templates.id", ondelete="SET NULL"), nullable=True)
+    title = Column(String(300), nullable=False)
+    scope = Column(String(50), nullable=False, default="All Employees")
+    due_date = Column(Date, nullable=True)
+    status = Column(String(30), nullable=False, default="Active")
+    created_by_email = Column(String(200), nullable=False, default="")
+    is_deleted = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    template = relationship("SurveyTemplate")
+    responses = relationship("SurveyResponse", back_populates="campaign", cascade="all, delete-orphan")
+
+
+class SurveyResponse(Base):
+    __tablename__ = "survey_responses"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    campaign_id = Column(Integer, ForeignKey("survey_campaigns.id", ondelete="CASCADE"), nullable=False)
+    respondent_email = Column(String(200), nullable=False)
+    status = Column(String(30), nullable=False, default="Draft")
+    submitted_at = Column(DateTime, nullable=True)
+    is_deleted = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    campaign = relationship("SurveyCampaign", back_populates="responses")
+    answers = relationship("SurveyResponseAnswer", back_populates="response", cascade="all, delete-orphan")
+
+
+class SurveyResponseAnswer(Base):
+    __tablename__ = "survey_response_answers"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    response_id = Column(Integer, ForeignKey("survey_responses.id", ondelete="CASCADE"), nullable=False)
+    question_id = Column(Integer, nullable=False)
+    section_id = Column(Integer, nullable=False)
+    answer_text = Column(Text, nullable=True, default="")
+    rating = Column(Integer, nullable=True)
+    selected_options = Column(Text, nullable=True, default="")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    response = relationship("SurveyResponse", back_populates="answers")
