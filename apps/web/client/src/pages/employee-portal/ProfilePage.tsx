@@ -7,6 +7,7 @@ import {
   GraduationCap,
   Mail,
   MapPin,
+  MessageSquare,
   Network,
   Paperclip,
   Phone,
@@ -68,6 +69,17 @@ import {
   downloadAttachment,
   type EmployeeAttachment,
 } from '../../api/employeeAttachments';
+import { getStoredToken } from '../../api/auth';
+
+interface ReceivedFeedbackItem {
+  id: number;
+  title: string;
+  from: string;
+  fromEmail: string;
+  fromPhoto: string;
+  date: string;
+  description: string;
+}
 
 function formatDisplayDate(dateStr: string) {
   if (!dateStr) return '—';
@@ -94,7 +106,11 @@ function ProfilePage() {
   const [roleInfo, setRoleInfo] = useState<RoleDetail | null>(null);
   const [competencyNames, setCompetencyNames] = useState<string[]>([]);
   const [directReports, setDirectReports] = useState<string[]>([]);
+  const [receivedFeedback, setReceivedFeedback] = useState<ReceivedFeedbackItem[]>([]);
+  const [showAllFeedbackModal, setShowAllFeedbackModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const FEEDBACK_PREVIEW_COUNT = 4;
 
   const loadRoleInfo = useCallback(async () => {
     if (!emp?.jobTitle) return;
@@ -134,6 +150,17 @@ function ProfilePage() {
       })
       .catch(() => {});
   }, [emp?.email]);
+
+  useEffect(() => {
+    const token = getStoredToken();
+    if (!token) return;
+    fetch('/api/v1/feedback/received', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => r.json())
+      .then((data) => setReceivedFeedback(data.items || []))
+      .catch(() => {});
+  }, []);
 
   const loadAttachments = useCallback(async () => {
     if (!emp?.id) return;
@@ -517,6 +544,85 @@ function ProfilePage() {
           ))}
         </div>
       </article>
+
+      <article className="profile-info-card profile-feedback-card">
+        <div className="profile-card-head">
+          <MessageSquare size={20} />
+          <h3>Received Feedback</h3>
+        </div>
+
+        <div className="profile-feedback-list">
+          {receivedFeedback.length === 0 && (
+            <p className="profile-feedback-empty">No feedback received yet.</p>
+          )}
+
+          {receivedFeedback.slice(0, FEEDBACK_PREVIEW_COUNT).map((fb) => (
+            <div key={fb.id} className="profile-feedback-item">
+              <div className="profile-feedback-item-header">
+                {fb.fromPhoto ? (
+                  <img src={fb.fromPhoto} alt={fb.from} className="profile-feedback-avatar-img" />
+                ) : (
+                  <div className="profile-feedback-avatar">{getInitials(fb.from)}</div>
+                )}
+                <div className="profile-feedback-meta">
+                  <strong>{fb.from}</strong>
+                  <span>{fb.date}</span>
+                </div>
+              </div>
+              <h4 className="profile-feedback-title">{fb.title}</h4>
+              <p className="profile-feedback-desc">{fb.description}</p>
+            </div>
+          ))}
+        </div>
+
+        {receivedFeedback.length > FEEDBACK_PREVIEW_COUNT && (
+          <button
+            className="profile-feedback-view-all-btn"
+            onClick={() => setShowAllFeedbackModal(true)}
+          >
+            View All Feedback ({receivedFeedback.length})
+          </button>
+        )}
+      </article>
+
+      {showAllFeedbackModal && (
+        <div className="profile-competency-modal-backdrop" onClick={() => setShowAllFeedbackModal(false)}>
+          <section className="profile-feedback-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="profile-competency-modal-header">
+              <div>
+                <h3>All Received Feedback</h3>
+                <p>{receivedFeedback.length} feedback received</p>
+              </div>
+              <button
+                className="profile-competency-close-btn"
+                onClick={() => setShowAllFeedbackModal(false)}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="profile-feedback-modal-list">
+              {receivedFeedback.map((fb) => (
+                <div key={fb.id} className="profile-feedback-item">
+                  <div className="profile-feedback-item-header">
+                    {fb.fromPhoto ? (
+                      <img src={fb.fromPhoto} alt={fb.from} className="profile-feedback-avatar-img" />
+                    ) : (
+                      <div className="profile-feedback-avatar">{getInitials(fb.from)}</div>
+                    )}
+                    <div className="profile-feedback-meta">
+                      <strong>{fb.from}</strong>
+                      <span>{fb.date}</span>
+                    </div>
+                  </div>
+                  <h4 className="profile-feedback-title">{fb.title}</h4>
+                  <p className="profile-feedback-desc">{fb.description}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+      )}
 
       {selectedCompetency && (
         <div className="profile-competency-modal-backdrop">

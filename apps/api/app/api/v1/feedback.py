@@ -34,10 +34,17 @@ def _user_display_name(user: UserAccount) -> str:
     return user.email
 
 
+def _user_profile_photo(user: UserAccount) -> str:
+    if user.employee and user.employee.profile_photo:
+        return user.employee.profile_photo
+    return ""
+
+
 def _serialize_feedback(fb: Feedback, perspective: str) -> dict:
     other_user = fb.to_user if perspective == "given" else fb.from_user
     other_email = other_user.email if other_user else ""
     other_name = _user_display_name(other_user) if other_user else ""
+    other_photo = _user_profile_photo(other_user) if other_user else ""
 
     result = {
         "id": fb.id,
@@ -48,9 +55,11 @@ def _serialize_feedback(fb: Feedback, perspective: str) -> dict:
     if perspective == "given":
         result["to"] = other_name
         result["toEmail"] = other_email
+        result["toPhoto"] = other_photo
     else:
         result["from"] = other_name
         result["fromEmail"] = other_email
+        result["fromPhoto"] = other_photo
     return result
 
 
