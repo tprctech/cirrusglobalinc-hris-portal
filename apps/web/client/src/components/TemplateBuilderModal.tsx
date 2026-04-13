@@ -120,6 +120,8 @@ function TemplateBuilderModal({
   onClose,
 }: TemplateBuilderModalProps) {
   const [selectedExistingSectionId, setSelectedExistingSectionId] = useState('');
+  const [showAddSectionMenu, setShowAddSectionMenu] = useState(false);
+  const addSectionMenuRef = useRef<HTMLDivElement | null>(null);
   const sectionCounterRef = useRef(sections.length + 1);
   const questionCounterRef = useRef(
     sections.reduce((count, section) => count + section.questions.length, 0) + 1,
@@ -140,6 +142,17 @@ function TemplateBuilderModal({
     sectionCounterRef.current = getMaxNumericSuffix(sectionIds, 'section-') + 1;
     questionCounterRef.current = getMaxNumericSuffix(questionIds, 'question-') + 1;
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!showAddSectionMenu) return;
+    function handleClickOutside(event: MouseEvent) {
+      if (addSectionMenuRef.current && !addSectionMenuRef.current.contains(event.target as Node)) {
+        setShowAddSectionMenu(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showAddSectionMenu]);
 
   useLayoutEffect(() => {
     const previousTops = previousSectionTopsRef.current;
@@ -572,9 +585,6 @@ function TemplateBuilderModal({
 
         {metaFields.map(renderBuilderField)}
 
-        {renderBuilderField(subjectField)}
-        {afterSubjectFields.map(renderBuilderField)}
-
         <div className="builder-block">
           <label htmlFor={titleField.id}>{titleField.label}</label>
           <input
@@ -588,6 +598,9 @@ function TemplateBuilderModal({
           />
           {titleField.helperText && <p className="builder-field-help">{titleField.helperText}</p>}
         </div>
+
+        {renderBuilderField(subjectField)}
+        {afterSubjectFields.map(renderBuilderField)}
 
         {sections.map((section, index) => (
           <div
@@ -813,35 +826,72 @@ function TemplateBuilderModal({
           </div>
         ))}
 
-        <div className="builder-actions">
-          <div className="builder-actions-left">
-            {allowMultipleSections && (
-              <button className="secondary-btn" onClick={addSection}>
-                Add New Section
-              </button>
-            )}
-            {allowMultipleSections && existingSectionOptions.length > 0 && (
-              <div className="builder-existing-section-actions">
-                <select
-                  value={selectedExistingSectionId}
-                  onChange={(event) => setSelectedExistingSectionId(event.target.value)}
-                  aria-label="Select existing section"
-                >
-                  {existingSectionOptions.map((option) => (
-                    <option key={option.id} value={option.id}>
-                      {option.description ? `${option.label} - ${option.description}` : option.label}
-                    </option>
-                  ))}
-                </select>
-                <button className="secondary-btn" onClick={addExistingSection}>
-                  Add Existing Section
-                </button>
+        {allowMultipleSections && (
+          <div
+            className={`add-section-card ${showAddSectionMenu ? 'active' : ''}`}
+            onClick={() => {
+              if (!showAddSectionMenu) {
+                if (existingSectionOptions.length > 0 && !selectedExistingSectionId) {
+                  setSelectedExistingSectionId(existingSectionOptions[0].id);
+                }
+                setShowAddSectionMenu(true);
+              }
+            }}
+            ref={addSectionMenuRef}
+          >
+            {!showAddSectionMenu && (
+              <div className="add-section-card-placeholder">
+                <span className="add-section-card-icon">+</span>
+                <span>Add a Section</span>
               </div>
             )}
-            {allowMultipleSections && selectedExistingSectionOption?.description && (
-              <p className="builder-field-help">{selectedExistingSectionOption.description}</p>
+            {showAddSectionMenu && (
+              <div className="add-section-card-menu">
+                <button
+                  className="add-section-menu-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    addSection();
+                    setShowAddSectionMenu(false);
+                  }}
+                >
+                  <span className="add-section-menu-icon">+</span>
+                  Create New Section
+                </button>
+                {existingSectionOptions.length > 0 && (
+                  <div className="add-section-menu-existing">
+                    <div className="add-section-menu-divider">or use an existing question set</div>
+                    <select
+                      value={selectedExistingSectionId}
+                      onChange={(event) => setSelectedExistingSectionId(event.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      aria-label="Select existing section"
+                    >
+                      {existingSectionOptions.map((option) => (
+                        <option key={option.id} value={option.id}>
+                          {option.description ? `${option.label} — ${option.description}` : option.label}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      className="add-section-menu-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        addExistingSection();
+                        setShowAddSectionMenu(false);
+                      }}
+                    >
+                      <span className="add-section-menu-icon">&#x2191;</span>
+                      Use Selected Question Set
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
           </div>
+        )}
+
+        <div className="builder-actions">
           <button className="primary-btn" onClick={onSave}>
             {saveButtonLabel}
           </button>

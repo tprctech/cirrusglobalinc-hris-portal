@@ -495,26 +495,117 @@
 
 .builder-actions {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 12px;
   flex-wrap: wrap;
 }
 
-.builder-actions-left {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
+.builder-field-help {
+  margin: 0;
+  font-size: 12px;
+  color: var(--gray-600);
 }
 
-.builder-existing-section-actions {
-  display: inline-flex;
+.add-section-card {
+  border: 2px dashed var(--gray-300);
+  border-radius: 10px;
+  padding: 20px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  position: relative;
+}
+
+.add-section-card:hover {
+  border-color: var(--primary);
+  background: rgba(0, 166, 227, 0.03);
+}
+
+.add-section-card.active {
+  border-color: var(--primary);
+  background: var(--white);
+  cursor: default;
+}
+
+.add-section-card-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--gray-500);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.add-section-card:hover .add-section-card-placeholder {
+  color: var(--primary);
+}
+
+.add-section-card-icon {
+  font-size: 22px;
+  font-weight: 300;
+  line-height: 1;
+}
+
+.add-section-card-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.add-section-menu-btn {
+  display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
+  padding: 10px 14px;
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  background: var(--white);
+  color: var(--charcoal);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
 }
 
-.builder-existing-section-actions select {
+.add-section-menu-btn:hover {
+  background: var(--gray-50, #f9fafb);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.add-section-menu-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--primary);
+  color: var(--white);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.add-section-menu-existing {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.add-section-menu-divider {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--gray-400);
+  padding: 4px 0 0;
+  text-align: center;
+}
+
+.add-section-menu-existing select {
   border: 1px solid var(--gray-300);
   border-radius: 8px;
   min-height: 36px;
@@ -522,12 +613,6 @@
   font-size: 13px;
   font-family: inherit;
   background: var(--white);
-}
-
-.builder-field-help {
-  margin: 0;
-  font-size: 12px;
-  color: var(--gray-600);
 }
 
 @media (max-width: 900px) {

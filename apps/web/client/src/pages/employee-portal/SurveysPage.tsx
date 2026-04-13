@@ -502,13 +502,6 @@ function SurveysPage() {
           dataField: 'title',
           value: formTitle,
           onChange: setFormTitle,
-          disabled: Boolean(selectedTemplateId),
-          disabledTooltip: selectedTemplateId
-            ? 'Title is locked because this survey is using a saved template.'
-            : undefined,
-          helperText: selectedTemplateId
-            ? 'Using a saved template. To edit title/questions, choose "None (Start from scratch)".'
-            : undefined,
         }}
         sections={sections}
         setSections={setSections}
