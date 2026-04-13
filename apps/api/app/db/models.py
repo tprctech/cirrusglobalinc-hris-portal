@@ -474,3 +474,19 @@ class SurveyResponseAnswer(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     response = relationship("SurveyResponse", back_populates="answers")
+
+
+class Feedback(Base):
+    __tablename__ = "feedbacks"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    from_user_id = Column(Integer, ForeignKey("user_accounts.id", ondelete="CASCADE"), nullable=False)
+    to_user_id = Column(Integer, ForeignKey("user_accounts.id", ondelete="CASCADE"), nullable=False)
+    title = Column(String(255), nullable=False)
+    description = Column(Text, nullable=False, default="")
+    is_deleted = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    from_user = relationship("UserAccount", foreign_keys=[from_user_id])
+    to_user = relationship("UserAccount", foreign_keys=[to_user_id])
