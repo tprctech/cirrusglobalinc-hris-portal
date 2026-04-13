@@ -300,13 +300,15 @@ class RecognitionBadge(Base):
     __tablename__ = "recognition_badges"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    image = Column(String(100), nullable=True, default="Trophy")
+    image = Column(Text, nullable=True, default="")
     title = Column(String(200), nullable=False)
     description = Column(Text, nullable=True, default="")
     is_official = Column(Boolean, nullable=False, default=False)
     point = Column(Integer, nullable=False, default=0)
     is_active = Column(Boolean, nullable=False, default=True)
     is_deleted = Column(Boolean, nullable=False, default=False)
+    created_by = Column(String(200), nullable=False, default="")
+    updated_by = Column(String(200), nullable=False, default="")
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -317,10 +319,11 @@ class Reward(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     reward_name = Column(String(200), nullable=False)
     reward_description = Column(Text, nullable=True, default="")
-    reward_category = Column(String(100), nullable=True, default="")
-    required_point = Column(Integer, nullable=False, default=0)
+    redeem_points = Column(Integer, nullable=False, default=0)
     is_active = Column(Boolean, nullable=False, default=True)
     is_deleted = Column(Boolean, nullable=False, default=False)
+    created_by = Column(String(200), nullable=False, default="")
+    updated_by = Column(String(200), nullable=False, default="")
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { PenSquare, Trash2 } from 'lucide-react';
+import { PenSquare, Search, Trash2 } from 'lucide-react';
 import AdminCenterSidebar from '../../../../components/AdminCenterSidebar';
 import AdminTablePagination from '../../../../components/AdminTablePagination';
 import ConfirmationDialog from '../../../../components/ConfirmationDialog';
+import { useAuth } from '../../../../app/AuthContext';
 import '../../AdminCenterPage.css';
 
 type AdminRecognitionsConfigPageProps = {
@@ -19,15 +20,18 @@ type BadgeRow = {
   is_official: boolean;
   point: number;
   is_active: boolean;
+  created_by: string;
+  updated_by: string;
 };
 
 type RewardRow = {
   id: number;
   reward_name: string;
   reward_description: string;
-  reward_category: string;
-  required_point: number;
+  redeem_points: number;
   is_active: boolean;
+  created_by: string;
+  updated_by: string;
 };
 
 type RedeemRow = {
@@ -44,6 +48,7 @@ const BASE = '/api/v1/hr/recognitions';
 const PAGE_SIZE = 8;
 
 function AdminRecognitionsConfigPage({ onNavigate }: AdminRecognitionsConfigPageProps) {
+  const { user } = useAuth();
   const navigate = onNavigate ?? ((path: string) => {
     if (window.location.pathname !== path) {
       window.history.pushState({}, '', path);
@@ -57,18 +62,19 @@ function AdminRecognitionsConfigPage({ onNavigate }: AdminRecognitionsConfigPage
   const [pendingDeleteBadgeId, setPendingDeleteBadgeId] = useState<number | null>(null);
   const [showBadgeModal, setShowBadgeModal] = useState(false);
   const [editingBadge, setEditingBadge] = useState<BadgeRow | null>(null);
-  const [badgeForm, setBadgeForm] = useState({ image: 'Trophy', title: '', description: '', is_official: false, point: 0, is_active: true });
+  const [badgeForm, setBadgeForm] = useState({ image: '', title: '', description: '', is_official: false, point: 0, is_active: true });
 
   const [rewards, setRewards] = useState<RewardRow[]>([]);
   const [rewardPage, setRewardPage] = useState(1);
   const [pendingDeleteRewardId, setPendingDeleteRewardId] = useState<number | null>(null);
   const [showRewardModal, setShowRewardModal] = useState(false);
   const [editingReward, setEditingReward] = useState<RewardRow | null>(null);
-  const [rewardForm, setRewardForm] = useState({ reward_name: '', reward_description: '', reward_category: '', required_point: 0, is_active: true });
+  const [rewardForm, setRewardForm] = useState({ reward_name: '', reward_description: '', redeem_points: 0, is_active: true });
 
   const [redeems, setRedeems] = useState<RedeemRow[]>([]);
   const [redeemTab, setRedeemTab] = useState<RedeemStatus>('Pending');
   const [redeemPage, setRedeemPage] = useState(1);
+  const [redeemSearch, setRedeemSearch] = useState('');
   const [saving, setSaving] = useState(false);
 
   const loadAll = useCallback(async () => {
@@ -95,17 +101,21 @@ function AdminRecognitionsConfigPage({ onNavigate }: AdminRecognitionsConfigPage
   const rewardSafePage = Math.min(rewardPage, rewardTotalPages);
   const rewardPagedRows = rewards.slice((rewardSafePage - 1) * PAGE_SIZE, rewardSafePage * PAGE_SIZE);
 
-  const filteredRedeems = useMemo(
-    () => redeems.filter((item) => item.status === redeemTab),
-    [redeems, redeemTab],
-  );
+  const filteredRedeems = useMemo(() => {
+    let items = redeems.filter((item) => item.status === redeemTab);
+    if (redeemSearch.trim()) {
+      const q = redeemSearch.trim().toLowerCase();
+      items = items.filter((item) => item.requested_by.toLowerCase().includes(q));
+    }
+    return items;
+  }, [redeems, redeemTab, redeemSearch]);
   const redeemTotalPages = Math.max(1, Math.ceil(filteredRedeems.length / PAGE_SIZE));
   const redeemSafePage = Math.min(redeemPage, redeemTotalPages);
   const redeemPagedRows = filteredRedeems.slice((redeemSafePage - 1) * PAGE_SIZE, redeemSafePage * PAGE_SIZE);
 
   function openCreateBadge() {
     setEditingBadge(null);
-    setBadgeForm({ image: 'Trophy', title: '', description: '', is_official: false, point: 0, is_active: true });
+    setBadgeForm({ image: '', title: '', description: '', is_official: false, point: 0, is_active: true });
     setShowBadgeModal(true);
   }
 
@@ -115,22 +125,44 @@ function AdminRecognitionsConfigPage({ onNavigate }: AdminRecognitionsConfigPage
     setShowBadgeModal(true);
   }
 
+  function handleBadgeImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 24;
+        canvas.height = 24;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, 24, 24);
+          setBadgeForm((p) => ({ ...p, image: canvas.toDataURL('image/png') }));
+        }
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  }
+
   async function handleSaveBadge() {
     if (saving) return;
     setSaving(true);
+    const email = user?.email ?? '';
     try {
       if (editingBadge) {
         const res = await fetch(`${BASE}/badges/${editingBadge.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(badgeForm),
+          body: JSON.stringify({ ...badgeForm, updated_by: email }),
         });
         if (!res.ok) throw new Error('Failed');
       } else {
         const res = await fetch(`${BASE}/badges`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(badgeForm),
+          body: JSON.stringify({ ...badgeForm, created_by: email }),
         });
         if (!res.ok) throw new Error('Failed');
       }
@@ -145,32 +177,33 @@ function AdminRecognitionsConfigPage({ onNavigate }: AdminRecognitionsConfigPage
 
   function openCreateReward() {
     setEditingReward(null);
-    setRewardForm({ reward_name: '', reward_description: '', reward_category: '', required_point: 0, is_active: true });
+    setRewardForm({ reward_name: '', reward_description: '', redeem_points: 0, is_active: true });
     setShowRewardModal(true);
   }
 
   function openEditReward(reward: RewardRow) {
     setEditingReward(reward);
-    setRewardForm({ reward_name: reward.reward_name, reward_description: reward.reward_description, reward_category: reward.reward_category, required_point: reward.required_point, is_active: reward.is_active });
+    setRewardForm({ reward_name: reward.reward_name, reward_description: reward.reward_description, redeem_points: reward.redeem_points, is_active: reward.is_active });
     setShowRewardModal(true);
   }
 
   async function handleSaveReward() {
     if (saving) return;
     setSaving(true);
+    const email = user?.email ?? '';
     try {
       if (editingReward) {
         const res = await fetch(`${BASE}/rewards/${editingReward.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(rewardForm),
+          body: JSON.stringify({ ...rewardForm, updated_by: email }),
         });
         if (!res.ok) throw new Error('Failed');
       } else {
         const res = await fetch(`${BASE}/rewards`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(rewardForm),
+          body: JSON.stringify({ ...rewardForm, created_by: email }),
         });
         if (!res.ok) throw new Error('Failed');
       }
@@ -184,6 +217,8 @@ function AdminRecognitionsConfigPage({ onNavigate }: AdminRecognitionsConfigPage
   }
 
   async function updateRedeemStatus(id: number, status: Exclude<RedeemStatus, 'Pending'>) {
+    if (saving) return;
+    setSaving(true);
     try {
       const res = await fetch(`${BASE}/redeems/${id}`, {
         method: 'PUT',
@@ -192,6 +227,14 @@ function AdminRecognitionsConfigPage({ onNavigate }: AdminRecognitionsConfigPage
       });
       if (res.ok) await loadAll();
     } catch { /* ignore */ }
+    setSaving(false);
+  }
+
+  function formatDate(d: string | null): string {
+    if (!d) return '—';
+    const [year, month, day] = d.split('-');
+    if (!year || !month || !day) return d;
+    return `${Number(month)}/${Number(day)}/${year}`;
   }
 
   if (loading) {
@@ -244,7 +287,13 @@ function AdminRecognitionsConfigPage({ onNavigate }: AdminRecognitionsConfigPage
                   )}
                   {badgePagedRows.map((row) => (
                     <tr key={row.id}>
-                      <td>{row.image}</td>
+                      <td>
+                        {row.image ? (
+                          <img src={row.image} alt={row.title} style={{ width: 24, height: 24, objectFit: 'cover', borderRadius: 4 }} />
+                        ) : (
+                          <span style={{ color: '#999' }}>—</span>
+                        )}
+                      </td>
                       <td>{row.title}</td>
                       <td>{row.description}</td>
                       <td>{row.is_official ? 'Yes' : 'No'}</td>
@@ -279,22 +328,20 @@ function AdminRecognitionsConfigPage({ onNavigate }: AdminRecognitionsConfigPage
                   <tr>
                     <th>Reward Name</th>
                     <th>Reward Description</th>
-                    <th>Reward Category</th>
-                    <th>Required Point</th>
+                    <th>Redeem Points</th>
                     <th>Is Active</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {rewardPagedRows.length === 0 && (
-                    <tr><td colSpan={6} className="admin-empty-state">No rewards yet.</td></tr>
+                    <tr><td colSpan={5} className="admin-empty-state">No rewards yet.</td></tr>
                   )}
                   {rewardPagedRows.map((row) => (
                     <tr key={row.id}>
                       <td>{row.reward_name}</td>
                       <td>{row.reward_description}</td>
-                      <td>{row.reward_category}</td>
-                      <td>{row.required_point}</td>
+                      <td>{row.redeem_points}</td>
                       <td>{row.is_active ? 'Yes' : 'No'}</td>
                       <td>
                         <div className="admin-actions-cell">
@@ -318,36 +365,55 @@ function AdminRecognitionsConfigPage({ onNavigate }: AdminRecognitionsConfigPage
             <div className="admin-users-toolbar">
               <div><h2>Manage Reward Redeems</h2></div>
             </div>
-            <div className="admin-tab-list" role="tablist" aria-label="Redeem status tabs">
-              {(['Pending', 'Approved', 'Rejected'] as RedeemStatus[]).map((tab) => (
-                <button
-                  key={tab}
-                  role="tab"
-                  aria-selected={redeemTab === tab}
-                  className={`admin-tab-btn ${redeemTab === tab ? 'active' : ''}`}
-                  onClick={() => { setRedeemTab(tab); setRedeemPage(1); }}
-                >
-                  {tab}
-                </button>
-              ))}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
+              <div className="admin-tab-list" role="tablist" aria-label="Redeem status tabs" style={{ flex: 1 }}>
+                {(['Pending', 'Approved', 'Rejected'] as RedeemStatus[]).map((tab) => (
+                  <button
+                    key={tab}
+                    role="tab"
+                    aria-selected={redeemTab === tab}
+                    className={`admin-tab-btn ${redeemTab === tab ? 'active' : ''}`}
+                    onClick={() => { setRedeemTab(tab); setRedeemPage(1); }}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </div>
+              <div style={{ position: 'relative', minWidth: 220 }}>
+                <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#999' }} />
+                <input
+                  type="text"
+                  placeholder="Search by Requested By..."
+                  value={redeemSearch}
+                  onChange={(e) => { setRedeemSearch(e.target.value); setRedeemPage(1); }}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px 8px 30px',
+                    border: '1px solid #ddd',
+                    borderRadius: 6,
+                    fontSize: 13,
+                    outline: 'none',
+                  }}
+                />
+              </div>
             </div>
             <div className="admin-users-table-wrap">
               <table className="admin-users-table">
                 <thead>
                   <tr>
                     <th>Requested By</th>
-                    <th>User Mail</th>
+                    <th>Requested By Email</th>
                     <th>Reward Name</th>
                     <th>Reward Points</th>
                     <th>Redeem Date</th>
-                    <th>Status</th>
+                    {redeemTab === 'Pending' && <th>Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
                   {filteredRedeems.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="admin-empty-state">
-                        No redeems found for this status.
+                      <td colSpan={redeemTab === 'Pending' ? 6 : 5} className="admin-empty-state">
+                        No {redeemTab.toLowerCase()} redeems found.
                       </td>
                     </tr>
                   )}
@@ -357,21 +423,19 @@ function AdminRecognitionsConfigPage({ onNavigate }: AdminRecognitionsConfigPage
                       <td>{row.user_mail}</td>
                       <td>{row.reward_name}</td>
                       <td>{row.reward_points}</td>
-                      <td>{row.redeem_date || '—'}</td>
-                      <td>
-                        {row.status === 'Pending' ? (
+                      <td>{formatDate(row.redeem_date)}</td>
+                      {redeemTab === 'Pending' && (
+                        <td>
                           <div className="admin-actions-cell">
-                            <button className="admin-compact-action-btn approve" onClick={() => updateRedeemStatus(row.id, 'Approved')}>
+                            <button className="admin-compact-action-btn approve" disabled={saving} onClick={() => updateRedeemStatus(row.id, 'Approved')}>
                               Approve
                             </button>
-                            <button className="admin-compact-action-btn reject" onClick={() => updateRedeemStatus(row.id, 'Rejected')}>
+                            <button className="admin-compact-action-btn reject" disabled={saving} onClick={() => updateRedeemStatus(row.id, 'Rejected')}>
                               Reject
                             </button>
                           </div>
-                        ) : (
-                          row.status
-                        )}
-                      </td>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -385,12 +449,13 @@ function AdminRecognitionsConfigPage({ onNavigate }: AdminRecognitionsConfigPage
       <ConfirmationDialog
         isOpen={Boolean(pendingDeleteBadgeId)}
         title="Delete Badge"
-        message="Are you sure you want to delete this recognition badge?"
+        message="Are you sure you want to delete this recognition badge? It will be deactivated."
         confirmLabel="Delete"
         onCancel={() => setPendingDeleteBadgeId(null)}
         onConfirm={async () => {
           if (pendingDeleteBadgeId) {
-            await fetch(`${BASE}/badges/${pendingDeleteBadgeId}`, { method: 'DELETE' });
+            const email = user?.email ?? '';
+            await fetch(`${BASE}/badges/${pendingDeleteBadgeId}?updated_by=${encodeURIComponent(email)}`, { method: 'DELETE' });
             await loadAll();
           }
           setPendingDeleteBadgeId(null);
@@ -399,12 +464,13 @@ function AdminRecognitionsConfigPage({ onNavigate }: AdminRecognitionsConfigPage
       <ConfirmationDialog
         isOpen={Boolean(pendingDeleteRewardId)}
         title="Delete Reward"
-        message="Are you sure you want to delete this reward?"
+        message="Are you sure you want to delete this reward? It will be deactivated."
         confirmLabel="Delete"
         onCancel={() => setPendingDeleteRewardId(null)}
         onConfirm={async () => {
           if (pendingDeleteRewardId) {
-            await fetch(`${BASE}/rewards/${pendingDeleteRewardId}`, { method: 'DELETE' });
+            const email = user?.email ?? '';
+            await fetch(`${BASE}/rewards/${pendingDeleteRewardId}?updated_by=${encodeURIComponent(email)}`, { method: 'DELETE' });
             await loadAll();
           }
           setPendingDeleteRewardId(null);
@@ -412,44 +478,49 @@ function AdminRecognitionsConfigPage({ onNavigate }: AdminRecognitionsConfigPage
       />
 
       {showBadgeModal && (
-        <div className="admin-modal-backdrop" onClick={() => setShowBadgeModal(false)}>
-          <div className="admin-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 520 }}>
-            <h2>{editingBadge ? 'Edit Badge' : 'Add Badge'}</h2>
-            <div className="admin-edit-grid">
-              <div className="admin-field">
-                <label>Image/Icon Name</label>
-                <input value={badgeForm.image} onChange={(e) => setBadgeForm((p) => ({ ...p, image: e.target.value }))} />
+        <div className="admin-modal-backdrop" role="dialog" aria-modal="true">
+          <div className="admin-modal" style={{ maxWidth: 520 }}>
+            <div className="admin-modal-header">
+              <h2>{editingBadge ? 'Edit Badge' : 'Add Badge'}</h2>
+            </div>
+            <div className="admin-modal-grid">
+              <div className="admin-modal-field">
+                <label>Badge Image (24x24)</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  {badgeForm.image && (
+                    <img src={badgeForm.image} alt="Preview" style={{ width: 24, height: 24, objectFit: 'cover', borderRadius: 4, border: '1px solid #ddd' }} />
+                  )}
+                  <input type="file" accept="image/*" onChange={handleBadgeImageUpload} />
+                </div>
               </div>
-              <div className="admin-field">
-                <label>Title</label>
-                <input value={badgeForm.title} onChange={(e) => setBadgeForm((p) => ({ ...p, title: e.target.value }))} />
+              <div className="admin-modal-field">
+                <label>Title *</label>
+                <input value={badgeForm.title} onChange={(e) => setBadgeForm((p) => ({ ...p, title: e.target.value }))} placeholder="Badge title" />
               </div>
-              <div className="admin-field" style={{ gridColumn: '1 / -1' }}>
+              <div className="admin-modal-field">
                 <label>Description</label>
-                <textarea value={badgeForm.description} onChange={(e) => setBadgeForm((p) => ({ ...p, description: e.target.value }))} rows={2} />
+                <textarea value={badgeForm.description} onChange={(e) => setBadgeForm((p) => ({ ...p, description: e.target.value }))} rows={3} placeholder="Badge description" />
               </div>
-              <div className="admin-field">
-                <label>Points</label>
-                <input type="number" value={badgeForm.point} onChange={(e) => setBadgeForm((p) => ({ ...p, point: Number(e.target.value) }))} />
+              <div className="admin-modal-field">
+                <label>Point</label>
+                <input type="number" value={badgeForm.point} onChange={(e) => setBadgeForm((p) => ({ ...p, point: Number(e.target.value) }))} min={0} />
               </div>
-              <div className="admin-field">
-                <label>Is Official</label>
-                <select value={badgeForm.is_official ? 'Yes' : 'No'} onChange={(e) => setBadgeForm((p) => ({ ...p, is_official: e.target.value === 'Yes' }))}>
-                  <option>Yes</option>
-                  <option>No</option>
-                </select>
+              <div className="admin-modal-field">
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input type="checkbox" checked={badgeForm.is_official} onChange={(e) => setBadgeForm((p) => ({ ...p, is_official: e.target.checked }))} />
+                  Is Official (only HR can give this badge)
+                </label>
               </div>
-              <div className="admin-field">
-                <label>Is Active</label>
-                <select value={badgeForm.is_active ? 'Yes' : 'No'} onChange={(e) => setBadgeForm((p) => ({ ...p, is_active: e.target.value === 'Yes' }))}>
-                  <option>Yes</option>
-                  <option>No</option>
-                </select>
+              <div className="admin-modal-field">
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input type="checkbox" checked={badgeForm.is_active} onChange={(e) => setBadgeForm((p) => ({ ...p, is_active: e.target.checked }))} />
+                  Is Active
+                </label>
               </div>
             </div>
             <div className="admin-modal-actions">
-              <button className="admin-cancel-btn" onClick={() => setShowBadgeModal(false)}>Cancel</button>
-              <button className="admin-invite-btn" onClick={handleSaveBadge} disabled={saving || !badgeForm.title.trim()}>
+              <button className="admin-secondary-btn" onClick={() => setShowBadgeModal(false)}>Cancel</button>
+              <button className="admin-primary-btn" onClick={handleSaveBadge} disabled={saving || !badgeForm.title.trim()}>
                 {saving ? 'Saving...' : 'Save Badge'}
               </button>
             </div>
@@ -458,37 +529,34 @@ function AdminRecognitionsConfigPage({ onNavigate }: AdminRecognitionsConfigPage
       )}
 
       {showRewardModal && (
-        <div className="admin-modal-backdrop" onClick={() => setShowRewardModal(false)}>
-          <div className="admin-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 520 }}>
-            <h2>{editingReward ? 'Edit Reward' : 'Create Reward'}</h2>
-            <div className="admin-edit-grid">
-              <div className="admin-field">
-                <label>Reward Name</label>
-                <input value={rewardForm.reward_name} onChange={(e) => setRewardForm((p) => ({ ...p, reward_name: e.target.value }))} />
+        <div className="admin-modal-backdrop" role="dialog" aria-modal="true">
+          <div className="admin-modal" style={{ maxWidth: 520 }}>
+            <div className="admin-modal-header">
+              <h2>{editingReward ? 'Edit Reward' : 'Create Reward'}</h2>
+            </div>
+            <div className="admin-modal-grid">
+              <div className="admin-modal-field">
+                <label>Reward Name *</label>
+                <input value={rewardForm.reward_name} onChange={(e) => setRewardForm((p) => ({ ...p, reward_name: e.target.value }))} placeholder="Reward name" />
               </div>
-              <div className="admin-field">
-                <label>Category</label>
-                <input value={rewardForm.reward_category} onChange={(e) => setRewardForm((p) => ({ ...p, reward_category: e.target.value }))} />
+              <div className="admin-modal-field">
+                <label>Reward Description</label>
+                <textarea value={rewardForm.reward_description} onChange={(e) => setRewardForm((p) => ({ ...p, reward_description: e.target.value }))} rows={3} placeholder="Reward description" />
               </div>
-              <div className="admin-field" style={{ gridColumn: '1 / -1' }}>
-                <label>Description</label>
-                <textarea value={rewardForm.reward_description} onChange={(e) => setRewardForm((p) => ({ ...p, reward_description: e.target.value }))} rows={2} />
+              <div className="admin-modal-field">
+                <label>Redeem Points</label>
+                <input type="number" value={rewardForm.redeem_points} onChange={(e) => setRewardForm((p) => ({ ...p, redeem_points: Number(e.target.value) }))} min={0} />
               </div>
-              <div className="admin-field">
-                <label>Required Points</label>
-                <input type="number" value={rewardForm.required_point} onChange={(e) => setRewardForm((p) => ({ ...p, required_point: Number(e.target.value) }))} />
-              </div>
-              <div className="admin-field">
-                <label>Is Active</label>
-                <select value={rewardForm.is_active ? 'Yes' : 'No'} onChange={(e) => setRewardForm((p) => ({ ...p, is_active: e.target.value === 'Yes' }))}>
-                  <option>Yes</option>
-                  <option>No</option>
-                </select>
+              <div className="admin-modal-field">
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input type="checkbox" checked={rewardForm.is_active} onChange={(e) => setRewardForm((p) => ({ ...p, is_active: e.target.checked }))} />
+                  Is Active
+                </label>
               </div>
             </div>
             <div className="admin-modal-actions">
-              <button className="admin-cancel-btn" onClick={() => setShowRewardModal(false)}>Cancel</button>
-              <button className="admin-invite-btn" onClick={handleSaveReward} disabled={saving || !rewardForm.reward_name.trim()}>
+              <button className="admin-secondary-btn" onClick={() => setShowRewardModal(false)}>Cancel</button>
+              <button className="admin-primary-btn" onClick={handleSaveReward} disabled={saving || !rewardForm.reward_name.trim()}>
                 {saving ? 'Saving...' : 'Save Reward'}
               </button>
             </div>

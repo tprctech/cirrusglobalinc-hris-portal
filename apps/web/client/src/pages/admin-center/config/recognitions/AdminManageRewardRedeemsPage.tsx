@@ -1,4 +1,5 @@
-﻿import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Search } from 'lucide-react';
 import AdminCenterSidebar from '../../../../components/AdminCenterSidebar';
 import AdminTablePagination from '../../../../components/AdminTablePagination';
 import { ROUTES } from '../../../../app/routes';
@@ -11,51 +12,25 @@ type AdminManageRewardRedeemsPageProps = {
 type RedeemStatus = 'Pending' | 'Approved' | 'Rejected';
 
 type RedeemRow = {
-  id: string;
-  requestedBy: string;
-  userMail: string;
-  rewardName: string;
-  rewardPoints: number;
-  redeemDate: string;
+  id: number;
+  requested_by: string;
+  user_mail: string;
+  reward_name: string;
+  reward_points: number;
+  redeem_date: string | null;
   status: RedeemStatus;
 };
 
-const initialRedeems: RedeemRow[] = [
-  {
-    id: 'redeem-1',
-    requestedBy: 'Michael Johnson',
-    userMail: 'michael.johnson@cirrus.com',
-    rewardName: 'Coffee Gift Card',
-    rewardPoints: 300,
-    redeemDate: '2026-02-11',
-    status: 'Pending',
-  },
-  {
-    id: 'redeem-2',
-    requestedBy: 'Emma Wilson',
-    userMail: 'emma.wilson@cirrus.com',
-    rewardName: 'Company T-Shirt',
-    rewardPoints: 180,
-    redeemDate: '2026-02-08',
-    status: 'Approved',
-  },
-  {
-    id: 'redeem-3',
-    requestedBy: 'Noah Brown',
-    userMail: 'noah.brown@cirrus.com',
-    rewardName: 'Wireless Earbuds',
-    rewardPoints: 900,
-    redeemDate: '2026-02-03',
-    status: 'Rejected',
-  },
-];
-
+const API = '/api/v1/hr/recognitions/redeems';
 const PAGE_SIZE = 8;
 
 function AdminManageRewardRedeemsPage({ onNavigate }: AdminManageRewardRedeemsPageProps) {
   const [activeTab, setActiveTab] = useState<RedeemStatus>('Pending');
-  const [redeems, setRedeems] = useState<RedeemRow[]>(initialRedeems);
+  const [redeems, setRedeems] = useState<RedeemRow[]>([]);
+  const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const navigate = onNavigate ?? ((path: string) => {
     if (window.location.pathname !== path) {
@@ -64,20 +39,52 @@ function AdminManageRewardRedeemsPage({ onNavigate }: AdminManageRewardRedeemsPa
     }
   });
 
-  const filteredRedeems = useMemo(
-    () => redeems.filter((item) => item.status === activeTab),
-    [redeems, activeTab],
-  );
+  const loadRedeems = useCallback(async () => {
+    try {
+      const res = await fetch(API);
+      if (res.ok) setRedeems(await res.json());
+    } catch { /* ignore */ }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { loadRedeems(); }, [loadRedeems]);
+
+  const filteredRedeems = useMemo(() => {
+    let items = redeems.filter((item) => item.status === activeTab);
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      items = items.filter((item) => item.requested_by.toLowerCase().includes(q));
+    }
+    return items;
+  }, [redeems, activeTab, searchQuery]);
 
   const totalRows = filteredRedeems.length;
   const totalPages = Math.max(1, Math.ceil(totalRows / PAGE_SIZE));
   const safeCurrentPage = Math.min(currentPage, totalPages);
   const pagedRows = filteredRedeems.slice((safeCurrentPage - 1) * PAGE_SIZE, safeCurrentPage * PAGE_SIZE);
 
-  function updateRedeemStatus(id: string, status: Exclude<RedeemStatus, 'Pending'>) {
-    setRedeems((previous) => previous.map((item) => (
-      item.id === id ? { ...item, status } : item
-    )));
+  async function updateRedeemStatus(id: number, status: Exclude<RedeemStatus, 'Pending'>) {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`${API.replace('/redeems', '')}/redeems/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+      if (res.ok) await loadRedeems();
+    } catch (err) {
+      console.error('Failed to update redeem status', err);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function formatDate(d: string | null): string {
+    if (!d) return '—';
+    const [year, month, day] = d.split('-');
+    if (!year || !month || !day) return d;
+    return `${Number(month)}/${Number(day)}/${year}`;
   }
 
   return (
@@ -99,21 +106,40 @@ function AdminManageRewardRedeemsPage({ onNavigate }: AdminManageRewardRedeemsPa
               </div>
             </div>
 
-            <div className="admin-tab-list" role="tablist" aria-label="Redeem status tabs">
-              {(['Pending', 'Approved', 'Rejected'] as RedeemStatus[]).map((tab) => (
-                <button
-                  key={tab}
-                  role="tab"
-                  aria-selected={activeTab === tab}
-                  className={`admin-tab-btn ${activeTab === tab ? 'active' : ''}`}
-                  onClick={() => {
-                    setActiveTab(tab);
-                    setCurrentPage(1);
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
+              <div className="admin-tab-list" role="tablist" aria-label="Redeem status tabs" style={{ flex: 1 }}>
+                {(['Pending', 'Approved', 'Rejected'] as RedeemStatus[]).map((tab) => (
+                  <button
+                    key={tab}
+                    role="tab"
+                    aria-selected={activeTab === tab}
+                    className={`admin-tab-btn ${activeTab === tab ? 'active' : ''}`}
+                    onClick={() => {
+                      setActiveTab(tab);
+                      setCurrentPage(1);
+                    }}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </div>
+              <div style={{ position: 'relative', minWidth: 220 }}>
+                <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#999' }} />
+                <input
+                  type="text"
+                  placeholder="Search by Requested By..."
+                  value={searchQuery}
+                  onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px 8px 30px',
+                    border: '1px solid #ddd',
+                    borderRadius: 6,
+                    fontSize: 13,
+                    outline: 'none',
                   }}
-                >
-                  {tab}
-                </button>
-              ))}
+                />
+              </div>
             </div>
 
             <div className="admin-users-table-wrap">
@@ -121,48 +147,51 @@ function AdminManageRewardRedeemsPage({ onNavigate }: AdminManageRewardRedeemsPa
                 <thead>
                   <tr>
                     <th>Requested By</th>
-                    <th>User Mail</th>
+                    <th>Requested By Email</th>
                     <th>Reward Name</th>
                     <th>Reward Points</th>
                     <th>Redeem Date</th>
-                    <th>Status</th>
+                    {activeTab === 'Pending' && <th>Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
-                  {totalRows === 0 && (
+                  {loading && (
+                    <tr><td colSpan={activeTab === 'Pending' ? 6 : 5} className="admin-empty-state">Loading...</td></tr>
+                  )}
+                  {!loading && totalRows === 0 && (
                     <tr>
-                      <td colSpan={6} className="admin-empty-state">
-                        No redeems found for this status.
+                      <td colSpan={activeTab === 'Pending' ? 6 : 5} className="admin-empty-state">
+                        No {activeTab.toLowerCase()} redeems found.
                       </td>
                     </tr>
                   )}
                   {pagedRows.map((row) => (
                     <tr key={row.id}>
-                      <td>{row.requestedBy}</td>
-                      <td>{row.userMail}</td>
-                      <td>{row.rewardName}</td>
-                      <td>{row.rewardPoints}</td>
-                      <td>{row.redeemDate}</td>
-                      <td>
-                        {row.status === 'Pending' ? (
+                      <td>{row.requested_by}</td>
+                      <td>{row.user_mail}</td>
+                      <td>{row.reward_name}</td>
+                      <td>{row.reward_points}</td>
+                      <td>{formatDate(row.redeem_date)}</td>
+                      {activeTab === 'Pending' && (
+                        <td>
                           <div className="admin-actions-cell">
                             <button
                               className="admin-compact-action-btn approve"
+                              disabled={saving}
                               onClick={() => updateRedeemStatus(row.id, 'Approved')}
                             >
                               Approve
                             </button>
                             <button
                               className="admin-compact-action-btn reject"
+                              disabled={saving}
                               onClick={() => updateRedeemStatus(row.id, 'Rejected')}
                             >
                               Reject
                             </button>
                           </div>
-                        ) : (
-                          row.status
-                        )}
-                      </td>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>

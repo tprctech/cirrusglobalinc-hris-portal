@@ -54,7 +54,7 @@ Two workflows are configured:
 - `apps/api/app/api/v1/auth.py` - Auth endpoints (login, register, me)
 - `apps/api/app/core/middleware.py` - Audit logging middleware
 - `apps/api/app/db/session.py` - SQLAlchemy engine/session factory
-- `apps/api/app/db/models.py` - All SQLAlchemy ORM models (24 tables)
+- `apps/api/app/db/models.py` - All SQLAlchemy ORM models (30 tables)
 - `apps/api/app/db/init_db.py` - Table creation script
 - `apps/api/app/api/v1/hr_center/` - HR Center CRUD route modules
 - `apps/web/client/src/pages/admin-center/library/AdminDepartmentLibraryPage.tsx` - Department Library page (live API)

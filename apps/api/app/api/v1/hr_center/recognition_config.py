@@ -12,12 +12,13 @@ router = APIRouter()
 
 
 class BadgeCreate(BaseModel):
-    image: Optional[str] = "Trophy"
+    image: Optional[str] = ""
     title: str
     description: Optional[str] = ""
     is_official: Optional[bool] = False
     point: Optional[int] = 0
     is_active: Optional[bool] = True
+    created_by: Optional[str] = ""
 
 
 class BadgeUpdate(BaseModel):
@@ -27,6 +28,7 @@ class BadgeUpdate(BaseModel):
     is_official: Optional[bool] = None
     point: Optional[int] = None
     is_active: Optional[bool] = None
+    updated_by: Optional[str] = ""
 
 
 class BadgeOut(BaseModel):
@@ -37,6 +39,8 @@ class BadgeOut(BaseModel):
     is_official: bool
     point: int
     is_active: bool
+    created_by: str
+    updated_by: str
     created_at: Optional[datetime]
     updated_at: Optional[datetime]
 
@@ -47,26 +51,27 @@ class BadgeOut(BaseModel):
 class RewardCreate(BaseModel):
     reward_name: str
     reward_description: Optional[str] = ""
-    reward_category: Optional[str] = ""
-    required_point: Optional[int] = 0
+    redeem_points: Optional[int] = 0
     is_active: Optional[bool] = True
+    created_by: Optional[str] = ""
 
 
 class RewardUpdate(BaseModel):
     reward_name: Optional[str] = None
     reward_description: Optional[str] = None
-    reward_category: Optional[str] = None
-    required_point: Optional[int] = None
+    redeem_points: Optional[int] = None
     is_active: Optional[bool] = None
+    updated_by: Optional[str] = ""
 
 
 class RewardOut(BaseModel):
     id: int
     reward_name: str
     reward_description: str
-    reward_category: str
-    required_point: int
+    redeem_points: int
     is_active: bool
+    created_by: str
+    updated_by: str
     created_at: Optional[datetime]
     updated_at: Optional[datetime]
 
@@ -117,7 +122,9 @@ def get_badge(badge_id: int, db: Session = Depends(get_db)):
 
 @router.post("/badges", response_model=BadgeOut, status_code=201)
 def create_badge(payload: BadgeCreate, db: Session = Depends(get_db)):
-    row = RecognitionBadge(**payload.model_dump())
+    data = payload.model_dump()
+    data["updated_by"] = data.get("created_by", "")
+    row = RecognitionBadge(**data)
     db.add(row)
     db.commit()
     db.refresh(row)
@@ -137,11 +144,13 @@ def update_badge(badge_id: int, payload: BadgeUpdate, db: Session = Depends(get_
 
 
 @router.delete("/badges/{badge_id}", status_code=204)
-def delete_badge(badge_id: int, db: Session = Depends(get_db)):
+def delete_badge(badge_id: int, updated_by: str = "", db: Session = Depends(get_db)):
     row = db.query(RecognitionBadge).filter(RecognitionBadge.id == badge_id, RecognitionBadge.is_deleted == False).first()
     if not row:
         raise HTTPException(status_code=404, detail="Badge not found")
+    row.is_active = False
     row.is_deleted = True
+    row.updated_by = updated_by
     db.commit()
 
 
@@ -160,7 +169,9 @@ def get_reward(reward_id: int, db: Session = Depends(get_db)):
 
 @router.post("/rewards", response_model=RewardOut, status_code=201)
 def create_reward(payload: RewardCreate, db: Session = Depends(get_db)):
-    row = Reward(**payload.model_dump())
+    data = payload.model_dump()
+    data["updated_by"] = data.get("created_by", "")
+    row = Reward(**data)
     db.add(row)
     db.commit()
     db.refresh(row)
@@ -180,19 +191,23 @@ def update_reward(reward_id: int, payload: RewardUpdate, db: Session = Depends(g
 
 
 @router.delete("/rewards/{reward_id}", status_code=204)
-def delete_reward(reward_id: int, db: Session = Depends(get_db)):
+def delete_reward(reward_id: int, updated_by: str = "", db: Session = Depends(get_db)):
     row = db.query(Reward).filter(Reward.id == reward_id, Reward.is_deleted == False).first()
     if not row:
         raise HTTPException(status_code=404, detail="Reward not found")
+    row.is_active = False
     row.is_deleted = True
+    row.updated_by = updated_by
     db.commit()
 
 
 @router.get("/redeems", response_model=list[RedeemOut])
-def list_redeems(status_filter: Optional[str] = None, db: Session = Depends(get_db)):
+def list_redeems(status_filter: Optional[str] = None, search: Optional[str] = None, db: Session = Depends(get_db)):
     q = db.query(RewardRedeem).filter(RewardRedeem.is_deleted == False)
     if status_filter:
         q = q.filter(RewardRedeem.status == status_filter)
+    if search:
+        q = q.filter(RewardRedeem.requested_by.ilike(f"%{search}%"))
     return q.order_by(RewardRedeem.id.desc()).all()
 
 
