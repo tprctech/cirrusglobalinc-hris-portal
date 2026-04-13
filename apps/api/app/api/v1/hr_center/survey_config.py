@@ -26,6 +26,7 @@ class SectionIn(BaseModel):
     label: str
     sort_order: Optional[int] = 0
     questions: Optional[list[QuestionIn]] = []
+    source_question_set_id: Optional[int] = None
 
 
 class QuestionOut(BaseModel):
@@ -44,6 +45,7 @@ class SectionOut(BaseModel):
     id: int
     label: str
     sort_order: int
+    source_question_set_id: Optional[int] = None
     questions: list[QuestionOut]
 
     class Config:
@@ -101,7 +103,7 @@ class QuestionSetOut(BaseModel):
 def _build_template_sections(sections_data: list[SectionIn]) -> list[SurveyTemplateSection]:
     result = []
     for s in sections_data:
-        section = SurveyTemplateSection(label=s.label, sort_order=s.sort_order)
+        section = SurveyTemplateSection(label=s.label, sort_order=s.sort_order, source_question_set_id=s.source_question_set_id)
         for q in (s.questions or []):
             section.questions.append(SurveyTemplateQuestion(
                 prompt=q.prompt, question_type=q.question_type or "Long Answer",

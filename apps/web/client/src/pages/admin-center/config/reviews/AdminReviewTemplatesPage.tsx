@@ -61,6 +61,7 @@ function cloneSections(sections: BuilderSection[]): BuilderSection[] {
     readOnlyReason: section.readOnlyReason,
     sourceTitle: section.sourceTitle,
     sourceDescription: section.sourceDescription,
+    sourceQuestionSetId: section.sourceQuestionSetId,
     questions: section.questions.map((question) => ({
       id: question.id,
       prompt: question.prompt,

@@ -28,6 +28,7 @@ type ApiSection = {
   id: number;
   label: string;
   sort_order: number;
+  source_question_set_id: number | null;
   questions: ApiQuestion[];
 };
 
@@ -48,9 +49,13 @@ type ApiQuestionSet = {
 const BASE = '/api/v1/hr/surveys';
 
 function apiSectionToBuilder(s: ApiSection): BuilderSection {
+  const isFromQs = s.source_question_set_id != null;
   return {
     id: `section-${s.id}`,
     label: s.label,
+    isReadOnly: isFromQs,
+    readOnlyReason: isFromQs ? 'This section comes from a reusable question set.' : undefined,
+    sourceQuestionSetId: s.source_question_set_id ?? undefined,
     questions: s.questions
       .sort((a, b) => a.sort_order - b.sort_order)
       .map((q) => ({
@@ -67,6 +72,7 @@ function builderSectionToApi(s: BuilderSection, idx: number) {
   return {
     label: s.label,
     sort_order: idx,
+    source_question_set_id: s.sourceQuestionSetId ?? null,
     questions: s.questions.map((q, qi) => ({
       prompt: q.prompt,
       question_type: q.type,

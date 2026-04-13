@@ -31,6 +31,7 @@ export type BuilderSection = {
   readOnlyReason?: string;
   sourceTitle?: string;
   sourceDescription?: string;
+  sourceQuestionSetId?: number;
 };
 
 type BuilderFieldOption = {
@@ -313,6 +314,7 @@ function TemplateBuilderModal({
       readOnlyReason: 'This section comes from a reusable question set.',
       sourceTitle: selectedOption.label,
       sourceDescription: selectedOption.description,
+      sourceQuestionSetId: Number(selectedOption.id) || undefined,
       questions: selectedOption.section.questions.map((question) => ({
         id: nextQuestionId(),
         prompt: question.prompt,

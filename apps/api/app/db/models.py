@@ -160,6 +160,7 @@ class ReviewTemplateSection(Base):
     template_id = Column(Integer, ForeignKey("review_templates.id", ondelete="CASCADE"), nullable=False)
     label = Column(String(300), nullable=False)
     sort_order = Column(Integer, nullable=False, default=0)
+    source_question_set_id = Column(Integer, nullable=True)
 
     template = relationship("ReviewTemplate", back_populates="sections")
     questions = relationship("ReviewTemplateQuestion", back_populates="section", cascade="all, delete-orphan", order_by="ReviewTemplateQuestion.sort_order")
@@ -238,6 +239,7 @@ class SurveyTemplateSection(Base):
     template_id = Column(Integer, ForeignKey("survey_templates.id", ondelete="CASCADE"), nullable=False)
     label = Column(String(300), nullable=False)
     sort_order = Column(Integer, nullable=False, default=0)
+    source_question_set_id = Column(Integer, nullable=True)
 
     template = relationship("SurveyTemplate", back_populates="sections")
     questions = relationship("SurveyTemplateQuestion", back_populates="section", cascade="all, delete-orphan", order_by="SurveyTemplateQuestion.sort_order")
