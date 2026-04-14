@@ -1,5 +1,6 @@
 export const ROUTES = {
   home: '/home',
+  onboarding: '/onboarding',
   orgChart: '/org-chart',
   kpi: '/kpi',
   tasks: '/tasks',
@@ -39,6 +40,7 @@ export const ROUTES = {
 
 export const MENU_ROUTE_MAP = {
   Home: ROUTES.home,
+  Onboarding: ROUTES.onboarding,
   KPI: ROUTES.kpi,
   'L&D': ROUTES.learningDevelopment,
   Tasks: ROUTES.tasks,

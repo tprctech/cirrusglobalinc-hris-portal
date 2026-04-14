@@ -37,6 +37,7 @@ import ReviewsPage from '../pages/employee-portal/ReviewsPage';
 import SurveysPage from '../pages/employee-portal/SurveysPage';
 import FeedbackPage from '../pages/employee-portal/FeedbackPage';
 import RecognitionsPage from '../pages/employee-portal/RecognitionsPage';
+import OnboardingPage from '../pages/employee-portal/OnboardingPage';
 import OrgChartPage from '../pages/employee-portal/OrgChartPage';
 import LearningDevelopmentPage from '../pages/employee-portal/LearningDevelopmentPage';
 import LmsHomePage from '../pages/lms/LmsHomePage';
@@ -263,6 +264,7 @@ function App() {
 
   const sidebarItems: SidebarItem[] = [
     { label: 'Home', icon: <Home size={20} /> },
+    { label: 'Onboarding', icon: <ClipboardList size={20} /> },
     { label: 'KPI', icon: <Target size={20} /> },
     { label: 'L&D', icon: <GraduationCap size={20} /> },
     { label: 'Tasks', icon: <ListTodo size={20} /> },
@@ -625,6 +627,7 @@ function App() {
 
         <main className={`main-content ${isAdminCenter ? 'admin-main-content' : ''}`}>
           {currentPath === ROUTES.home && <HomePage />}
+          {currentPath === ROUTES.onboarding && <OnboardingPage />}
           {currentPath === ROUTES.orgChart && <OrgChartPage />}
           {currentPath === ROUTES.kpi && <KpiPage />}
           {currentPath === ROUTES.tasks && <TasksPage />}

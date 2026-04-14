@@ -505,3 +505,52 @@ class Feedback(Base):
 
     from_user = relationship("UserAccount", foreign_keys=[from_user_id])
     to_user = relationship("UserAccount", foreign_keys=[to_user_id])
+
+
+class OnboardingStep(Base):
+    __tablename__ = "onboarding_steps"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    title = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True, default="")
+    sort_order = Column(Integer, nullable=False, default=0)
+    is_active = Column(Boolean, nullable=False, default=True)
+    is_deleted = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    documents = relationship("OnboardingDocument", back_populates="step", order_by="OnboardingDocument.sort_order")
+
+
+class OnboardingDocument(Base):
+    __tablename__ = "onboarding_documents"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    step_id = Column(Integer, ForeignKey("onboarding_steps.id", ondelete="CASCADE"), nullable=False)
+    title = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True, default="")
+    sort_order = Column(Integer, nullable=False, default=0)
+    is_required = Column(Boolean, nullable=False, default=True)
+    is_deleted = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    step = relationship("OnboardingStep", back_populates="documents")
+    uploads = relationship("OnboardingUpload", back_populates="document")
+
+
+class OnboardingUpload(Base):
+    __tablename__ = "onboarding_uploads"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    document_id = Column(Integer, ForeignKey("onboarding_documents.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("user_accounts.id", ondelete="CASCADE"), nullable=False)
+    file_name = Column(String(500), nullable=False)
+    file_path = Column(String(500), nullable=False)
+    file_size = Column(Integer, nullable=False, default=0)
+    is_deleted = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    document = relationship("OnboardingDocument", back_populates="uploads")
+    user = relationship("UserAccount")

@@ -76,6 +76,7 @@ Two workflows are configured:
 - `/api/v1/recognitions/*` - Recognitions
 - `/api/v1/rewards/*` - Rewards
 - `/api/v1/admin/*` - Admin
+- `/api/v1/onboarding/*` - Onboarding checklist (steps, document uploads)
 - `/api/v1/notifications/*` - Notifications
 
 ### HR Center API (PostgreSQL-backed CRUD)
@@ -106,7 +107,7 @@ Two workflows are configured:
 - **API flow**: Create cycle/campaign → GET detail (loads template sections/questions) → POST responses with answers array
 - **Upsert pattern**: Saving a response for the same respondent replaces previous answers (draft overwrite)
 
-## Database Tables (30 total)
+## Database Tables (33 total)
 
 user_accounts, employees, departments, roles, role_competencies, competencies, competency_learning_materials, employee_attachments, company_resources,
 review_templates, review_template_sections, review_template_questions,
@@ -115,13 +116,14 @@ review_cycles, review_responses, review_response_answers,
 survey_templates, survey_template_sections, survey_template_questions,
 survey_question_sets, survey_question_set_sections, survey_question_set_questions,
 survey_campaigns, survey_responses, survey_response_answers,
-recognition_badges, rewards, reward_redeems
+recognition_badges, rewards, reward_redeems,
+onboarding_steps, onboarding_documents, onboarding_uploads
 
 ## Soft Delete
 
 All main entity tables use **soft delete** — records are never physically removed from the database. Instead, an `is_deleted` boolean column (default `FALSE`) is set to `TRUE` when a record is "deleted."
 
-Tables with `is_deleted`: `user_accounts`, `employees`, `departments`, `roles`, `competencies`, `recognition_badges`, `rewards`, `reward_redeems`, `review_templates`, `review_question_sets`, `survey_templates`, `survey_question_sets`, `employee_attachments`, `company_resources`
+Tables with `is_deleted`: `user_accounts`, `employees`, `departments`, `roles`, `competencies`, `recognition_badges`, `rewards`, `reward_redeems`, `review_templates`, `review_question_sets`, `survey_templates`, `survey_question_sets`, `employee_attachments`, `company_resources`, `onboarding_steps`, `onboarding_documents`, `onboarding_uploads`
 
 Child tables (sections, questions, learning materials) do not have `is_deleted` — they remain in the DB when their parent is soft-deleted.
 
@@ -135,6 +137,16 @@ All list/get/update/delete endpoints filter by `is_deleted = FALSE`. Auth login 
 - **Individual view**: Paginated per-respondent view showing all answers
 - **Sidebar**: "Reporting" accordion added to HR Center sidebar with Reviews and Surveys sub-links
 - **Files**: `apps/web/client/src/pages/admin-center/reporting/AdminReportingReviewsPage.tsx`, `AdminReportingSurveysPage.tsx`, `AdminReporting.css`
+
+### Onboarding Checklist
+
+- **Employee Portal page** (`/onboarding`): Multi-step onboarding checklist with document upload tracking
+- **Models**: `OnboardingStep` (title, description, sort_order) → `OnboardingDocument` (title, description, is_required) → `OnboardingUpload` (per-user file uploads)
+- **API**: `GET /api/v1/onboarding/steps` (list steps with user's upload progress), `POST /api/v1/onboarding/documents/{id}/upload`, `DELETE /api/v1/onboarding/uploads/{id}`, `GET /api/v1/onboarding/uploads/{id}/download`
+- **File storage**: `apps/api/uploads/onboarding/` directory; max 10MB; allowed: PDF, JPG, PNG, WEBP, DOC, DOCX
+- **Security**: All endpoints require JWT auth; download endpoint enforces user ownership (no IDOR)
+- **Step 1 (seeded)**: "Signing of Forms and Contract" — 8 required documents (Contract, Declaration of Consent, JD, Contract without salary, NBI Clearance, Data Privacy Consent, Passport-size Photos, CV/Resume)
+- **Files**: `apps/api/app/api/v1/onboarding.py`, `apps/web/client/src/pages/employee-portal/OnboardingPage.tsx`
 
 ## Development Notes
 

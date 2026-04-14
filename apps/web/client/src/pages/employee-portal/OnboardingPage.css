@@ -1,0 +1,353 @@
+.onboarding-page {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.onboarding-page h1 {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--charcoal);
+  margin-bottom: 6px;
+}
+
+.onboarding-page .page-subtitle {
+  color: var(--gray-600);
+  font-size: 14px;
+  margin-bottom: 24px;
+}
+
+.onboarding-progress-bar {
+  background: var(--gray-200);
+  border-radius: 8px;
+  height: 10px;
+  margin-bottom: 28px;
+  overflow: hidden;
+}
+
+.onboarding-progress-fill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 8px;
+  transition: width 0.4s ease;
+}
+
+.onboarding-progress-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: var(--gray-600);
+}
+
+.onboarding-progress-label strong {
+  color: var(--charcoal);
+}
+
+.onboarding-step-card {
+  background: #fff;
+  border: 1px solid var(--gray-200);
+  border-radius: 12px;
+  padding: 0;
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.onboarding-step-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+}
+
+.onboarding-step-header:hover {
+  background: var(--gray-50);
+}
+
+.onboarding-step-header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.step-number-badge {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.step-number-badge.incomplete {
+  background: var(--gray-100);
+  color: var(--gray-600);
+  border: 2px solid var(--gray-300);
+}
+
+.step-number-badge.complete {
+  background: #dcfce7;
+  color: #16a34a;
+  border: 2px solid #86efac;
+}
+
+.step-info h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--charcoal);
+  margin: 0;
+}
+
+.step-info p {
+  font-size: 13px;
+  color: var(--gray-500);
+  margin: 3px 0 0;
+}
+
+.step-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.step-status-badge.complete {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.step-status-badge.in-progress {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.step-status-badge.not-started {
+  background: var(--gray-100);
+  color: var(--gray-500);
+}
+
+.onboarding-step-body {
+  border-top: 1px solid var(--gray-200);
+  padding: 0;
+}
+
+.onboarding-doc-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.onboarding-doc-table th {
+  background: var(--gray-50);
+  padding: 10px 22px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.onboarding-doc-table td {
+  padding: 14px 22px;
+  vertical-align: middle;
+  font-size: 14px;
+  color: var(--charcoal);
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.onboarding-doc-table tr:last-child td {
+  border-bottom: none;
+}
+
+.doc-title-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.doc-title-cell .doc-title {
+  font-weight: 500;
+  color: var(--charcoal);
+}
+
+.doc-title-cell .doc-desc {
+  font-size: 12px;
+  color: var(--gray-500);
+}
+
+.doc-status-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.doc-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.doc-status-pill.uploaded {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.doc-status-pill.pending {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.doc-action-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: 1px solid var(--primary);
+  background: transparent;
+  color: var(--primary);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.upload-btn:hover {
+  background: var(--primary);
+  color: #fff;
+}
+
+.upload-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.view-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  border: 1px solid var(--gray-300);
+  background: transparent;
+  color: var(--gray-600);
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.view-btn:hover {
+  background: var(--gray-100);
+  color: var(--charcoal);
+}
+
+.remove-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  border: 1px solid #fca5a5;
+  background: transparent;
+  color: #dc2626;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.remove-btn:hover {
+  background: #fef2f2;
+}
+
+.file-name-display {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--gray-700);
+}
+
+.file-name-display .file-icon {
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.onboarding-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  color: var(--gray-500);
+  font-size: 14px;
+}
+
+.onboarding-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  color: var(--gray-500);
+  gap: 10px;
+}
+
+.step-chevron {
+  color: var(--gray-400);
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+
+.step-chevron.open {
+  transform: rotate(180deg);
+}
+
+.upload-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--gray-300);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: onb-spin 0.6s linear infinite;
+}
+
+@keyframes onb-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 640px) {
+  .onboarding-doc-table th:nth-child(3),
+  .onboarding-doc-table td:nth-child(3) {
+    display: none;
+  }
+
+  .onboarding-step-header {
+    padding: 14px 16px;
+  }
+
+  .onboarding-doc-table th,
+  .onboarding-doc-table td {
+    padding: 10px 16px;
+  }
+}
