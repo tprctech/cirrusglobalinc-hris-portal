@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from sqlalchemy import func
-from app.db.models import Reward, RewardRedeem, Employee, RecognitionGiven
+from app.db.models import Reward, RewardRedeem, Employee, RecognitionGiven, UserAccount
 from app.db.session import get_db
 
 router = APIRouter()
@@ -26,8 +26,13 @@ def _get_current_user(request: Request):
     from app.db.session import SessionLocal
     db = SessionLocal()
     try:
-        emp = db.query(Employee).filter(Employee.user_id == user_id).first()
-        return emp, emp.email if emp else ""
+        ua = db.query(UserAccount).filter(UserAccount.id == user_id).first()
+        if not ua:
+            return None, ""
+        if not ua.employee_id:
+            return None, ua.email
+        emp = db.query(Employee).filter(Employee.id == ua.employee_id).first()
+        return emp, emp.email if emp else ua.email
     finally:
         db.close()
 

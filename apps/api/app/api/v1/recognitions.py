@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.db.models import RecognitionBadge, RecognitionGiven, Employee
+from app.db.models import RecognitionBadge, RecognitionGiven, Employee, UserAccount
 from app.db.session import get_db
 
 router = APIRouter()
@@ -25,8 +25,11 @@ def _get_current_email(request: Request) -> str:
     from app.db.session import SessionLocal
     db = SessionLocal()
     try:
-        emp = db.query(Employee).filter(Employee.user_id == user_id).first()
-        return emp.email if emp else ""
+        ua = db.query(UserAccount).filter(UserAccount.id == user_id).first()
+        if not ua or not ua.employee_id:
+            return ua.email if ua else ""
+        emp = db.query(Employee).filter(Employee.id == ua.employee_id).first()
+        return emp.email if emp else (ua.email if ua else "")
     finally:
         db.close()
 
