@@ -698,3 +698,86 @@
   color: var(--gray-500);
   flex-shrink: 0;
 }
+
+.reviews-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 40px 20px;
+  color: var(--gray-400);
+  text-align: center;
+}
+
+.reviews-empty-state p {
+  font-size: 14px;
+  color: var(--gray-500);
+  max-width: 400px;
+}
+
+.team-review-report {
+  display: grid;
+  gap: 16px;
+}
+
+.team-report-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.team-report-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--charcoal);
+  margin: 0;
+}
+
+.team-report-back-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--gray-300);
+  background: var(--white);
+  color: var(--gray-700);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.team-report-back-btn:hover {
+  background: var(--gray-50);
+}
+
+.team-report-subtitle {
+  font-size: 13px;
+  color: var(--gray-500);
+  margin: 4px 0 0;
+}
+
+.team-report-nav-btn {
+  border: 1px solid var(--gray-300);
+  border-radius: 8px;
+  background: var(--white);
+  color: var(--charcoal);
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.team-report-nav-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.team-report-nav-btn:hover:not(:disabled) {
+  background: var(--gray-50);
+}

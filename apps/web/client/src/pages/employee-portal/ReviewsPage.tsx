@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { CircleDot, Clock3, FileText, Plus, Star } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronRight, CircleDot, Clock3, FileText, Plus, Star } from 'lucide-react';
 import TemplateBuilderModal, {
   type BuilderExistingSectionOption,
   type BuilderQuestionType,
@@ -14,6 +14,7 @@ import { useReviewCatalog } from '../../data/reviewCatalogStore';
 import { useAuth } from '../../app/AuthContext';
 import { reviewsMockData } from '../../data/mock/menuMockData';
 import './ReviewsPage.css';
+import '../../pages/admin-center/reporting/AdminReporting.css';
 
 const API_BASE = '/api/v1';
 
@@ -84,6 +85,30 @@ type EvaluationFormPayload = {
       required: boolean;
     }>;
   }>;
+};
+
+type TeamAnswer = {
+  id: number;
+  question_id: number;
+  section_id: number;
+  answer_text: string;
+  rating: number | null;
+  selected_options: string;
+};
+
+type TeamResponse = {
+  id: number;
+  cycle_id: number;
+  respondent_email: string;
+  status: string;
+  submitted_at: string | null;
+  answers: TeamAnswer[];
+};
+
+type TeamQuestionSummary = {
+  question: CycleDetail['sections'][0]['questions'][0];
+  answers: TeamAnswer[];
+  responseCount: number;
 };
 
 let evaluationCounter = 0;
@@ -160,7 +185,7 @@ function cloneTemplateSectionsAsLocked(
 }
 
 function ReviewsPage() {
-  const { user } = useAuth();
+  const { user, hasRole } = useAuth();
   const { templates, questionSets } = useReviewCatalog();
   const [activeTab, setActiveTab] = useState<ReviewTab>('my');
   const [showBuilder, setShowBuilder] = useState(false);
@@ -177,6 +202,43 @@ function ReviewsPage() {
   const [existingAnswers, setExistingAnswers] = useState<AnswerValue[]>([]);
   const [responseSaving, setResponseSaving] = useState(false);
   const [creatingCycle, setCreatingCycle] = useState(false);
+
+  const [directReportEmails, setDirectReportEmails] = useState<string[]>([]);
+  const [hasDirectReports, setHasDirectReports] = useState(false);
+
+  const [teamSelectedCycleId, setTeamSelectedCycleId] = useState<number | null>(null);
+  const [teamCycleDetail, setTeamCycleDetail] = useState<CycleDetail | null>(null);
+  const [teamResponses, setTeamResponses] = useState<TeamResponse[]>([]);
+  const [teamDetailLoading, setTeamDetailLoading] = useState(false);
+  const [teamExpandedSections, setTeamExpandedSections] = useState<Set<number>>(new Set());
+  const [teamViewMode, setTeamViewMode] = useState<'summary' | 'individual'>('summary');
+  const [teamSelectedResponseIdx, setTeamSelectedResponseIdx] = useState(0);
+
+  const isPrivileged = hasRole('Admin', 'HR');
+
+  useEffect(() => {
+    if (!user?.employee?.email) return;
+    const empEmail = user.employee.email.toLowerCase();
+    fetch('/api/v1/hr/employees/')
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: { supervisor?: string; email?: string; status?: string }[]) => {
+        const reportEmails = data
+          .filter((e) => {
+            if (e.status !== 'Active' || !e.supervisor) return false;
+            const sv = e.supervisor.toLowerCase().trim();
+            const emailOnly = sv.includes('(') ? (sv.match(/\(([^)]+)\)/)?.[1] || sv) : sv;
+            return emailOnly === empEmail;
+          })
+          .map((e) => (e.email || '').toLowerCase())
+          .filter(Boolean);
+        setDirectReportEmails(reportEmails);
+        setHasDirectReports(reportEmails.length > 0);
+      })
+      .catch(() => {});
+  }, [user?.employee?.email]);
+
+  const showTeamTab = hasDirectReports || isPrivileged;
+  const showCreateButton = hasDirectReports || isPrivileged;
 
   const loadCycles = useCallback(async () => {
     try {
@@ -205,16 +267,27 @@ function ReviewsPage() {
     [questionSets],
   );
 
-  const allReviews: Review[] = cycles.map((c) => ({
-    id: String(c.id),
-    title: c.title,
-    employee: c.reviewee_email,
-    department: '',
-    manager: c.reviewer_email || '',
-    teammates: [],
-    dueDate: formatDisplayDate(c.due_date),
-    status: (c.status === 'Completed' ? 'Completed' : c.status === 'In Progress' ? 'In Progress' : 'Pending') as ReviewStatus,
-  }));
+  const myEmail = (user?.email || '').toLowerCase();
+
+  const myReviews: Review[] = cycles
+    .filter((c) => c.reviewee_email.toLowerCase() === myEmail)
+    .map((c) => ({
+      id: String(c.id),
+      title: c.title,
+      employee: c.reviewee_email,
+      department: '',
+      manager: c.reviewer_email || '',
+      teammates: [],
+      dueDate: formatDisplayDate(c.due_date),
+      status: (c.status === 'Completed' ? 'Completed' : c.status === 'In Progress' ? 'In Progress' : 'Pending') as ReviewStatus,
+    }));
+
+  const teamCycles = useMemo(() => {
+    if (isPrivileged) {
+      return cycles.filter((c) => c.reviewee_email.toLowerCase() !== myEmail);
+    }
+    return cycles.filter((c) => directReportEmails.includes(c.reviewee_email.toLowerCase()));
+  }, [cycles, directReportEmails, myEmail, isPrivileged]);
 
   function openCreateEvaluationModal() {
     setEvaluationId(nextEvaluationId());
@@ -352,6 +425,325 @@ function ReviewsPage() {
     }
   }
 
+  const loadTeamCycleDetail = useCallback((cycleId: number) => {
+    setTeamSelectedCycleId(cycleId);
+    setTeamDetailLoading(true);
+    setTeamViewMode('summary');
+    setTeamSelectedResponseIdx(0);
+
+    Promise.all([
+      fetch(`${API_BASE}/review-cycles/${cycleId}`).then((r) => r.json()),
+      fetch(`${API_BASE}/review-cycles/${cycleId}/responses`).then((r) => r.json()),
+    ])
+      .then(([detail, resps]: [CycleDetail, TeamResponse[]]) => {
+        setTeamCycleDetail(detail);
+        setTeamResponses(resps.filter((r) => r.status === 'Submitted'));
+        setTeamExpandedSections(new Set(detail.sections.map((s) => s.id)));
+      })
+      .catch(() => {})
+      .finally(() => setTeamDetailLoading(false));
+  }, []);
+
+  function toggleTeamSection(sectionId: number) {
+    setTeamExpandedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(sectionId)) next.delete(sectionId);
+      else next.add(sectionId);
+      return next;
+    });
+  }
+
+  function getTeamQuestionSummaries(section: CycleDetail['sections'][0]): TeamQuestionSummary[] {
+    return section.questions.map((q) => {
+      const answers = teamResponses.flatMap((r) =>
+        r.answers.filter((a) => a.question_id === q.id && a.section_id === section.id),
+      );
+      return { question: q, answers, responseCount: answers.length };
+    });
+  }
+
+  function renderTeamRatingSummary(summary: TeamQuestionSummary) {
+    const ratings = summary.answers.filter((a) => a.rating !== null).map((a) => a.rating!);
+    if (ratings.length === 0) return <p className="reporting-no-data">No responses yet</p>;
+    const avg = ratings.reduce((s, v) => s + v, 0) / ratings.length;
+    const dist: Record<number, number> = {};
+    for (const r of ratings) dist[r] = (dist[r] || 0) + 1;
+    const maxScale = Math.max(...ratings, 5);
+    return (
+      <div className="reporting-rating-summary">
+        <div className="reporting-avg-badge">
+          <span className="reporting-avg-value">{avg.toFixed(1)}</span>
+          <span className="reporting-avg-label">Average ({ratings.length} responses)</span>
+        </div>
+        <div className="reporting-rating-bars">
+          {Array.from({ length: maxScale }, (_, i) => maxScale - i).map((val) => (
+            <div key={val} className="reporting-bar-row">
+              <span className="reporting-bar-label">{val}</span>
+              <div className="reporting-bar-track">
+                <div
+                  className="reporting-bar-fill"
+                  style={{ width: `${((dist[val] || 0) / ratings.length) * 100}%` }}
+                />
+              </div>
+              <span className="reporting-bar-count">{dist[val] || 0}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  function renderTeamChoiceSummary(summary: TeamQuestionSummary) {
+    const optionsList = summary.question.options
+      ? summary.question.options.split('\n').filter(Boolean)
+      : [];
+    const counts: Record<string, number> = {};
+    for (const opt of optionsList) counts[opt] = 0;
+    for (const a of summary.answers) {
+      const selected = a.selected_options ? a.selected_options.split('\n').filter(Boolean) : [];
+      for (const s of selected) counts[s] = (counts[s] || 0) + 1;
+    }
+    const total = summary.answers.length || 1;
+    if (summary.answers.length === 0) return <p className="reporting-no-data">No responses yet</p>;
+    return (
+      <div className="reporting-choice-summary">
+        {optionsList.map((opt) => (
+          <div key={opt} className="reporting-choice-row">
+            <div className="reporting-choice-info">
+              <span className="reporting-choice-label">{opt}</span>
+              <span className="reporting-choice-pct">{Math.round((counts[opt] / total) * 100)}%</span>
+            </div>
+            <div className="reporting-bar-track">
+              <div
+                className="reporting-bar-fill choice"
+                style={{ width: `${(counts[opt] / total) * 100}%` }}
+              />
+            </div>
+            <span className="reporting-bar-count">{counts[opt]} responses</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  function renderTeamTextSummary(summary: TeamQuestionSummary) {
+    const texts = summary.answers.filter((a) => a.answer_text.trim()).map((a) => a.answer_text);
+    if (texts.length === 0) return <p className="reporting-no-data">No responses yet</p>;
+    return (
+      <div className="reporting-text-responses">
+        {texts.map((t, i) => (
+          <div key={i} className="reporting-text-item">{t}</div>
+        ))}
+      </div>
+    );
+  }
+
+  function renderTeamQuestionSummary(summary: TeamQuestionSummary) {
+    const type = summary.question.question_type;
+    if (type === 'Rating' || type === 'Scale' || type === '5-Star Rating') return renderTeamRatingSummary(summary);
+    if (type === 'Multiple Choice' || type === 'Single Choice') return renderTeamChoiceSummary(summary);
+    return renderTeamTextSummary(summary);
+  }
+
+  function renderTeamIndividualResponse(resp: TeamResponse) {
+    if (!teamCycleDetail) return null;
+    return (
+      <div className="reporting-individual">
+        <div className="reporting-individual-header">
+          <strong>{resp.respondent_email}</strong>
+          <span className="reporting-submitted-at">
+            {resp.submitted_at ? new Date(resp.submitted_at).toLocaleDateString() : ''}
+          </span>
+        </div>
+        {teamCycleDetail.sections.map((section) => (
+          <div key={section.id} className="reporting-individual-section">
+            <h4>{section.label}</h4>
+            {section.questions.map((q) => {
+              const answer = resp.answers.find(
+                (a) => a.question_id === q.id && a.section_id === section.id,
+              );
+              return (
+                <div key={q.id} className="reporting-individual-qa">
+                  <p className="reporting-individual-prompt">{q.prompt}</p>
+                  <p className="reporting-individual-answer">
+                    {answer
+                      ? answer.rating !== null
+                        ? `Rating: ${answer.rating}`
+                        : answer.selected_options || answer.answer_text || '—'
+                      : '—'}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  function renderTeamReviewsContent() {
+    if (teamSelectedCycleId !== null) {
+      const submittedResponses = teamResponses;
+      return (
+        <div className="team-review-report">
+          <div className="team-report-toolbar">
+            <div>
+              <h2 className="team-report-title">
+                <button
+                  className="team-report-back-btn"
+                  onClick={() => {
+                    setTeamSelectedCycleId(null);
+                    setTeamCycleDetail(null);
+                    setTeamResponses([]);
+                  }}
+                >
+                  <ArrowLeft size={16} />
+                </button>
+                {teamCycleDetail?.title || 'Review Cycle'}
+              </h2>
+              <p className="team-report-subtitle">
+                {submittedResponses.length} submitted response{submittedResponses.length !== 1 ? 's' : ''}
+                {teamCycleDetail && ` · Reviewee: ${teamCycleDetail.reviewee_email}`}
+                {teamCycleDetail?.due_date && ` · Due: ${teamCycleDetail.due_date}`}
+              </p>
+            </div>
+          </div>
+
+          {teamDetailLoading && <p className="reporting-loading">Loading report...</p>}
+
+          {!teamDetailLoading && teamCycleDetail && (
+            <>
+              <div className="reporting-view-toggle">
+                <button
+                  className={`reviews-tab ${teamViewMode === 'summary' ? 'active' : ''}`}
+                  onClick={() => setTeamViewMode('summary')}
+                >
+                  Summary
+                </button>
+                <button
+                  className={`reviews-tab ${teamViewMode === 'individual' ? 'active' : ''}`}
+                  onClick={() => setTeamViewMode('individual')}
+                >
+                  Individual
+                </button>
+              </div>
+
+              {teamViewMode === 'summary' && (
+                <div className="reporting-sections">
+                  {teamCycleDetail.sections.map((section) => {
+                    const summaries = getTeamQuestionSummaries(section);
+                    const isExpanded = teamExpandedSections.has(section.id);
+                    return (
+                      <div key={section.id} className="reporting-section">
+                        <button
+                          className="reporting-section-header"
+                          onClick={() => toggleTeamSection(section.id)}
+                        >
+                          <span className="reporting-section-title">{section.label}</span>
+                          <span className="reporting-section-count">
+                            {section.questions.length} question{section.questions.length !== 1 ? 's' : ''}
+                          </span>
+                          {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                        </button>
+                        {isExpanded && (
+                          <div className="reporting-questions">
+                            {summaries.map((s, idx) => (
+                              <div key={s.question.id} className="reporting-question-card">
+                                <div className="reporting-question-header">
+                                  <span className="reporting-question-number">Q{idx + 1}</span>
+                                  <span className="reporting-question-prompt">{s.question.prompt}</span>
+                                  <span className="reporting-question-type">{s.question.question_type}</span>
+                                </div>
+                                <div className="reporting-question-body">
+                                  {renderTeamQuestionSummary(s)}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {teamCycleDetail.sections.length === 0 && (
+                    <p className="reporting-no-data">No sections found for this review cycle.</p>
+                  )}
+                </div>
+              )}
+
+              {teamViewMode === 'individual' && (
+                <div className="reporting-individual-view">
+                  {submittedResponses.length === 0 && (
+                    <p className="reporting-no-data">No submitted responses yet.</p>
+                  )}
+                  {submittedResponses.length > 0 && (
+                    <>
+                      <div className="reporting-response-nav">
+                        <button
+                          className="team-report-nav-btn"
+                          disabled={teamSelectedResponseIdx <= 0}
+                          onClick={() => setTeamSelectedResponseIdx((i) => i - 1)}
+                        >
+                          Previous
+                        </button>
+                        <span className="reporting-response-counter">
+                          {teamSelectedResponseIdx + 1} of {submittedResponses.length}
+                        </span>
+                        <button
+                          className="team-report-nav-btn"
+                          disabled={teamSelectedResponseIdx >= submittedResponses.length - 1}
+                          onClick={() => setTeamSelectedResponseIdx((i) => i + 1)}
+                        >
+                          Next
+                        </button>
+                      </div>
+                      {renderTeamIndividualResponse(submittedResponses[teamSelectedResponseIdx])}
+                    </>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <>
+        {teamCycles.length === 0 && (
+          <div className="reviews-empty-state">
+            <FileText size={36} />
+            <p>No team review cycles found yet.</p>
+          </div>
+        )}
+        <div className="reporting-cycle-grid">
+          {teamCycles.map((cycle) => (
+            <button
+              key={cycle.id}
+              className="reporting-cycle-card"
+              onClick={() => loadTeamCycleDetail(cycle.id)}
+            >
+              <div className="reporting-cycle-title">{cycle.title}</div>
+              <div className="reporting-cycle-meta">
+                <span>Reviewee: {cycle.reviewee_email}</span>
+                {cycle.due_date && <span>Due: {cycle.due_date}</span>}
+              </div>
+              <div className="reporting-cycle-footer">
+                <span className={`reporting-status-badge ${cycle.status.toLowerCase()}`}>
+                  {cycle.status}
+                </span>
+                {cycle.created_at && (
+                  <span className="reporting-cycle-date">
+                    Created {new Date(cycle.created_at).toLocaleDateString()}
+                  </span>
+                )}
+              </div>
+            </button>
+          ))}
+        </div>
+      </>
+    );
+  }
+
   return (
     <section className="reviews-page">
       <div className="reviews-header-row">
@@ -359,7 +751,7 @@ function ReviewsPage() {
           <h1>{reviewsMockData.pageTitle}</h1>
           <p>{reviewsMockData.subtitle}</p>
         </div>
-        {reviewsMockData.permissions.showCreateEvaluationButton && (
+        {showCreateButton && (
           <button className="create-evaluation-btn" onClick={openCreateEvaluationModal}>
             <Plus size={16} />
             Create Evaluation
@@ -374,7 +766,7 @@ function ReviewsPage() {
         >
           My Reviews
         </button>
-        {reviewsMockData.permissions.showTeamReviewsTab && (
+        {showTeamTab && (
           <button
             className={`reviews-tab ${activeTab === 'team' ? 'active' : ''}`}
             onClick={() => setActiveTab('team')}
@@ -384,37 +776,47 @@ function ReviewsPage() {
         )}
       </div>
 
-      <div className="reviews-list">
-        {allReviews.map((review) => (
-          <article className="review-card" key={review.id}>
-            <div className="review-card-header">
-              <div className="review-title-row">
-                <FileText size={18} />
-                <h3>{review.title}</h3>
-              </div>
-              <span className={statusClassMap[review.status]}>
-                {(review.status === 'Pending' || review.status === 'In Progress') && <Clock3 size={14} />}
-                {review.status === 'Completed' && <Star size={14} />}
-                {review.status}
-              </span>
+      {activeTab === 'my' && (
+        <div className="reviews-list">
+          {myReviews.length === 0 && (
+            <div className="reviews-empty-state">
+              <FileText size={36} />
+              <p>No reviews assigned to you yet.</p>
             </div>
+          )}
+          {myReviews.map((review) => (
+            <article className="review-card" key={review.id}>
+              <div className="review-card-header">
+                <div className="review-title-row">
+                  <FileText size={18} />
+                  <h3>{review.title}</h3>
+                </div>
+                <span className={statusClassMap[review.status]}>
+                  {(review.status === 'Pending' || review.status === 'In Progress') && <Clock3 size={14} />}
+                  {review.status === 'Completed' && <Star size={14} />}
+                  {review.status}
+                </span>
+              </div>
 
-            <p>Employee: <strong>{review.employee}</strong></p>
-            {review.department && <p>Department: <strong>{review.department}</strong></p>}
-            {review.manager && <p>Manager: <strong>{review.manager}</strong></p>}
-            {review.teammates.length > 0 && <p>Teammates: <strong>{review.teammates.join(', ')}</strong></p>}
-            <p>Due Date: <strong>{review.dueDate}</strong></p>
+              <p>Employee: <strong>{review.employee}</strong></p>
+              {review.department && <p>Department: <strong>{review.department}</strong></p>}
+              {review.manager && <p>Manager: <strong>{review.manager}</strong></p>}
+              {review.teammates.length > 0 && <p>Teammates: <strong>{review.teammates.join(', ')}</strong></p>}
+              <p>Due Date: <strong>{review.dueDate}</strong></p>
 
-            <button
-              className="review-employee-btn"
-              onClick={() => openResponseForm(review.id)}
-            >
-              <CircleDot size={15} />
-              {review.status === 'Completed' ? 'View Response' : 'Review Employee'}
-            </button>
-          </article>
-        ))}
-      </div>
+              <button
+                className="review-employee-btn"
+                onClick={() => openResponseForm(review.id)}
+              >
+                <CircleDot size={15} />
+                {review.status === 'Completed' ? 'View Response' : 'Review Employee'}
+              </button>
+            </article>
+          ))}
+        </div>
+      )}
+
+      {activeTab === 'team' && showTeamTab && renderTeamReviewsContent()}
 
       <TemplateBuilderModal
         isOpen={showBuilder}
