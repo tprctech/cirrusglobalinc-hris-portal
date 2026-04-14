@@ -83,6 +83,9 @@ def give_recognition(payload: GiveRecognitionIn, request: Request, db: Session =
     if not from_email:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
+    if payload.to_email.strip().lower() == from_email.strip().lower():
+        raise HTTPException(status_code=400, detail="You cannot give a recognition to yourself")
+
     badge = db.query(RecognitionBadge).filter(
         RecognitionBadge.id == payload.badge_id,
         RecognitionBadge.is_deleted == False,

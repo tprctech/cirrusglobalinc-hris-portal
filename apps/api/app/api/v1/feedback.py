@@ -71,6 +71,9 @@ def create_employee_feedback(
 ):
     current_user_id = _get_current_user_id(authorization)
 
+    if body.to_user_id == current_user_id:
+        raise HTTPException(status_code=400, detail="You cannot send feedback to yourself")
+
     to_user = db.query(UserAccount).filter(
         UserAccount.id == body.to_user_id,
         UserAccount.is_deleted == False,
@@ -78,9 +81,6 @@ def create_employee_feedback(
     ).first()
     if not to_user:
         raise HTTPException(status_code=404, detail="Recipient user not found")
-
-    if to_user.id == current_user_id:
-        raise HTTPException(status_code=400, detail="Cannot send feedback to yourself")
 
     fb = Feedback(
         from_user_id=current_user_id,

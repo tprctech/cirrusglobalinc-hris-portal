@@ -53,8 +53,9 @@ function formatDate(iso: string | null): string {
 }
 
 function RecognitionsPage() {
-  const { hasRole, token } = useAuth();
+  const { user, hasRole, token } = useAuth();
   const isPrivileged = hasRole('Admin', 'HR');
+  const currentEmail = user?.email?.toLowerCase() || '';
 
   const [activeTab, setActiveTab] = useState<RecognitionTab>('received');
   const [badges, setBadges] = useState<Badge[]>([]);
@@ -116,7 +117,8 @@ function RecognitionsPage() {
         });
         if (res.ok) {
           const data = await res.json();
-          const items = Array.isArray(data) ? data : (data.items || []);
+          const raw = Array.isArray(data) ? data : (data.items || []);
+          const items = raw.filter((u: { email: string }) => u.email.toLowerCase() !== currentEmail);
           setUserSearchResults(items);
           setShowUserDropdown(items.length > 0);
         }

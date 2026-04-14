@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { CalendarDays, Loader2, MessageSquare, Plus, X } from 'lucide-react';
 import { getStoredToken } from '../../api/auth';
+import { useAuth } from '../../app/AuthContext';
 import './FeedbackPage.css';
 
 type FeedbackTab = 'received' | 'given';
@@ -42,9 +43,11 @@ type UserOption = {
 function UserSearchDropdown({
   selectedUser,
   onSelect,
+  excludeEmail,
 }: {
   selectedUser: UserOption | null;
   onSelect: (user: UserOption | null) => void;
+  excludeEmail?: string;
 }) {
   const [query, setQuery] = useState(selectedUser ? selectedUser.name : '');
   const [results, setResults] = useState<UserOption[]>([]);
@@ -61,7 +64,10 @@ function UserSearchDropdown({
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((r) => r.json())
-      .then((data) => setResults(data.items || []))
+      .then((data) => {
+        const items: UserOption[] = data.items || [];
+        setResults(excludeEmail ? items.filter((u) => u.email.toLowerCase() !== excludeEmail.toLowerCase()) : items);
+      })
       .catch(() => setResults([]))
       .finally(() => setLoading(false));
   }, []);
@@ -128,6 +134,8 @@ function UserSearchDropdown({
 }
 
 function FeedbackPage() {
+  const { user } = useAuth();
+  const currentEmail = user?.email || '';
   const [activeTab, setActiveTab] = useState<FeedbackTab>('received');
   const [showNewFeedbackModal, setShowNewFeedbackModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserOption | null>(null);
@@ -332,6 +340,7 @@ function FeedbackPage() {
               <UserSearchDropdown
                 selectedUser={selectedUser}
                 onSelect={setSelectedUser}
+                excludeEmail={currentEmail}
               />
             </div>
 
