@@ -559,9 +559,10 @@ function TemplateBuilderModal({
     }));
   }
 
-  const selectedExistingSectionOption = existingSectionOptions.find(
+  const _selectedExistingSectionOption = existingSectionOptions.find(
     (option) => option.id === selectedExistingSectionId,
   );
+  void _selectedExistingSectionOption;
 
   if (!isOpen) {
     return null;

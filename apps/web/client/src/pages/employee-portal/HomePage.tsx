@@ -80,11 +80,6 @@ function isPreviewable(filename: string): boolean {
   return ['pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp'].includes(ext);
 }
 
-function isImageFile(filename: string): boolean {
-  const ext = getFileExtension(filename);
-  return ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp'].includes(ext);
-}
-
 function HomePage() {
   const { token } = useAuth();
   const [activeTab, setActiveTab] = useState('policies');

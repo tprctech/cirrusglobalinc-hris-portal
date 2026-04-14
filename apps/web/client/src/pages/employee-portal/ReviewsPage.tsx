@@ -66,27 +66,6 @@ type Review = {
   status: ReviewStatus;
 };
 
-type EvaluationFormPayload = {
-  evaluationId: string;
-  templateId: string | null;
-  reviewee: string;
-  dueDate: string;
-  title: string;
-  sections: Array<{
-    id: string;
-    order: number;
-    label: string;
-    questions: Array<{
-      id: string;
-      order: number;
-      prompt: string;
-      type: BuilderQuestionType;
-      options: string[];
-      required: boolean;
-    }>;
-  }>;
-};
-
 type TeamAnswer = {
   id: number;
   question_id: number;

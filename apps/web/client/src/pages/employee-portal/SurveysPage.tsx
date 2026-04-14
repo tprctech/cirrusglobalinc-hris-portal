@@ -129,10 +129,6 @@ function cloneTemplateSectionsAsLocked(
   }));
 }
 
-function formatDateForDisplay(d: Date): string {
-  return d.toLocaleDateString('en-US');
-}
-
 function toIsoDate(value: string): string {
   if (!value) return '';
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;

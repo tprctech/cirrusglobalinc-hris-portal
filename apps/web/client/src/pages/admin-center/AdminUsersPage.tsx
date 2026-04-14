@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowUpDown, Camera, Download, Plus, Settings2, Upload, X } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import AdminCenterSidebar from '../../components/AdminCenterSidebar';
@@ -234,7 +234,7 @@ function EmployeeSearchField({ id, label, value, onChange }: { id: string; label
   const [results, setResults] = useState<LookupResult[]>([]);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => { setQuery(value); }, [value]);
 

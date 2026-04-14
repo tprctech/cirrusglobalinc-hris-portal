@@ -175,10 +175,6 @@ function buildOrgData(employees: ApiEmployee[]) {
     }
   }
 
-  if (rootIds.length === 0 && orphans.length > 0) {
-    return { people, connections, childrenByParent };
-  }
-
   return { people, connections, childrenByParent };
 }
 
