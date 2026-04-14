@@ -248,6 +248,27 @@ def list_survey_responses(campaign_id: int, db: Session = Depends(get_db)) -> li
     return [ResponseOut.model_validate(r) for r in responses]
 
 
+class CampaignStatusUpdate(BaseModel):
+    status: str
+
+
+@router.patch("/survey-campaigns/{campaign_id}/status")
+def update_campaign_status(campaign_id: int, payload: CampaignStatusUpdate, db: Session = Depends(get_db)) -> CampaignOut:
+    if payload.status not in ("Active", "Inactive"):
+        raise HTTPException(status_code=400, detail="Status must be 'Active' or 'Inactive'")
+    campaign = (
+        db.query(SurveyCampaign)
+        .filter(SurveyCampaign.id == campaign_id, SurveyCampaign.is_deleted == False)
+        .first()
+    )
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Survey campaign not found")
+    campaign.status = payload.status
+    db.commit()
+    db.refresh(campaign)
+    return CampaignOut.model_validate(campaign)
+
+
 @router.get("/surveys/{survey_id}/results")
 def survey_results(survey_id: str) -> dict:
     return {"survey_id": survey_id, "participation_rate": 0.0}

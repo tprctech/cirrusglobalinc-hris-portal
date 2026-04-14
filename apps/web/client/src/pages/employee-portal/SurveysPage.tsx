@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { BarChart3, CalendarDays, CircleDot, Plus } from 'lucide-react';
+import { BarChart3, CalendarDays, CircleDot, Plus, ToggleLeft, ToggleRight } from 'lucide-react';
 import TemplateBuilderModal, {
   type BuilderExistingSectionOption,
   type BuilderQuestionType,
@@ -166,6 +166,7 @@ function SurveysPage() {
   const [existingAnswers, setExistingAnswers] = useState<AnswerValue[]>([]);
   const [responseSaving, setResponseSaving] = useState(false);
   const [pendingDeleteCampaign, setPendingDeleteCampaign] = useState<Campaign | null>(null);
+  const [togglingIds, setTogglingIds] = useState<Set<number>>(new Set());
 
   const loadCampaigns = useCallback(async () => {
     try {
@@ -323,6 +324,28 @@ function SurveysPage() {
     }));
   }
 
+  async function toggleCampaignStatus(campaignId: number, currentStatus: string) {
+    if (togglingIds.has(campaignId)) return;
+    const nextStatus = currentStatus === 'Active' ? 'Inactive' : 'Active';
+    setTogglingIds((prev) => new Set(prev).add(campaignId));
+    try {
+      const res = await fetch(`${API_BASE}/survey-campaigns/${campaignId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+      if (res.ok) await loadCampaigns();
+    } catch (err) {
+      console.error('Failed to toggle survey status', err);
+    } finally {
+      setTogglingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(campaignId);
+        return next;
+      });
+    }
+  }
+
   async function handleSaveResponse(data: FormResponseData) {
     if (!activeCampaignDetail || responseSaving) return;
     setResponseSaving(true);
@@ -421,11 +444,16 @@ function SurveysPage() {
                   <th>Department</th>
                   <th>Created On</th>
                   <th>Due Date</th>
+                  <th>Status</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {managedSurveys.map((survey) => (
+                {managedSurveys.map((survey) => {
+                  const numericId = Number(survey.id);
+                  const isActive = survey.status === 'Active';
+                  const isToggling = togglingIds.has(numericId);
+                  return (
                   <tr key={survey.id}>
                     <td>{survey.title}</td>
                     <td>{survey.department}</td>
@@ -437,12 +465,24 @@ function SurveysPage() {
                     </td>
                     <td>{survey.dueDate}</td>
                     <td>
+                      <button
+                        className={`survey-status-toggle ${isActive ? 'active' : 'inactive'}`}
+                        onClick={() => toggleCampaignStatus(numericId, survey.status)}
+                        disabled={isToggling}
+                        title={isActive ? 'Click to deactivate' : 'Click to activate'}
+                      >
+                        {isActive ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}
+                        <span>{survey.status}</span>
+                      </button>
+                    </td>
+                    <td>
                       <button className="survey-action-btn small" onClick={() => openResponseForm(survey.id)}>
                         View Responses
                       </button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

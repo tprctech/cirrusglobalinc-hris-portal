@@ -250,3 +250,39 @@
     font-size: 20px;
   }
 }
+
+.survey-status-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: opacity 0.15s;
+}
+
+.survey-status-toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.survey-status-toggle.active {
+  color: #16a34a;
+}
+
+.survey-status-toggle.active:hover:not(:disabled) {
+  background: rgba(22, 163, 74, 0.08);
+}
+
+.survey-status-toggle.inactive {
+  color: var(--gray-400);
+}
+
+.survey-status-toggle.inactive:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.04);
+}
