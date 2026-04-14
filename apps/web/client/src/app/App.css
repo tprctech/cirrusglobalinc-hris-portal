@@ -211,6 +211,17 @@
   color: var(--gray-400);
 }
 
+.notification-item.clickable {
+  cursor: pointer;
+}
+
+.notification-empty {
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--gray-400);
+  font-size: 13px;
+}
+
 .profile-wrapper {
   position: relative;
 }

@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.api.v1.notification_helpers import create_notification
 from app.db.models import RecognitionBadge, RecognitionGiven, Employee, UserAccount
 from app.db.session import get_db
 
@@ -107,11 +108,26 @@ def give_recognition(payload: GiveRecognitionIn, request: Request, db: Session =
         points=badge.point,
     )
     db.add(rec)
-    db.commit()
-    db.refresh(rec)
 
     from_emp = db.query(Employee).filter(Employee.email == from_email).first()
     to_emp = db.query(Employee).filter(Employee.email == payload.to_email).first()
+
+    sender_name = f"{from_emp.first_name} {from_emp.last_name}" if from_emp else from_email
+    to_user = db.query(UserAccount).filter(UserAccount.email == payload.to_email).first()
+    if not to_user and to_emp:
+        to_user = db.query(UserAccount).filter(UserAccount.employee_id == to_emp.id).first()
+    if to_user:
+        create_notification(
+            db,
+            user_id=to_user.id,
+            notification_type="recognition",
+            title="You Were Recognized!",
+            message=f'{sender_name} recognized you with "{badge.title}"' + (f" — {payload.message}" if payload.message else ""),
+            link="/recognitions",
+        )
+
+    db.commit()
+    db.refresh(rec)
 
     return RecognitionOut(
         id=rec.id,

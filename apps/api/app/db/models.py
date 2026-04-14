@@ -507,6 +507,22 @@ class Feedback(Base):
     to_user = relationship("UserAccount", foreign_keys=[to_user_id])
 
 
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("user_accounts.id", ondelete="CASCADE"), nullable=False)
+    type = Column(String(50), nullable=False)
+    title = Column(String(500), nullable=False)
+    message = Column(Text, nullable=False, default="")
+    link = Column(String(500), nullable=True, default=None)
+    is_read = Column(Boolean, nullable=False, default=False)
+    is_deleted = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("UserAccount")
+
+
 class OnboardingStep(Base):
     __tablename__ = "onboarding_steps"
 

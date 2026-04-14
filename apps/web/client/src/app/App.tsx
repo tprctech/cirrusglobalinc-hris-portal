@@ -114,17 +114,33 @@ function getLmsMenuLabelForPath(pathname: string): LmsMenuLabel | null {
   return match ? match[0] : null;
 }
 
-const mockNotifications = [
-  { id: '1', type: 'review', title: 'Performance Review Due', message: 'Your Q2 self-assessment is due in 3 days.', time: '2 hours ago', read: false },
-  { id: '2', type: 'feedback', title: 'New Feedback Received', message: 'Sarah Johnson sent you feedback on your recent presentation.', time: '5 hours ago', read: false },
-  { id: '3', type: 'recognition', title: 'You Were Recognized!', message: 'David Lee recognized you for "Outstanding Teamwork".', time: '1 day ago', read: false },
-  { id: '4', type: 'survey', title: 'New Survey Available', message: 'Employee Engagement Survey Q2 is now open.', time: '1 day ago', read: true },
-  { id: '5', type: 'kpi', title: 'KPI Update', message: 'Your monthly KPI targets have been updated by your manager.', time: '2 days ago', read: true },
-  { id: '6', type: 'task', title: 'Task Assigned', message: 'Complete onboarding checklist for new team member.', time: '3 days ago', read: true },
-];
+interface NotificationItem {
+  id: number;
+  type: string;
+  title: string;
+  message: string;
+  link: string | null;
+  is_read: boolean;
+  created_at: string | null;
+}
+
+function formatTimeAgo(isoDate: string | null): string {
+  if (!isoDate) return '';
+  const now = Date.now();
+  const then = new Date(isoDate).getTime();
+  const diff = Math.max(0, now - then);
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 30) return `${days}d ago`;
+  return `${Math.floor(days / 30)}mo ago`;
+}
 
 function App() {
-  const { user, loading, logout, hasRole } = useAuth();
+  const { user, loading, logout, hasRole, token } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
@@ -135,11 +151,11 @@ function App() {
   const [cpSuccess, setCpSuccess] = useState('');
   const [cpLoading, setCpLoading] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [notifications, setNotifications] = useState(mockNotifications);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [currentPath, setCurrentPath] = useState(normalizePath(window.location.pathname));
   const profileRef = useRef<HTMLDivElement>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   const canAccessAdmin = hasRole('HR', 'Admin');
   const emp = user?.employee;
@@ -186,6 +202,27 @@ function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    function fetchNotifications() {
+      fetch('/api/v1/notifications', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((r) => (r.ok ? r.json() : []))
+        .then((data: NotificationItem[]) => {
+          if (!cancelled) setNotifications(data);
+        })
+        .catch(() => {});
+    }
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [token]);
+
   function shouldOpenInNewTab(event?: ReactMouseEvent<HTMLElement>) {
     return Boolean(event && (event.ctrlKey || event.metaKey || event.button === 1));
   }
@@ -204,7 +241,28 @@ function App() {
   }
 
   function markAllNotificationsRead() {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    if (!token) return;
+    fetch('/api/v1/notifications/read-all', {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}` },
+    }).catch(() => {});
+    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+  }
+
+  function handleNotificationClick(n: NotificationItem) {
+    if (!n.is_read && token) {
+      fetch(`/api/v1/notifications/${n.id}/read`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}` },
+      }).catch(() => {});
+      setNotifications((prev) =>
+        prev.map((item) => (item.id === n.id ? { ...item, is_read: true } : item))
+      );
+    }
+    if (n.link) {
+      navigateTo(n.link);
+    }
+    setNotificationsOpen(false);
   }
 
   function openProfilePage() {
@@ -358,13 +416,20 @@ function App() {
                   )}
                 </div>
                 <div className="notification-popup-list">
+                  {notifications.length === 0 && (
+                    <div className="notification-empty">No notifications yet</div>
+                  )}
                   {notifications.map((n) => (
-                    <div key={n.id} className={`notification-item ${n.read ? '' : 'unread'}`}>
-                      <div className="notification-item-dot">{!n.read && <span />}</div>
+                    <div
+                      key={n.id}
+                      className={`notification-item ${n.is_read ? '' : 'unread'}${n.link ? ' clickable' : ''}`}
+                      onClick={() => handleNotificationClick(n)}
+                    >
+                      <div className="notification-item-dot">{!n.is_read && <span />}</div>
                       <div className="notification-item-content">
                         <div className="notification-item-title">{n.title}</div>
                         <div className="notification-item-message">{n.message}</div>
-                        <div className="notification-item-time">{n.time}</div>
+                        <div className="notification-item-time">{formatTimeAgo(n.created_at)}</div>
                       </div>
                     </div>
                   ))}

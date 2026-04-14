@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.api.v1.auth import decode_token
+from app.api.v1.notification_helpers import create_notification
 from app.db.models import Feedback, UserAccount, Employee
 from app.db.session import get_db
 
@@ -89,6 +90,20 @@ def create_employee_feedback(
         description=body.description,
     )
     db.add(fb)
+
+    from_user = db.query(UserAccount).filter(UserAccount.id == current_user_id).first()
+    from_emp = db.query(Employee).filter(Employee.id == from_user.employee_id).first() if from_user and from_user.employee_id else None
+    sender_name = f"{from_emp.first_name} {from_emp.last_name}" if from_emp else (from_user.email if from_user else "Someone")
+
+    create_notification(
+        db,
+        user_id=body.to_user_id,
+        notification_type="feedback",
+        title="New Feedback Received",
+        message=f'{sender_name} sent you feedback: "{body.title.strip()}"',
+        link="/feedback",
+    )
+
     db.commit()
     db.refresh(fb)
 
