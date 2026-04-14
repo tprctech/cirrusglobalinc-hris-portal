@@ -70,7 +70,7 @@ export type AdminRole = {
 };
 
 export const adminMockData = {
-  pageTitle: 'HR Center',
+  pageTitle: 'Core HR',
   subtitle: 'Manage users who can access the application.',
   users: [] as AdminUser[],
   competencies: [

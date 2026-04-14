@@ -30,6 +30,19 @@
   padding: 6px 8px 10px;
 }
 
+.admin-center-sidebar-divider {
+  height: 1px;
+  background: var(--gray-200);
+  margin: 12px 0 4px;
+}
+
+.admin-center-sidebar-placeholder {
+  font-size: 13px;
+  color: var(--gray-400);
+  padding: 4px 8px 8px;
+  margin: 0;
+}
+
 .admin-center-side-link {
   display: flex;
   align-items: center;
