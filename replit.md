@@ -30,7 +30,7 @@ Two workflows are configured:
 - **JWT secret**: Configurable via `JWT_SECRET` env var (defaults to dev secret)
 - **Portal roles**: Employee, Manager, HR, Admin (case-insensitive, normalized on save)
 - **Role-based access**: HR Center only visible/accessible to HR and Admin roles
-- **Auth context**: `useAuth()` hook provides `user`, `login()`, `logout()`, `hasRole()`
+- **Auth context**: `useAuth()` hook provides `user`, `token`, `login()`, `logout()`, `hasRole()`
 - **Profile data**: Header and profile page reflect logged-in employee's real DB data
 - **User accounts table**: `user_accounts` (email, password_hash, employee_id FK, portal_role)
 - **Default password**: `cirrus{year}` (e.g., `cirrus2026`)

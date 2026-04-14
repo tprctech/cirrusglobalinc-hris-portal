@@ -16,13 +16,13 @@ import {
   X,
 } from 'lucide-react';
 import {
-  dashboardStats,
   newsletters,
   nextSteps,
   valuesCards,
 } from '../../data/mock/homeMockData';
 import { listResources, type CompanyResource } from '../../api/companyResources';
 import PdfViewer from '../../components/PdfViewer';
+import { useAuth } from '../../app/AuthContext';
 
 const statIcons: Record<string, React.ReactNode> = {
   'clipboard-list': <ClipboardList size={22} />,
@@ -86,14 +86,33 @@ function isImageFile(filename: string): boolean {
 }
 
 function HomePage() {
+  const { token } = useAuth();
   const [activeTab, setActiveTab] = useState('policies');
   const [employees, setEmployees] = useState<BdayEmployee[]>([]);
   const [resources, setResources] = useState<CompanyResource[]>([]);
   const [previewResource, setPreviewResource] = useState<CompanyResource | null>(null);
   const [previewBlobUrl, setPreviewBlobUrl] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [recognitionPoints, setRecognitionPoints] = useState(0);
   const currentMonth = new Date().toLocaleString('en-US', { month: 'long' });
   const currentMonthIdx = new Date().getMonth();
+
+  useEffect(() => {
+    if (!token) return;
+    fetch('/api/v1/recognitions/points', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => (res.ok ? res.json() : { total: 0 }))
+      .then((data) => setRecognitionPoints(data.total ?? 0))
+      .catch(() => {});
+  }, [token]);
+
+  const dashboardStats = [
+    { label: 'Pending Reviews', value: 1, icon: 'clipboard-list' },
+    { label: 'Active Surveys', value: 2, icon: 'trending-up' },
+    { label: 'Recognition Points', value: recognitionPoints, icon: 'award' },
+    { label: 'Feedback Received', value: 8, icon: 'users' },
+  ];
 
   useEffect(() => {
     if (!previewResource) {

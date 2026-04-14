@@ -69,7 +69,6 @@ import {
   downloadAttachment,
   type EmployeeAttachment,
 } from '../../api/employeeAttachments';
-import { getStoredToken } from '../../api/auth';
 
 interface ReceivedFeedbackItem {
   id: number;
@@ -92,13 +91,14 @@ function formatDisplayDate(dateStr: string) {
 }
 
 function ProfilePage() {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const emp = user?.employee;
 
   const name = emp ? (emp.displayName || `${emp.firstName} ${emp.lastName}`) : '—';
   const profilePhoto = emp?.profilePhoto || '';
 
   const [attachments, setAttachments] = useState<EmployeeAttachment[]>([]);
+  const [recognitionPoints, setRecognitionPoints] = useState(0);
   const [attachmentUploading, setAttachmentUploading] = useState(false);
   const [selectedCompetency, setSelectedCompetency] = useState<CompetencyDetail | null>(null);
   const [pendingDeleteAttachment, setPendingDeleteAttachment] = useState<EmployeeAttachment | null>(null);
@@ -152,7 +152,6 @@ function ProfilePage() {
   }, [emp?.email]);
 
   useEffect(() => {
-    const token = getStoredToken();
     if (!token) return;
     fetch('/api/v1/feedback/received', {
       headers: { Authorization: `Bearer ${token}` },
@@ -160,7 +159,17 @@ function ProfilePage() {
       .then((r) => r.json())
       .then((data) => setReceivedFeedback(data.items || []))
       .catch(() => {});
-  }, []);
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) return;
+    fetch('/api/v1/recognitions/points', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => (res.ok ? res.json() : { total: 0 }))
+      .then((data) => setRecognitionPoints(data.total ?? 0))
+      .catch(() => {});
+  }, [token]);
 
   const loadAttachments = useCallback(async () => {
     if (!emp?.id) return;
@@ -280,7 +289,7 @@ function ProfilePage() {
         </div>
         <aside className="profile-hero-points">
           <Award size={24} />
-          <strong>0</strong>
+          <strong>{recognitionPoints}</strong>
           <p>Recognition Points</p>
         </aside>
       </article>
