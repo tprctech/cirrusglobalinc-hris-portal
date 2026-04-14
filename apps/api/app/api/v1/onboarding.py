@@ -58,6 +58,7 @@ class DocumentOut(BaseModel):
     title: str
     description: str
     reference_url: str | None
+    doc_type: str
     sort_order: int
     is_required: bool
     upload: UploadOut | None
@@ -113,6 +114,7 @@ def list_steps(request: Request, db: Session = Depends(get_db)) -> list[StepOut]
                 title=doc.title,
                 description=doc.description or "",
                 reference_url=doc.reference_url,
+                doc_type=doc.doc_type or "upload",
                 sort_order=doc.sort_order,
                 is_required=doc.is_required,
                 upload=latest,
@@ -128,6 +130,58 @@ def list_steps(request: Request, db: Session = Depends(get_db)) -> list[StepOut]
             completed_documents=completed,
         ))
     return result
+
+
+@router.post("/documents/{document_id}/complete")
+def mark_document_complete(document_id: int, request: Request, db: Session = Depends(get_db)):
+    user_id = _get_current_user_id(request)
+
+    doc = db.query(OnboardingDocument).filter(
+        OnboardingDocument.id == document_id,
+        OnboardingDocument.is_deleted == False,
+    ).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    if doc.doc_type not in ("material", "acknowledgment"):
+        raise HTTPException(status_code=400, detail="This document requires a file upload")
+
+    existing = db.query(OnboardingUpload).filter(
+        OnboardingUpload.document_id == document_id,
+        OnboardingUpload.user_id == user_id,
+        OnboardingUpload.is_deleted == False,
+    ).first()
+    if existing:
+        return {"ok": True, "already_complete": True}
+
+    marker = OnboardingUpload(
+        document_id=document_id,
+        user_id=user_id,
+        file_name="[completed]",
+        file_path="",
+        file_size=0,
+    )
+    db.add(marker)
+    db.commit()
+    return {"ok": True}
+
+
+@router.delete("/documents/{document_id}/uncomplete")
+def unmark_document_complete(document_id: int, request: Request, db: Session = Depends(get_db)):
+    user_id = _get_current_user_id(request)
+
+    markers = db.query(OnboardingUpload).filter(
+        OnboardingUpload.document_id == document_id,
+        OnboardingUpload.user_id == user_id,
+        OnboardingUpload.is_deleted == False,
+        OnboardingUpload.file_name == "[completed]",
+    ).all()
+
+    for m in markers:
+        m.is_deleted = True
+
+    db.commit()
+    return {"ok": True}
 
 
 @router.post("/documents/{document_id}/upload")

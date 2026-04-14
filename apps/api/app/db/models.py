@@ -546,6 +546,7 @@ class OnboardingDocument(Base):
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=True, default="")
     reference_url = Column(String(1000), nullable=True, default=None)
+    doc_type = Column(String(20), nullable=False, default="upload")
     sort_order = Column(Integer, nullable=False, default=0)
     is_required = Column(Boolean, nullable=False, default=True)
     is_deleted = Column(Boolean, nullable=False, default=False)
