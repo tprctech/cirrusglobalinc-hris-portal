@@ -389,7 +389,7 @@ function App() {
               onClick={(event) => navigateTo(ROUTES.adminUsers, event)}
             >
               <Settings size={14} />
-              Core HR
+              HCM Center
             </button>
           )}
           <div className="notification-wrapper" ref={notificationRef}>
