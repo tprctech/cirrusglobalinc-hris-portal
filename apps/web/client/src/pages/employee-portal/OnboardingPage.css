@@ -1,5 +1,5 @@
 .onboarding-page {
-  max-width: 900px;
+  max-width: 960px;
   margin: 0 auto;
 }
 
@@ -16,32 +16,96 @@
   margin-bottom: 24px;
 }
 
-.onboarding-progress-bar {
-  background: var(--gray-200);
-  border-radius: 8px;
-  height: 10px;
-  margin-bottom: 28px;
-  overflow: hidden;
-}
-
-.onboarding-progress-fill {
-  height: 100%;
-  background: var(--primary);
-  border-radius: 8px;
-  transition: width 0.4s ease;
-}
-
-.onboarding-progress-label {
+.onboarding-stages {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-  font-size: 13px;
-  color: var(--gray-600);
+  align-items: flex-start;
+  justify-content: center;
+  margin-bottom: 32px;
+  padding: 24px 16px 12px;
+  background: #fff;
+  border: 1px solid var(--gray-200);
+  border-radius: 12px;
+  overflow-x: auto;
 }
 
-.onboarding-progress-label strong {
-  color: var(--charcoal);
+.onboarding-stage-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.stage-dot {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+}
+
+.stage-dot.complete {
+  background: #16a34a;
+  color: #fff;
+  border: 3px solid #86efac;
+}
+
+.stage-dot.current {
+  background: var(--primary);
+  color: #fff;
+  border: 3px solid #7dd3fc;
+  box-shadow: 0 0 0 4px rgba(0, 166, 227, 0.15);
+  animation: stage-pulse 2s ease-in-out infinite;
+}
+
+.stage-dot.upcoming {
+  background: var(--gray-100);
+  color: var(--gray-400);
+  border: 2px solid var(--gray-300);
+}
+
+.stage-dot:hover {
+  transform: scale(1.1);
+}
+
+@keyframes stage-pulse {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(0, 166, 227, 0.15); }
+  50% { box-shadow: 0 0 0 8px rgba(0, 166, 227, 0.08); }
+}
+
+.stage-connector {
+  position: absolute;
+  top: 18px;
+  left: calc(50% + 18px);
+  right: calc(-50% + 18px);
+  height: 3px;
+  background: var(--gray-200);
+  z-index: 1;
+  border-radius: 2px;
+}
+
+.stage-connector.complete {
+  background: #16a34a;
+}
+
+.stage-label {
+  margin-top: 10px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--gray-600);
+  text-align: center;
+  line-height: 1.3;
+  max-width: 100px;
+  word-wrap: break-word;
 }
 
 .onboarding-step-card {
@@ -337,6 +401,28 @@
 }
 
 @media (max-width: 640px) {
+  .onboarding-stages {
+    padding: 16px 8px 8px;
+    gap: 0;
+  }
+
+  .stage-label {
+    font-size: 9px;
+    max-width: 60px;
+  }
+
+  .stage-dot {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+  }
+
+  .stage-connector {
+    top: 14px;
+    left: calc(50% + 14px);
+    right: calc(-50% + 14px);
+  }
+
   .onboarding-doc-table th:nth-child(3),
   .onboarding-doc-table td:nth-child(3) {
     display: none;

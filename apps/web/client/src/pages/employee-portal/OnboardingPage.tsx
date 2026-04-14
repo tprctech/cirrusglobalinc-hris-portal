@@ -150,10 +150,6 @@ export default function OnboardingPage() {
     }
   }
 
-  const totalDocs = steps.reduce((s, st) => s + st.total_documents, 0);
-  const completedDocs = steps.reduce((s, st) => s + st.completed_documents, 0);
-  const progressPct = totalDocs > 0 ? Math.round((completedDocs / totalDocs) * 100) : 0;
-
   if (loading) {
     return (
       <div className="onboarding-page">
@@ -169,13 +165,32 @@ export default function OnboardingPage() {
         Complete all required documents to finish your onboarding process.
       </p>
 
-      <div className="onboarding-progress-label">
-        <span>Overall Progress</span>
-        <strong>{completedDocs} / {totalDocs} documents uploaded ({progressPct}%)</strong>
-      </div>
-      <div className="onboarding-progress-bar">
-        <div className="onboarding-progress-fill" style={{ width: `${progressPct}%` }} />
-      </div>
+      {steps.length > 0 && (
+        <div className="onboarding-stages">
+          {steps.map((step, idx) => {
+            const isComplete = step.completed_documents === step.total_documents && step.total_documents > 0;
+            const isStarted = step.completed_documents > 0;
+            const isCurrent = !isComplete && (isStarted || (idx === 0 || (steps[idx - 1].completed_documents === steps[idx - 1].total_documents && steps[idx - 1].total_documents > 0)));
+            return (
+              <div key={step.id} className="onboarding-stage-item">
+                <div
+                  className={`stage-dot ${isComplete ? 'complete' : isCurrent ? 'current' : 'upcoming'}`}
+                  onClick={() => {
+                    setExpandedSteps(new Set([step.id]));
+                    document.getElementById(`step-${step.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}
+                >
+                  {isComplete ? <CheckCircle2 size={16} /> : <span>{idx + 1}</span>}
+                </div>
+                {idx < steps.length - 1 && (
+                  <div className={`stage-connector ${isComplete ? 'complete' : ''}`} />
+                )}
+                <div className="stage-label">{step.title}</div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {steps.length === 0 && (
         <div className="onboarding-empty">
@@ -190,7 +205,7 @@ export default function OnboardingPage() {
         const isStarted = step.completed_documents > 0;
 
         return (
-          <div className="onboarding-step-card" key={step.id}>
+          <div className="onboarding-step-card" key={step.id} id={`step-${step.id}`}>
             <div className="onboarding-step-header" onClick={() => toggleStep(step.id)}>
               <div className="onboarding-step-header-left">
                 <span className={`step-number-badge ${isComplete ? 'complete' : 'incomplete'}`}>
