@@ -376,6 +376,21 @@ class RewardRedeem(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class RecognitionGiven(Base):
+    __tablename__ = "recognition_given"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    from_email = Column(String(200), nullable=False)
+    to_email = Column(String(200), nullable=False)
+    badge_id = Column(Integer, ForeignKey("recognition_badges.id", ondelete="SET NULL"), nullable=True)
+    message = Column(Text, nullable=True, default="")
+    points = Column(Integer, nullable=False, default=0)
+    is_deleted = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    badge = relationship("RecognitionBadge")
+
+
 class ReviewCycle(Base):
     __tablename__ = "review_cycles"
 

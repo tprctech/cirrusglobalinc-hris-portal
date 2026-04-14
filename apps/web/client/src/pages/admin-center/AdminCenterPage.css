@@ -854,6 +854,58 @@
   white-space: nowrap;
 }
 
+.admin-modal-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.admin-modal-field {
+  display: grid;
+  gap: 5px;
+}
+
+.admin-modal-field label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-700);
+}
+
+.admin-modal-field input[type="text"],
+.admin-modal-field input[type="number"],
+.admin-modal-field input[type="email"],
+.admin-modal-field input[type="date"],
+.admin-modal-field input[type="password"],
+.admin-modal-field select,
+.admin-modal-field textarea {
+  border: 1px solid var(--gray-300);
+  border-radius: 8px;
+  min-height: 36px;
+  padding: 8px 10px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--charcoal);
+  background: var(--white);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.admin-modal-field input:focus,
+.admin-modal-field select:focus,
+.admin-modal-field textarea:focus {
+  border-color: var(--primary);
+}
+
+.admin-modal-field textarea {
+  resize: vertical;
+}
+
+.admin-modal-field input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
 .admin-modal-actions {
   display: flex;
   justify-content: flex-end;
