@@ -63,6 +63,8 @@ class RecognitionOut(BaseModel):
     created_at: Optional[datetime]
     from_name: Optional[str] = ""
     to_name: Optional[str] = ""
+    from_photo: Optional[str] = ""
+    to_photo: Optional[str] = ""
 
 
 class PointsOut(BaseModel):
@@ -140,6 +142,8 @@ def _build_recognition_out(rec: RecognitionGiven, db: Session) -> RecognitionOut
         created_at=rec.created_at,
         from_name=f"{from_emp.first_name} {from_emp.last_name}" if from_emp else rec.from_email,
         to_name=f"{to_emp.first_name} {to_emp.last_name}" if to_emp else rec.to_email,
+        from_photo=from_emp.profile_photo or "" if from_emp else "",
+        to_photo=to_emp.profile_photo or "" if to_emp else "",
     )
 
 

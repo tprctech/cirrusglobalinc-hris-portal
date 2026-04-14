@@ -28,6 +28,8 @@ type RecognitionItem = {
   created_at: string | null;
   from_name: string;
   to_name: string;
+  from_photo: string;
+  to_photo: string;
 };
 
 type RewardCatalogItem = {
@@ -45,6 +47,10 @@ type RedeemedReward = {
   status: string;
   created_at: string | null;
 };
+
+function getInitials(name: string): string {
+  return name.split(' ').map((p) => p[0]).join('').toUpperCase().slice(0, 2);
+}
 
 function formatDate(iso: string | null): string {
   if (!iso) return '';
@@ -249,7 +255,14 @@ function RecognitionsPage() {
                   {formatDate(item.created_at)}
                 </span>
               </div>
-              <p>From: <strong>{item.from_name || item.from_email}</strong></p>
+              <div className="recognition-person-row">
+                {item.from_photo ? (
+                  <img src={item.from_photo} alt="" className="recognition-person-avatar" />
+                ) : (
+                  <span className="recognition-person-initials">{getInitials(item.from_name || item.from_email)}</span>
+                )}
+                <p>From: <strong>{item.from_name || item.from_email}</strong></p>
+              </div>
               {item.points > 0 && <p>Points: <strong>{item.points}</strong></p>}
               {item.message && <p>{item.message}</p>}
             </article>
@@ -281,7 +294,14 @@ function RecognitionsPage() {
                   {formatDate(item.created_at)}
                 </span>
               </div>
-              <p>To: <strong>{item.to_name || item.to_email}</strong></p>
+              <div className="recognition-person-row">
+                {item.to_photo ? (
+                  <img src={item.to_photo} alt="" className="recognition-person-avatar" />
+                ) : (
+                  <span className="recognition-person-initials">{getInitials(item.to_name || item.to_email)}</span>
+                )}
+                <p>To: <strong>{item.to_name || item.to_email}</strong></p>
+              </div>
               {item.points > 0 && <p>Points: <strong>{item.points}</strong></p>}
               {item.message && <p>{item.message}</p>}
             </article>

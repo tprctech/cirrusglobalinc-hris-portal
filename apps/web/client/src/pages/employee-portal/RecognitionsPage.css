@@ -137,6 +137,39 @@
   font-size: 13px;
 }
 
+.recognition-person-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.recognition-person-row p {
+  margin-top: 0;
+}
+
+.recognition-person-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.recognition-person-initials {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
 .recognition-card p {
   margin-top: 8px;
   color: var(--gray-700);
