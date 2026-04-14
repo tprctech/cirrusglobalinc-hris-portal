@@ -11,6 +11,7 @@ import {
 interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
+  token: string;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   hasRole: (...roles: string[]) => boolean;
@@ -19,6 +20,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
+  token: '',
   login: async () => {},
   logout: () => {},
   hasRole: () => false,
@@ -63,7 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, hasRole }}>
+    <AuthContext.Provider value={{ user, loading, token: getStoredToken() || '', login, logout, hasRole }}>
       {children}
     </AuthContext.Provider>
   );

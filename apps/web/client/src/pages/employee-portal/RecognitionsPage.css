@@ -408,6 +408,96 @@
   color: var(--white);
 }
 
+.recognitions-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 40px 20px;
+  color: var(--gray-400);
+  text-align: center;
+}
+
+.recognitions-empty p {
+  font-size: 14px;
+  color: var(--gray-500);
+}
+
+.recognition-user-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--white);
+  border: 1px solid var(--gray-300);
+  border-radius: 8px;
+  margin-top: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 20;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.recognition-user-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  background: none;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+}
+
+.recognition-user-option:hover {
+  background: var(--gray-50);
+}
+
+.recognition-user-option-name {
+  font-weight: 600;
+  color: var(--charcoal);
+}
+
+.recognition-user-option-email {
+  font-size: 12px;
+  color: var(--gray-500);
+}
+
+.badge-icon-img {
+  width: 32px;
+  height: 32px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.redeem-status-pill {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.redeem-status-pill.pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.redeem-status-pill.approved {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.redeem-status-pill.rejected {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
 @media (max-width: 1000px) {
   .rewards-grid {
     grid-template-columns: 1fr 1fr;

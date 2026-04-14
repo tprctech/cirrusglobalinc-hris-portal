@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
 import './App.css';
 import {
   Award,
   BarChart2,
   Bell,
   BookOpen,
+  Briefcase,
   Building,
   Calendar,
   ChevronDown,
@@ -254,17 +255,44 @@ function App() {
     }
   }
 
-  const sidebarItems = [
+  type SidebarItem = {
+    label: string;
+    icon: ReactNode;
+    children?: { label: string; icon: ReactNode }[];
+  };
+
+  const sidebarItems: SidebarItem[] = [
     { label: 'Home', icon: <Home size={20} /> },
     { label: 'KPI', icon: <Target size={20} /> },
     { label: 'L&D', icon: <GraduationCap size={20} /> },
     { label: 'Tasks', icon: <ListTodo size={20} /> },
-    { label: 'Performance Reviews', icon: <ClipboardList size={20} /> },
-    { label: 'Feedback', icon: <MessageSquare size={20} /> },
-    { label: 'AI Surveys', icon: <BarChart2 size={20} /> },
-    { label: 'Recognitions', icon: <Award size={20} /> },
+    {
+      label: 'Talent Management',
+      icon: <Briefcase size={20} />,
+      children: [
+        { label: 'Performance Reviews', icon: <ClipboardList size={18} /> },
+        { label: 'Feedback', icon: <MessageSquare size={18} /> },
+        { label: 'AI Surveys', icon: <BarChart2 size={18} /> },
+        { label: 'Recognitions', icon: <Award size={18} /> },
+      ],
+    },
     { label: 'Organization Chart', icon: <Network size={20} /> },
   ];
+
+  const talentChildLabels = ['Performance Reviews', 'Feedback', 'AI Surveys', 'Recognitions'];
+
+  const [talentExpanded, setTalentExpanded] = useState(() => {
+    const label = getMenuLabelForPath(currentPath);
+    return label !== null && talentChildLabels.includes(label);
+  });
+
+  useEffect(() => {
+    const label = getMenuLabelForPath(currentPath);
+    if (label !== null && talentChildLabels.includes(label)) {
+      setTalentExpanded(true);
+    }
+  }, [currentPath]);
+
   const activeMenuLabel = getMenuLabelForPath(currentPath);
   const activeLmsMenuLabel = getLmsMenuLabelForPath(currentPath);
   const isAdminCenter = currentPath.startsWith('/admin');
@@ -473,22 +501,83 @@ function App() {
         {!isAdminCenter && !isLmsCenter && (
           <aside className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
             <div className="sidebar-nav">
-              {sidebarItems.map((item) => (
-                <button
-                  key={item.label}
-                  className={`sidebar-link ${activeMenuLabel === item.label ? 'active' : ''}`}
-                  onClick={(event) => {
-                    const route = MENU_ROUTE_MAP[item.label as MenuLabel];
-                    if (currentPath !== route || shouldOpenInNewTab(event)) {
-                      navigateTo(route, event);
-                    }
-                  }}
-                  title={sidebarCollapsed ? item.label : undefined}
-                >
-                  <span className="sidebar-link-icon">{item.icon}</span>
-                  {!sidebarCollapsed && <span className="sidebar-link-label">{item.label}</span>}
-                </button>
-              ))}
+              {sidebarItems.map((item) => {
+                if (item.children) {
+                  const talentChildLabels = item.children.map((c) => c.label);
+                  const isChildActive = activeMenuLabel !== null && talentChildLabels.includes(activeMenuLabel);
+                  const isOpen = talentExpanded;
+
+                  if (sidebarCollapsed) {
+                    return item.children.map((child) => (
+                      <button
+                        key={child.label}
+                        className={`sidebar-link ${activeMenuLabel === child.label ? 'active' : ''}`}
+                        onClick={(event) => {
+                          const route = MENU_ROUTE_MAP[child.label as MenuLabel];
+                          if (currentPath !== route || shouldOpenInNewTab(event)) {
+                            navigateTo(route, event);
+                          }
+                        }}
+                        title={child.label}
+                      >
+                        <span className="sidebar-link-icon">{child.icon}</span>
+                      </button>
+                    ));
+                  }
+
+                  return (
+                    <div key={item.label} className="sidebar-accordion">
+                      <button
+                        className={`sidebar-link sidebar-accordion-trigger ${isChildActive ? 'active-parent' : ''}`}
+                        onClick={() => setTalentExpanded(!isOpen)}
+                      >
+                        <span className="sidebar-link-icon">{item.icon}</span>
+                        <span className="sidebar-link-label">{item.label}</span>
+                        <ChevronDown
+                          size={14}
+                          className={`sidebar-accordion-chevron ${isOpen ? 'open' : ''}`}
+                        />
+                      </button>
+                      <div className={`sidebar-accordion-children ${isOpen ? 'expanded' : ''}`}>
+                        <div className="sidebar-accordion-inner">
+                          {item.children.map((child) => (
+                            <button
+                              key={child.label}
+                              className={`sidebar-link sidebar-child-link ${activeMenuLabel === child.label ? 'active' : ''}`}
+                              onClick={(event) => {
+                                const route = MENU_ROUTE_MAP[child.label as MenuLabel];
+                                if (currentPath !== route || shouldOpenInNewTab(event)) {
+                                  navigateTo(route, event);
+                                }
+                              }}
+                            >
+                              <span className="sidebar-link-icon">{child.icon}</span>
+                              <span className="sidebar-link-label">{child.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <button
+                    key={item.label}
+                    className={`sidebar-link ${activeMenuLabel === item.label ? 'active' : ''}`}
+                    onClick={(event) => {
+                      const route = MENU_ROUTE_MAP[item.label as MenuLabel];
+                      if (currentPath !== route || shouldOpenInNewTab(event)) {
+                        navigateTo(route, event);
+                      }
+                    }}
+                    title={sidebarCollapsed ? item.label : undefined}
+                  >
+                    <span className="sidebar-link-icon">{item.icon}</span>
+                    {!sidebarCollapsed && <span className="sidebar-link-label">{item.label}</span>}
+                  </button>
+                );
+              })}
             </div>
             <button
               className="sidebar-toggle"
