@@ -4,6 +4,7 @@ import {
   ChevronDown,
   Clock,
   Download,
+  ExternalLink,
   FileText,
   Trash2,
   Upload,
@@ -26,6 +27,7 @@ type DocumentInfo = {
   id: number;
   title: string;
   description: string;
+  reference_url: string | null;
   sort_order: number;
   is_required: boolean;
   upload: UploadInfo | null;
@@ -249,7 +251,20 @@ export default function OnboardingPage() {
                         <td>{dIdx + 1}</td>
                         <td>
                           <div className="doc-title-cell">
-                            <span className="doc-title">{doc.title}</span>
+                            <span className="doc-title">
+                              {doc.title}
+                              {doc.reference_url && (
+                                <a
+                                  href={doc.reference_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="doc-ref-link"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <ExternalLink size={13} /> View File
+                                </a>
+                              )}
+                            </span>
                             {doc.description && (
                               <span className="doc-desc">{doc.description}</span>
                             )}

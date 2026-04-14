@@ -57,6 +57,7 @@ class DocumentOut(BaseModel):
     id: int
     title: str
     description: str
+    reference_url: str | None
     sort_order: int
     is_required: bool
     upload: UploadOut | None
@@ -111,6 +112,7 @@ def list_steps(request: Request, db: Session = Depends(get_db)) -> list[StepOut]
                 id=doc.id,
                 title=doc.title,
                 description=doc.description or "",
+                reference_url=doc.reference_url,
                 sort_order=doc.sort_order,
                 is_required=doc.is_required,
                 upload=latest,

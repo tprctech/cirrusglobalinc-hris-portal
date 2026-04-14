@@ -529,6 +529,7 @@ class OnboardingDocument(Base):
     step_id = Column(Integer, ForeignKey("onboarding_steps.id", ondelete="CASCADE"), nullable=False)
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=True, default="")
+    reference_url = Column(String(1000), nullable=True, default=None)
     sort_order = Column(Integer, nullable=False, default=0)
     is_required = Column(Boolean, nullable=False, default=True)
     is_deleted = Column(Boolean, nullable=False, default=False)
