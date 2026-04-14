@@ -48,6 +48,7 @@ import AdminLmsCoursesPage from '../pages/admin-center/AdminLmsCoursesPage';
 import AdminCompetencyLibraryPage from '../pages/admin-center/library/AdminCompetencyLibraryPage';
 import AdminRoleLibraryPage from '../pages/admin-center/library/AdminRoleLibraryPage';
 import AdminDepartmentLibraryPage from '../pages/admin-center/library/AdminDepartmentLibraryPage';
+import AdminFeedbackConfigPage from '../pages/admin-center/config/AdminFeedbackConfigPage';
 import AdminPortalConfigPage from '../pages/admin-center/AdminPortalConfigPage';
 import AdminReviewsConfigPage from '../pages/admin-center/config/reviews/AdminReviewsConfigPage';
 import AdminSurveysConfigPage from '../pages/admin-center/config/surveys/AdminSurveysConfigPage';
@@ -742,12 +743,7 @@ function App() {
             <AdminSurveysConfigPage onNavigate={navigateTo} />
           )}
           {currentPath === ROUTES.adminConfigFeedback && (
-            <AdminPortalConfigPage
-              activeMenu="configFeedback"
-              title="Feedback"
-              description="Manage admin-side settings for the employee portal Feedback module."
-              onNavigate={navigateTo}
-            />
+            <AdminFeedbackConfigPage onNavigate={navigateTo} />
           )}
           {(currentPath === ROUTES.adminConfigRecognitions
             || currentPath === ROUTES.adminConfigRecognitionBadges

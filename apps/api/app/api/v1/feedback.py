@@ -142,6 +142,53 @@ def list_given_feedback(
     return {"items": [_serialize_feedback(fb, "given") for fb in items]}
 
 
+@router.get("/all")
+def list_all_feedback(
+    q: str = "",
+    page: int = 1,
+    page_size: int = 15,
+    db: Session = Depends(get_db),
+    authorization: str = Header(None),
+):
+    _get_current_user_id(authorization)
+
+    query = (
+        db.query(Feedback)
+        .filter(Feedback.is_deleted == False)
+    )
+
+    if q.strip():
+        like = f"%{q.strip()}%"
+        query = query.filter(
+            (Feedback.title.ilike(like))
+            | (Feedback.description.ilike(like))
+        )
+
+    total = query.count()
+    items = (
+        query
+        .order_by(Feedback.created_at.desc())
+        .offset((max(page, 1) - 1) * page_size)
+        .limit(page_size)
+        .all()
+    )
+
+    results = []
+    for fb in items:
+        from_name = _user_display_name(fb.from_user) if fb.from_user else ""
+        to_name = _user_display_name(fb.to_user) if fb.to_user else ""
+        results.append({
+            "id": fb.id,
+            "title": fb.title,
+            "description": fb.description,
+            "sender": from_name,
+            "receiver": to_name,
+            "created_at": fb.created_at.isoformat() if fb.created_at else None,
+        })
+
+    return {"items": results, "total": total}
+
+
 @router.get("/users")
 def list_feedback_users(
     q: str = "",

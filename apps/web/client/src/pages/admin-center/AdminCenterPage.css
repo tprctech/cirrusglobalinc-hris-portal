@@ -1513,3 +1513,10 @@
   margin-top: 6px;
   font-size: 14px;
 }
+
+.admin-feedback-desc-cell {
+  max-width: 300px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
