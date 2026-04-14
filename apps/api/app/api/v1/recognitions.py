@@ -18,7 +18,7 @@ def _get_current_email(request: Request) -> str:
         return ""
     token = auth.split(" ", 1)[1]
     try:
-        payload = jwt.decode(token, os.environ.get("JWT_SECRET", "changeme"), algorithms=["HS256"])
+        payload = jwt.decode(token, os.environ.get("JWT_SECRET", "cirrus-dev-secret-change-in-prod"), algorithms=["HS256"])
         user_id = int(payload.get("sub", 0))
     except Exception:
         return ""
