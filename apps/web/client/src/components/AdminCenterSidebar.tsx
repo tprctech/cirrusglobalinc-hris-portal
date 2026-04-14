@@ -246,6 +246,10 @@ function AdminCenterSidebar({ activeMenu, onNavigate }: AdminCenterSidebarProps)
       )}
 
       <div className="admin-center-sidebar-divider" />
+      <h2>Inventory and Procurement</h2>
+      <p className="admin-center-sidebar-placeholder">Modules coming soon</p>
+
+      <div className="admin-center-sidebar-divider" />
       <h2>Finance</h2>
       <p className="admin-center-sidebar-placeholder">Modules coming soon</p>
     </nav>
