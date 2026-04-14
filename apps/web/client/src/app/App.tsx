@@ -56,6 +56,7 @@ import AdminOrgChartConfigPage from '../pages/admin-center/config/AdminOrgChartC
 import AdminCompanyResourcesPage from '../pages/admin-center/AdminCompanyResourcesPage';
 import AdminReportingReviewsPage from '../pages/admin-center/reporting/AdminReportingReviewsPage';
 import AdminReportingSurveysPage from '../pages/admin-center/reporting/AdminReportingSurveysPage';
+import AdminReportingVoePage from '../pages/admin-center/reporting/AdminReportingVoePage';
 import {
   LMS_MENU_ROUTE_MAP,
   MENU_ROUTE_MAP,
@@ -762,6 +763,9 @@ function App() {
           )}
           {currentPath === ROUTES.adminReportingSurveys && (
             <AdminReportingSurveysPage onNavigate={navigateTo} />
+          )}
+          {currentPath === ROUTES.adminReportingVoe && (
+            <AdminReportingVoePage onNavigate={navigateTo} />
           )}
           {currentPath === ROUTES.profile && <ProfilePage />}
         </main>

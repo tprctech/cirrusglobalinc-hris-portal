@@ -12,27 +12,36 @@ from app.db.session import get_db
 router = APIRouter()
 
 
-def _get_current_email(request: Request) -> str:
+def _get_current_user_info(request: Request):
     import jwt, os
     auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer "):
-        return ""
+        return "", ""
     token = auth.split(" ", 1)[1]
     try:
         payload = jwt.decode(token, os.environ.get("JWT_SECRET", "cirrus-dev-secret-change-in-prod"), algorithms=["HS256"])
         user_id = int(payload.get("sub", 0))
     except Exception:
-        return ""
+        return "", ""
     from app.db.session import SessionLocal
     db = SessionLocal()
     try:
         ua = db.query(UserAccount).filter(UserAccount.id == user_id).first()
-        if not ua or not ua.employee_id:
-            return ua.email if ua else ""
+        if not ua:
+            return "", ""
+        portal_role = ua.portal_role or "Employee"
+        if not ua.employee_id:
+            return ua.email.strip().lower(), portal_role
         emp = db.query(Employee).filter(Employee.id == ua.employee_id).first()
-        return emp.email if emp else (ua.email if ua else "")
+        email = (emp.email if emp else ua.email) or ""
+        return email.strip().lower(), portal_role
     finally:
         db.close()
+
+
+def _get_current_email(request: Request) -> str:
+    email, _ = _get_current_user_info(request)
+    return email
 
 
 class BadgeOut(BaseModel):
@@ -85,11 +94,12 @@ def list_badges(include_official: bool = True, db: Session = Depends(get_db)) ->
 
 @router.post("/give")
 def give_recognition(payload: GiveRecognitionIn, request: Request, db: Session = Depends(get_db)) -> RecognitionOut:
-    from_email = _get_current_email(request)
+    from_email, portal_role = _get_current_user_info(request)
     if not from_email:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
-    if payload.to_email.strip().lower() == from_email.strip().lower():
+    to_email_norm = payload.to_email.strip().lower()
+    if to_email_norm == from_email:
         raise HTTPException(status_code=400, detail="You cannot give a recognition to yourself")
 
     badge = db.query(RecognitionBadge).filter(
@@ -100,9 +110,12 @@ def give_recognition(payload: GiveRecognitionIn, request: Request, db: Session =
     if not badge:
         raise HTTPException(status_code=404, detail="Badge not found")
 
+    if badge.is_official and portal_role not in ("Admin", "HR"):
+        raise HTTPException(status_code=403, detail="Only HR or Admin can give official badges")
+
     rec = RecognitionGiven(
         from_email=from_email,
-        to_email=payload.to_email,
+        to_email=to_email_norm,
         badge_id=badge.id,
         message=payload.message or "",
         points=badge.point,
@@ -110,10 +123,10 @@ def give_recognition(payload: GiveRecognitionIn, request: Request, db: Session =
     db.add(rec)
 
     from_emp = db.query(Employee).filter(Employee.email == from_email).first()
-    to_emp = db.query(Employee).filter(Employee.email == payload.to_email).first()
+    to_emp = db.query(Employee).filter(Employee.email == to_email_norm).first()
 
     sender_name = f"{from_emp.first_name} {from_emp.last_name}" if from_emp else from_email
-    to_user = db.query(UserAccount).filter(UserAccount.email == payload.to_email).first()
+    to_user = db.query(UserAccount).filter(UserAccount.email == to_email_norm).first()
     if not to_user and to_emp:
         to_user = db.query(UserAccount).filter(UserAccount.employee_id == to_emp.id).first()
     if to_user:

@@ -30,9 +30,10 @@ def _get_current_user(request: Request):
         if not ua:
             return None, ""
         if not ua.employee_id:
-            return None, ua.email
+            return None, ua.email.strip().lower()
         emp = db.query(Employee).filter(Employee.id == ua.employee_id).first()
-        return emp, emp.email if emp else ua.email
+        email = (emp.email if emp else ua.email) or ""
+        return emp, email.strip().lower()
     finally:
         db.close()
 

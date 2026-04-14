@@ -7,11 +7,11 @@ import {
   ClipboardList,
   FileText,
   FolderOpen,
+  ListTodo,
   MessageSquare,
   Network,
   Settings,
   Target,
-  ListTodo,
   Users,
 } from 'lucide-react';
 import { useState, type MouseEvent as ReactMouseEvent } from 'react';
@@ -33,10 +33,11 @@ type AdminMenu = (
   | 'configRecognitions'
   | 'reportingReviews'
   | 'reportingSurveys'
+  | 'reportingVoe'
 );
 
 const LIBRARY_MENUS: AdminMenu[] = ['libraryRole', 'libraryDepartment', 'libraryCompetency', 'companyResources'];
-const REPORTING_MENUS: AdminMenu[] = ['reportingReviews', 'reportingSurveys'];
+const REPORTING_MENUS: AdminMenu[] = ['reportingReviews', 'reportingSurveys', 'reportingVoe'];
 
 type AdminCenterSidebarProps = {
   activeMenu: AdminMenu;
@@ -233,6 +234,13 @@ function AdminCenterSidebar({ activeMenu, onNavigate }: AdminCenterSidebarProps)
           >
             <BarChart2 size={14} />
             <span>Surveys</span>
+          </button>
+          <button
+            className={`admin-center-sub-link ${activeMenu === 'reportingVoe' ? 'active' : ''}`}
+            onClick={(event) => handleNavigate(ROUTES.adminReportingVoe, event)}
+          >
+            <MessageSquare size={14} />
+            <span>Voice of Employee</span>
           </button>
         </div>
       )}

@@ -1146,6 +1146,18 @@
   background: var(--primary-dark);
 }
 
+.submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.voe-success {
+  color: #16a34a;
+  font-size: 13px;
+  font-weight: 500;
+  margin-top: 8px;
+}
+
 .whats-next-card {
   margin-bottom: 24px;
 }

@@ -156,9 +156,13 @@ function RecognitionsPage() {
         setMessage('');
         setActiveTab('given');
         await loadData();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.detail || 'Failed to send recognition');
       }
     } catch (err) {
       console.error('Failed to give recognition', err);
+      alert('Failed to send recognition');
     } finally {
       setSubmitting(false);
     }
@@ -175,9 +179,13 @@ function RecognitionsPage() {
       if (res.ok) {
         setRewardToConfirm(null);
         await loadData();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.detail || 'Failed to redeem reward');
       }
     } catch (err) {
       console.error('Failed to redeem reward', err);
+      alert('Failed to redeem reward');
     } finally {
       setRedeeming(false);
     }

@@ -507,6 +507,16 @@ class Feedback(Base):
     to_user = relationship("UserAccount", foreign_keys=[to_user_id])
 
 
+class VoiceOfEmployee(Base):
+    __tablename__ = "voice_of_employee"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("user_accounts.id", ondelete="SET NULL"), nullable=True)
+    message = Column(Text, nullable=False)
+    is_deleted = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 class Notification(Base):
     __tablename__ = "notifications"
 

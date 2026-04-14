@@ -94,6 +94,9 @@ function HomePage() {
   const [previewBlobUrl, setPreviewBlobUrl] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [recognitionPoints, setRecognitionPoints] = useState(0);
+  const [voeText, setVoeText] = useState('');
+  const [voeSubmitting, setVoeSubmitting] = useState(false);
+  const [voeSuccess, setVoeSuccess] = useState(false);
   const currentMonth = new Date().toLocaleString('en-US', { month: 'long' });
   const currentMonthIdx = new Date().getMonth();
 
@@ -358,14 +361,49 @@ function HomePage() {
           <h2>Voice of Employee</h2>
         </div>
         <p className="voe-description">
-          Share your anonymous feedback to help us improve our workplace
+          Share your feedback to help us improve our workplace
           environment and culture.
         </p>
         <textarea
           className="voe-textarea"
-          placeholder="Type your anonymous feedback here..."
+          placeholder="Type your feedback here..."
+          value={voeText}
+          onChange={(e) => setVoeText(e.target.value)}
         />
-        <button className="submit-btn">Submit Feedback</button>
+        <button
+          className="submit-btn"
+          disabled={voeSubmitting || !voeText.trim()}
+          onClick={async () => {
+            setVoeSubmitting(true);
+            try {
+              const res = await fetch('/api/v1/voe/submit', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ message: voeText.trim() }),
+              });
+              if (res.ok) {
+                setVoeText('');
+                setVoeSuccess(true);
+                setTimeout(() => setVoeSuccess(false), 3000);
+              } else {
+                const err = await res.json().catch(() => ({}));
+                alert(err.detail || 'Failed to submit');
+              }
+            } catch {
+              alert('Failed to submit');
+            } finally {
+              setVoeSubmitting(false);
+            }
+          }}
+        >
+          {voeSubmitting ? 'Submitting…' : 'Submit Feedback'}
+        </button>
+        {voeSuccess && (
+          <p className="voe-success">Your feedback has been submitted. Thank you!</p>
+        )}
       </div>
 
       <div className="card whats-next-card">
